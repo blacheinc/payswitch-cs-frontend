@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PaySwitch Credit Scoring Platform
 
-## Getting Started
+An AI-powered credit scoring and risk assessment platform for financial institutions in Ghana. This frontend application provides an enterprise-grade interface for managing credit requests, organizations, and scoring models.
 
-First, run the development server:
+## 🚀 Key Features
+
+### Organization Portal
+- **Dashboard**: Real-time overview of scoring requests and risk distribution.
+- **Score Requests**: Single and Bulk (CSV/Excel) upload capabilities.
+- **Reports**: Interactive analytics with exportable data (CSV/PDF).
+- **Developers**: API Key management, Webhook configuration, and IP Whitelisting.
+- **Team**: Role-based access control and user management.
+
+### Admin Portal
+- **System Overview**: Platform-wide health and usage metrics.
+- **Organization Management**: Onboard and manage financial institutions.
+- **Model Registry**: Champion/Challenger model comparison and fairness reports.
+- **Compliance**: Audit logs and data retention policies.
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Components**: shadcn/ui (Radix UI)
+- **Charts**: Recharts
+- **State Management**: React Context + TanStack Query
+- **Forms**: React Hook Form + Zod
+
+## 🏁 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/payswitch/credit-scoring-frontend.git
+   cd credit-scoring-frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure Environment:
+   Create a `.env.local` file in the root directory:
+   ```env
+   # Backend API URL (default to localhost for dev)
+   NEXT_PUBLIC_API_URL=http://localhost:3000/api
+   
+   # Enable Mock Authentication (set to 'true' for standalone frontend dev)
+   NEXT_PUBLIC_MOCK_AUTH=true
+   ```
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 🔐 Authentication (Dev Mode)
+
+By default, the application runs in **Mock Auth Mode** (`NEXT_PUBLIC_MOCK_AUTH=true`). 
+This allows you to verify the UI without a running backend.
+
+- **Admin Portal**: Login with any email containing "admin" (e.g., `admin@payswitch.com`).
+- **Org Portal**: Login with any other email (e.g., `user@ecobank.com`).
+- **Password**: Any value (e.g., `password`).
+- **2FA**: If email contains "2fa", the UI will simulate a 2FA challenge.
+
+To disable this and connect to a real backend, set `NEXT_PUBLIC_MOCK_AUTH=false`.
+
+## 📦 Deployment
+
+### Docker
+
+The application includes a `Dockerfile` for containerized deployment.
+
+1. Build the image:
+   ```bash
+   docker build -t payswitch-credit-scoring .
+   ```
+
+2. Run the container:
+   ```bash
+   docker run -p 3000:3000 payswitch-credit-scoring
+   ```
+
+### Production Build
+
+To build the application for production locally:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📂 Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── app/                  # Next.js App Router pages
+│   ├── (auth)/           # Authentication routes (login, reset)
+│   ├── (admin)/          # Admin Portal routes (/admin/...)
+│   ├── (org)/            # Organization Portal routes (dashboard, requests...)
+│   └── api/              # API routes (if any mock handlers used)
+├── components/
+│   ├── ui/               # Reusable UI components (shadcn/ui)
+│   └── ...               # Feature-specific components
+├── lib/                  # Utilities, API client, helpers
+├── contexts/             # React Context Providers (Auth, Theme)
+└── types/                # TypeScript definitions
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🤝 Contribution
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Create a feature branch (`git checkout -b feature/amazing-feature`)
+2. Commit your changes (`git commit -m 'Add amazing feature'`)
+3. Push to the branch (`git push origin feature/amazing-feature`)
+4. Open a Pull Request
