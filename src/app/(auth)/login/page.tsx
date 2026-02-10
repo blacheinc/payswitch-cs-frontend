@@ -32,6 +32,7 @@ type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { login, verify2FA, isLoading, requires2FA } = useAuth();
+  const [loginMode, setLoginMode] = useState<'org' | 'admin'>('org');
   const [showPassword, setShowPassword] = useState(false);
 
   // Login form
@@ -68,8 +69,8 @@ export default function LoginPage() {
         document.cookie = 'auth-token=mock-token; path=/; max-age=86400; SameSite=Strict';
         toast.success('Welcome back!');
         
-        // Determine redirect based on email (admin check mock)
-        if (data.email.includes('admin')) {
+        // Determine redirect based on mode
+        if (loginMode === 'admin') {
           router.push('/admin/dashboard');
         } else {
           router.push('/dashboard');
@@ -85,7 +86,12 @@ export default function LoginPage() {
          // In real app, cookie should be set by backend or here if using JWT
         document.cookie = 'auth-token=mock-token; path=/; max-age=86400; SameSite=Strict';
         toast.success('Welcome back!');
-        router.push('/dashboard');
+        
+        if (loginMode === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed. Please try again.';
@@ -100,7 +106,12 @@ export default function LoginPage() {
       // Set cookie for middleware
       document.cookie = 'auth-token=mock-token; path=/; max-age=86400; SameSite=Strict';
       toast.success('Welcome back!');
-      router.push('/dashboard');
+      
+      if (loginMode === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Invalid code. Please try again.';
       toast.error(message);
@@ -134,6 +145,9 @@ export default function LoginPage() {
               <h1 className="text-4xl font-bold mb-4">
                 AI-Powered Credit Intelligence
               </h1>
+              <h2 className="text-2xl font-semibold mb-6 opacity-90">
+                {loginMode === 'admin' ? 'Platform Governance' : 'Institutional Lending'}
+              </h2>
               <p className="text-lg text-white/80 max-w-md">
                 Make data-driven lending decisions with Ghana&apos;s most advanced credit scoring platform.
               </p>
@@ -195,13 +209,23 @@ export default function LoginPage() {
 
           <Card className="border-0 shadow-xl">
             <CardHeader className="space-y-1 text-center">
-              <CardTitle className="text-2xl font-bold">
-                {requires2FA ? 'Two-Factor Authentication' : 'Welcome back'}
+              <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
+                {loginMode === 'admin' ? (
+                  <>
+                    <Shield className="h-6 w-6 text-primary" />
+                    Admin Portal
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="h-6 w-6 text-primary" />
+                    Organization Portal
+                  </>
+                )}
               </CardTitle>
               <CardDescription>
                 {requires2FA
                   ? 'Enter the 6-digit code from your authenticator app'
-                  : 'Sign in to your account to continue'}
+                  : `Sign in as ${loginMode === 'admin' ? 'a platform administrator' : 'an institution user'}`}
               </CardDescription>
             </CardHeader>
 
@@ -209,70 +233,101 @@ export default function LoginPage() {
               {!requires2FA ? (
                 // Login form
                 <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="name@company.com"
-                      autoComplete="email"
-                      disabled={isLoading}
-                      {...loginForm.register('email')}
-                    />
-                    {loginForm.formState.errors.email && (
-                      <p className="text-sm text-destructive">
-                        {loginForm.formState.errors.email.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
-                      <Link
-                        href="/forgot-password"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Forgot password?
-                      </Link>
-                    </div>
-                    <div className="relative">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
                       <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        autoComplete="current-password"
+                        id="email"
+                        type="email"
+                        placeholder="name@company.com"
+                        autoComplete="email"
                         disabled={isLoading}
-                        {...loginForm.register('password')}
+                        {...loginForm.register('email')}
                       />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? 'Hide' : 'Show'}
-                      </button>
+                      {loginForm.formState.errors.email && (
+                        <p className="text-sm text-destructive">
+                          {loginForm.formState.errors.email.message}
+                        </p>
+                      )}
                     </div>
-                    {loginForm.formState.errors.password && (
-                      <p className="text-sm text-destructive">
-                        {loginForm.formState.errors.password.message}
-                      </p>
-                    )}
-                  </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      <>
-                        Sign in
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <Link
+                          href="/forgot-password"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Forgot password?
+                        </Link>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                          disabled={isLoading}
+                          {...loginForm.register('password')}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                      {loginForm.formState.errors.password && (
+                        <p className="text-sm text-destructive">
+                          {loginForm.formState.errors.password.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Mode Toggle Link */}
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="px-0 h-auto text-primary font-medium hover:no-underline hover:text-primary/80"
+                        onClick={() => {
+                          const nextMode = loginMode === 'org' ? 'admin' : 'org';
+                          setLoginMode(nextMode);
+                          
+                          // Pre-fill mock credentials for better demo experience
+                          const useMockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
+                          if (useMockAuth) {
+                            if (nextMode === 'admin') {
+                              loginForm.setValue('email', 'admin@payswitch.com.gh');
+                              loginForm.setValue('password', 'password123');
+                            } else {
+                              loginForm.setValue('email', 'officer@fidelitybank.com.gh');
+                              loginForm.setValue('password', 'password123');
+                            }
+                            toast.info(`Switched to ${nextMode === 'admin' ? 'Admin' : 'Organization'} mode`);
+                          }
+                        }}
+                      >
+                        {loginMode === 'org' ? 'Sign in as Admin' : 'Sign in as Organization'}
+                        
+                      </Button>
+                    </div>
+
+                    <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        <>
+                          Sign in to Portal
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 // 2FA form
