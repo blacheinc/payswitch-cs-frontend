@@ -25,6 +25,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/contexts/theme-context';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { NotificationCenter } from '@/components/shared/notification-center';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -188,6 +189,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {/* Notifications */}
+            <NotificationCenter type="admin" />
+
             {/* Theme toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {resolvedTheme === 'dark' ? (

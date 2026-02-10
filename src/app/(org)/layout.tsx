@@ -28,6 +28,7 @@ import { useTheme } from '@/contexts/theme-context';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { NotificationCenter } from '@/components/shared/notification-center';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -212,13 +213,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
           {/* Right side actions */}
           <div className="flex items-center gap-2">
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
-                3
-              </span>
-              <span className="sr-only">Notifications</span>
-            </Button>
+            <NotificationCenter type="org" />
 
             {/* Theme toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
