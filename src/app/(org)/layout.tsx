@@ -19,6 +19,7 @@ import {
   Sun,
   User,
   Building2,
+  Terminal,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -48,7 +49,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Score Requests', href: '/score-requests', icon: FileText },
-  { title: 'API Keys', href: '/api-keys', icon: Key },
+  { title: 'Developers', href: '/developers', icon: Terminal },
   { title: 'Team', href: '/team', icon: Users },
   { title: 'Reports', href: '/reports', icon: BarChart3 },
   { title: 'Settings', href: '/settings', icon: Settings },

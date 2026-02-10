@@ -43,6 +43,7 @@ const models = [
     name: 'Credit Risk XGBoost',
     version: 'v2.3.1',
     status: 'production',
+    isChampion: true,
     accuracy: 94.2,
     latency: '145ms',
     deployed: '2025-01-15',
@@ -53,6 +54,7 @@ const models = [
     name: 'Credit Risk XGBoost',
     version: 'v2.4.0-beta',
     status: 'staging',
+    isChampion: false,
     accuracy: 95.8,
     latency: '152ms',
     deployed: '2025-02-01',
@@ -63,6 +65,7 @@ const models = [
     name: 'Legacy Logistic Regression',
     version: 'v1.0.0',
     status: 'archived',
+    isChampion: false,
     accuracy: 88.5,
     latency: '98ms',
     deployed: '2024-06-10',
@@ -74,7 +77,11 @@ export default function ModelsPage() {
   const [activeTab, setActiveTab] = useState('registry');
 
   const handlePromote = (id: string, version: string) => {
-    toast.success(`Promoted ${version} to Production`);
+    toast.success(`Promoted ${version} to Production. All traffic redirected.`);
+  };
+
+  const handleRollback = (id: string, version: string) => {
+    toast.warning(`Rolling back to ${version}. Previous production model archived.`);
   };
 
   const getStatusBadge = (status: string) => {
@@ -139,9 +146,16 @@ export default function ModelsPage() {
                   {models.map((model) => (
                     <TableRow key={model.id}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Bot className="h-4 w-4 text-muted-foreground" />
-                          {model.name}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 font-medium">
+                            <Bot className="h-4 w-4 text-muted-foreground" />
+                            {model.name}
+                          </div>
+                          {model.isChampion && (
+                            <Badge variant="outline" className="w-fit text-[10px] bg-yellow-50 text-yellow-700 border-yellow-200">
+                              <CheckCircle className="w-3 h-3 mr-1" /> CHAMPION
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{model.version}</TableCell>
@@ -170,6 +184,12 @@ export default function ModelsPage() {
                               <DropdownMenuItem onClick={() => handlePromote(model.id, model.version)}>
                                 <GitBranch className="mr-2 h-4 w-4" />
                                 Promote to Production
+                              </DropdownMenuItem>
+                            )}
+                            {model.status === 'production' && (
+                              <DropdownMenuItem onClick={() => handleRollback(model.id, 'v2.2.0')} className="text-destructive font-semibold">
+                                <History className="mr-2 h-4 w-4" />
+                                EMERGENCY ROLLBACK
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem>Download Artifact</DropdownMenuItem>

@@ -27,6 +27,9 @@ export const getAuthToken = (): string | null => {
 export const setAuthToken = (token: string): void => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(AUTH_TOKEN_KEY, token);
+  
+  // Also set the cookie for middleware/proxy consistency
+  document.cookie = `auth-token=${token}; path=/; max-age=86400; SameSite=Strict`;
 };
 
 // Remove token from storage
@@ -34,6 +37,9 @@ export const removeAuthToken = (): void => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  
+  // Also clear the cookie used by middleware/proxy
+  document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
 };
 
 // Set refresh token

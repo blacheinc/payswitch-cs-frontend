@@ -189,6 +189,7 @@ export interface ScoreRequestPayload {
   employment?: EmploymentInfo;
   loanRequest: LoanRequestInfo;
   financialProfile?: FinancialProfile;
+  alternativeData?: AlternativeData;
   consent: ConsentInfo;
   metadata?: {
     channel?: 'branch' | 'online' | 'mobile_app' | 'agent' | 'call_center';
@@ -197,6 +198,37 @@ export interface ScoreRequestPayload {
     officerId?: string;
     callbackUrl?: string;
   };
+}
+
+// ==================== ALTERNATIVE DATA ====================
+
+export interface UtilityPaymentInfo {
+  history: 'excellent' | 'good' | 'fair' | 'poor' | 'no_data';
+  lastPaymentDate?: string;
+  avgMonthlyBill?: number;
+}
+
+export interface RentPaymentInfo {
+  history: 'excellent' | 'good' | 'fair' | 'poor' | 'no_data';
+  monthlyRent?: number;
+  tenureMonths?: number;
+}
+
+export interface TelcoDataInfo {
+  accountAgeMonths?: number;
+  avgMonthlySpend?: number;
+  paymentRegularity: 'always_on_time' | 'mostly_on_time' | 'sometimes_late' | 'often_late';
+  momoUsageFrequency: 'high' | 'medium' | 'low' | 'none';
+}
+
+export interface AlternativeData {
+  utilityPaymentHistory?: UtilityPaymentInfo;
+  rentPaymentHistory?: RentPaymentInfo;
+  telcoData?: TelcoDataInfo;
+  socialSignals?: {
+    platform: 'linkedin' | 'professional_association';
+    verificationStatus: 'verified' | 'unverified';
+  }[];
 }
 
 // ==================== SCORE RESPONSE ====================
@@ -334,6 +366,8 @@ export interface ModelVersion {
   version: string;
   modelType: string;
   status: ModelStatus;
+  isChampion: boolean;
+  rollbackVersionId?: string;
   metrics: {
     auc?: number;
     ks?: number;
@@ -349,6 +383,36 @@ export interface ModelVersion {
   promotedAt?: string;
   promotedById?: string;
   createdAt: string;
+}
+
+// ==================== AGENTIC AI ====================
+
+export type AgentStatus = 'idle' | 'running' | 'warning' | 'error' | 'offline';
+
+export interface AIAgent {
+  id: string;
+  name: string;
+  role: 'data_quality' | 'feature_engineering' | 'risk_scoring' | 'retraining' | 'compliance_checker';
+  status: AgentStatus;
+  lastAction: string;
+  lastActionAt: string;
+  successRate24h: number;
+  autonomousActionsCount: number;
+  healthMetrics: {
+    cpu: number;
+    memory: number;
+    latency: number;
+  };
+}
+
+export interface AgentActionLog {
+  id: string;
+  agentId: string;
+  actionType: string;
+  description: string;
+  impact: 'low' | 'medium' | 'high';
+  status: 'success' | 'failure' | 'in_progress';
+  timestamp: string;
 }
 
 // ==================== USAGE & ANALYTICS ====================

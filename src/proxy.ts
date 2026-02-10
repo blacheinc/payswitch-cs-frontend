@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Get the pathname of the request (e.g. /, /protected)
   const path = request.nextUrl.pathname;
 
@@ -31,7 +31,7 @@ export function middleware(request: NextRequest) {
   }
 }
 
-// Ensure the middleware is only called for relevant paths
+// Ensure the proxy is only called for relevant paths
 export const config = {
   matcher: [
     /*

@@ -16,7 +16,8 @@ import {
   Wallet,
   FileCheck,
   Send,
-  Loader2
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -69,6 +70,13 @@ const scoreRequestSchema = z.object({
   hasBankAccount: z.boolean().default(false),
   hasMobileMoney: z.boolean().default(false),
   
+  // Alternative Data
+  utilityHistory: z.enum(['excellent', 'good', 'fair', 'poor', 'no_data']).default('no_data'),
+  rentHistory: z.enum(['excellent', 'good', 'fair', 'poor', 'no_data']).default('no_data'),
+  telcoAccountAge: z.string().optional(),
+  telcoAvgSpend: z.string().optional(),
+  telcoPaymentRegularity: z.enum(['always_on_time', 'mostly_on_time', 'sometimes_late', 'often_late']).default('always_on_time'),
+  
   // Consent
   bureauConsent: z.boolean().refine(val => val === true, 'Bureau consent is required'),
   dataSharingConsent: z.boolean().default(false),
@@ -84,8 +92,9 @@ const steps = [
   { id: 2, name: 'Employment', icon: Briefcase },
   { id: 3, name: 'Loan Details', icon: CreditCard },
   { id: 4, name: 'Financial', icon: Wallet },
-  { id: 5, name: 'Consent', icon: FileCheck },
-  { id: 6, name: 'Review', icon: Send },
+  { id: 5, name: 'Alt Data', icon: Zap },
+  { id: 6, name: 'Consent', icon: FileCheck },
+  { id: 7, name: 'Review', icon: Send },
 ];
 
 export default function NewScoreRequestPage() {
@@ -103,6 +112,9 @@ export default function NewScoreRequestPage() {
       hasExistingLoans: false,
       hasBankAccount: false,
       hasMobileMoney: false,
+      utilityHistory: 'no_data',
+      rentHistory: 'no_data',
+      telcoPaymentRegularity: 'always_on_time',
       bureauConsent: false,
       dataSharingConsent: false,
     },
@@ -481,6 +493,80 @@ export default function NewScoreRequestPage() {
       case 5:
         return (
           <div className="space-y-6">
+            <div className="space-y-4">
+               <h3 className="text-sm font-medium">Utility & Rent History</h3>
+               <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Utility Payment History</Label>
+                    <Select 
+                      value={watchedValues.utilityHistory} 
+                      onValueChange={(val) => setValue('utilityHistory', val as any)}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">Excellent (No delays)</SelectItem>
+                        <SelectItem value="good">Good (1-2 delays)</SelectItem>
+                        <SelectItem value="fair">Fair (Frequent delays)</SelectItem>
+                        <SelectItem value="poor">Poor (Disconnected)</SelectItem>
+                        <SelectItem value="no_data">No Data</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Rent Payment History</Label>
+                    <Select 
+                      value={watchedValues.rentHistory} 
+                      onValueChange={(val) => setValue('rentHistory', val as any)}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="good">Good</SelectItem>
+                        <SelectItem value="fair">Fair</SelectItem>
+                        <SelectItem value="poor">Poor</SelectItem>
+                        <SelectItem value="no_data">No Data</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+               </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+               <h3 className="text-sm font-medium">Telco & Mobile Money Data</h3>
+               <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Account Age (Months)</Label>
+                    <Input type="number" placeholder="24" {...register('telcoAccountAge')} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Avg. Monthly Spend (GHS)</Label>
+                    <Input type="number" placeholder="150" {...register('telcoAvgSpend')} />
+                  </div>
+               </div>
+               <div className="space-y-2">
+                  <Label>Payment Regularity</Label>
+                  <Select 
+                    value={watchedValues.telcoPaymentRegularity} 
+                    onValueChange={(val) => setValue('telcoPaymentRegularity', val as any)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="always_on_time">Always on time</SelectItem>
+                      <SelectItem value="mostly_on_time">Mostly on time</SelectItem>
+                      <SelectItem value="sometimes_late">Sometimes late</SelectItem>
+                      <SelectItem value="often_late">Often late</SelectItem>
+                    </SelectContent>
+                  </Select>
+               </div>
+            </div>
+          </div>
+        );
+
+      case 6:
+        return (
+          <div className="space-y-6">
             <Card className="border-primary/20 bg-primary/5">
               <CardContent className="pt-6">
                 <div className="flex items-start space-x-3">
@@ -528,7 +614,7 @@ export default function NewScoreRequestPage() {
           </div>
         );
 
-      case 6:
+      case 7:
         return (
           <div className="space-y-6">
             <Card>
@@ -589,8 +675,28 @@ export default function NewScoreRequestPage() {
                   <span className="font-medium">{watchedValues.loanTenure || '0'} months</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Purpose</span>
-                  <span className="font-medium capitalize">{watchedValues.loanPurpose || '—'}</span>
+                   <span className="text-muted-foreground">Purpose</span>
+                   <span className="font-medium capitalize">{watchedValues.loanPurpose || '—'}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Alternative Data Signals</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Utility History</span>
+                  <span className="font-medium capitalize">{watchedValues.utilityHistory || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                   <span className="text-muted-foreground">Rent History</span>
+                   <span className="font-medium capitalize">{watchedValues.rentHistory || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                   <span className="text-muted-foreground">Telco Regularity</span>
+                   <span className="font-medium capitalize">{watchedValues.telcoPaymentRegularity?.replace('_', ' ') || '—'}</span>
                 </div>
               </CardContent>
             </Card>

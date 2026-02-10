@@ -19,6 +19,7 @@ import {
   CreditCard,
   Calendar,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -210,6 +211,10 @@ export default function ScoreRequestDetailPage() {
   const [decision, setDecision] = useState<string>('');
   const [approvedAmount, setApprovedAmount] = useState('');
   const [decisionNotes, setDecisionNotes] = useState('');
+  
+  const [outcomeDialogOpen, setOutcomeDialogOpen] = useState(false);
+  const [outcome, setOutcome] = useState<string>('');
+  const [outcomeNotes, setOutcomeNotes] = useState('');
 
   const riskColors = getRiskColor(scoreRequest.score.riskCategory);
   const scorePercentage = ((scoreRequest.score.value - scoreRequest.score.minValue) / 
@@ -219,6 +224,14 @@ export default function ScoreRequestDetailPage() {
     // Handle decision submission
     console.log({ decision, approvedAmount, decisionNotes });
     setDecisionDialogOpen(false);
+    toast.success('Decision recorded successfully');
+  };
+
+  const handleRecordOutcome = () => {
+    // Handle outcome submission
+    console.log({ outcome, outcomeNotes });
+    setOutcomeDialogOpen(false);
+    toast.success('Outcome recorded. Data synchronized with ML training pipeline.');
   };
 
   return (
@@ -300,6 +313,54 @@ export default function ScoreRequestDetailPage() {
                 </Button>
                 <Button onClick={handleRecordDecision}>
                   Save Decision
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={outcomeDialogOpen} onOpenChange={setOutcomeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-primary text-primary hover:bg-primary/5 font-semibold">
+                Record Outcome
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Record Loan Outcome</DialogTitle>
+                <DialogDescription>
+                  Feedback on loan performance is critical for improving future scoring accuracy.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Final Outcome</Label>
+                  <Select value={outcome} onValueChange={setOutcome}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select outcome" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="paid_full">Paid in Full</SelectItem>
+                      <SelectItem value="default">Default / Written Off</SelectItem>
+                      <SelectItem value="late_settled">Settled with Delay</SelectItem>
+                      <SelectItem value="restructured">Restructured</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Outcome Notes</Label>
+                  <Textarea
+                    value={outcomeNotes}
+                    onChange={(e) => setOutcomeNotes(e.target.value)}
+                    placeholder="Provide details on repayment behavior..."
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOutcomeDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleRecordOutcome} disabled={!outcome}>
+                  Save Outcome
                 </Button>
               </DialogFooter>
             </DialogContent>

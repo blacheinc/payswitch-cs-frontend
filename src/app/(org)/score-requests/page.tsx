@@ -6,7 +6,8 @@ import {
   Plus, 
   Search, 
   Filter, 
-  Download, 
+  Download,
+  UploadCloud, 
   MoreHorizontal,
   Eye,
   FileText,
@@ -241,6 +242,12 @@ export default function ScoreRequestsPage() {
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/score-requests/bulk">
+              <UploadCloud className="mr-2 h-4 w-4" />
+              Bulk Request
+            </Link>
           </Button>
           <Button asChild>
             <Link href="/score-requests/new">
