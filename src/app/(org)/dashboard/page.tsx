@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { 
-  FileText, 
-  TrendingUp, 
-  Clock, 
+import Link from "next/link";
+import {
+  FileText,
+  TrendingUp,
+  Clock,
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
   Plus,
-  ArrowRight
-} from 'lucide-react';
+  ArrowRight,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -22,12 +22,19 @@ import {
   PieChart,
   Pie,
   Cell,
-} from 'recharts';
+} from "recharts";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ROUTES } from "@/lib/constant";
 
 // Mock data - would be fetched from API
 const stats = {
@@ -43,42 +50,95 @@ const stats = {
 };
 
 const scoreDistribution = [
-  { range: '300-499', count: 45, label: 'Very High Risk', color: 'var(--risk-very-high)' },
-  { range: '500-579', count: 123, label: 'High Risk', color: 'var(--risk-high)' },
-  { range: '580-669', count: 287, label: 'Medium Risk', color: 'var(--risk-medium)' },
-  { range: '670-739', count: 412, label: 'Low Risk', color: 'var(--risk-low)' },
-  { range: '740-850', count: 380, label: 'Very Low Risk', color: 'var(--risk-very-low)' },
+  {
+    range: "300-499",
+    count: 45,
+    label: "Very High Risk",
+    color: "var(--risk-very-high)",
+  },
+  {
+    range: "500-579",
+    count: 123,
+    label: "High Risk",
+    color: "var(--risk-high)",
+  },
+  {
+    range: "580-669",
+    count: 287,
+    label: "Medium Risk",
+    color: "var(--risk-medium)",
+  },
+  { range: "670-739", count: 412, label: "Low Risk", color: "var(--risk-low)" },
+  {
+    range: "740-850",
+    count: 380,
+    label: "Very Low Risk",
+    color: "var(--risk-very-low)",
+  },
 ];
 
 const riskBreakdown = [
-  { name: 'Very Low', value: 30, color: 'var(--risk-very-low)' },
-  { name: 'Low', value: 33, color: 'var(--risk-low)' },
-  { name: 'Medium', value: 23, color: 'var(--risk-medium)' },
-  { name: 'High', value: 10, color: 'var(--risk-high)' },
-  { name: 'Very High', value: 4, color: 'var(--risk-very-high)' },
+  { name: "Very Low", value: 30, color: "var(--risk-very-low)" },
+  { name: "Low", value: 33, color: "var(--risk-low)" },
+  { name: "Medium", value: 23, color: "var(--risk-medium)" },
+  { name: "High", value: 10, color: "var(--risk-high)" },
+  { name: "Very High", value: 4, color: "var(--risk-very-high)" },
 ];
 
 const recentRequests = [
-  { id: 'SCR-FID-20250204-001', applicant: 'Kwame Asante', score: 720, risk: 'low', time: '5 mins ago' },
-  { id: 'SCR-FID-20250204-002', applicant: 'Ama Serwaa', score: 645, risk: 'medium', time: '12 mins ago' },
-  { id: 'SCR-FID-20250204-003', applicant: 'Kofi Mensah', score: 780, risk: 'very_low', time: '25 mins ago' },
-  { id: 'SCR-FID-20250204-004', applicant: 'Akua Boateng', score: 520, risk: 'high', time: '1 hour ago' },
-  { id: 'SCR-FID-20250204-005', applicant: 'Yaw Owusu', score: 695, risk: 'low', time: '2 hours ago' },
+  {
+    id: "SCR-FID-20250204-001",
+    applicant: "Kwame Asante",
+    score: 720,
+    risk: "low",
+    time: "5 mins ago",
+  },
+  {
+    id: "SCR-FID-20250204-002",
+    applicant: "Ama Serwaa",
+    score: 645,
+    risk: "medium",
+    time: "12 mins ago",
+  },
+  {
+    id: "SCR-FID-20250204-003",
+    applicant: "Kofi Mensah",
+    score: 780,
+    risk: "very_low",
+    time: "25 mins ago",
+  },
+  {
+    id: "SCR-FID-20250204-004",
+    applicant: "Akua Boateng",
+    score: 520,
+    risk: "high",
+    time: "1 hour ago",
+  },
+  {
+    id: "SCR-FID-20250204-005",
+    applicant: "Yaw Owusu",
+    score: 695,
+    risk: "low",
+    time: "2 hours ago",
+  },
 ];
 
 const getRiskColor = (risk: string) => {
   const colors: Record<string, string> = {
-    very_low: 'bg-[var(--risk-very-low)]/10 text-[var(--risk-very-low)] border-[var(--risk-very-low)]/20',
-    low: 'bg-[var(--risk-low)]/10 text-[var(--risk-low)] border-[var(--risk-low)]/20',
-    medium: 'bg-[var(--risk-medium)]/10 text-[var(--risk-medium)] border-[var(--risk-medium)]/20',
-    high: 'bg-[var(--risk-high)]/10 text-[var(--risk-high)] border-[var(--risk-high)]/20',
-    very_high: 'bg-[var(--risk-very-high)]/10 text-[var(--risk-very-high)] border-[var(--risk-very-high)]/20',
+    very_low:
+      "bg-[var(--risk-very-low)]/10 text-[var(--risk-very-low)] border-[var(--risk-very-low)]/20",
+    low: "bg-[var(--risk-low)]/10 text-[var(--risk-low)] border-[var(--risk-low)]/20",
+    medium:
+      "bg-[var(--risk-medium)]/10 text-[var(--risk-medium)] border-[var(--risk-medium)]/20",
+    high: "bg-[var(--risk-high)]/10 text-[var(--risk-high)] border-[var(--risk-high)]/20",
+    very_high:
+      "bg-[var(--risk-very-high)]/10 text-[var(--risk-very-high)] border-[var(--risk-very-high)]/20",
   };
   return colors[risk] || colors.medium;
 };
 
 const getRiskLabel = (risk: string) => {
-  return risk.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  return risk.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
 export default function DashboardPage() {
@@ -93,7 +153,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/score-requests/new">
+          <Link href={`${ROUTES.ORG.SCORE_REQUESTS}/new`}>
             <Plus className="mr-2 h-4 w-4" />
             New Score Request
           </Link>
@@ -110,7 +170,9 @@ export default function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalRequests.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {stats.totalRequests.toLocaleString()}
+            </div>
             <div className="flex items-center text-xs text-muted-foreground mt-1">
               <span className="flex items-center text-green-600">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
@@ -181,34 +243,42 @@ export default function DashboardPage() {
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Score Distribution</CardTitle>
-            <CardDescription>Distribution of credit scores this month</CardDescription>
+            <CardDescription>
+              Distribution of credit scores this month
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={scoreDistribution} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="range" 
+                <BarChart
+                  data={scoreDistribution}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-muted"
+                  />
+                  <XAxis
+                    dataKey="range"
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
+                  <YAxis
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
                     }}
-                    labelStyle={{ fontWeight: 'bold' }}
+                    labelStyle={{ fontWeight: "bold" }}
                   />
-                  <Bar 
-                    dataKey="count" 
+                  <Bar
+                    dataKey="count"
                     fill="hsl(var(--primary))"
                     radius={[4, 4, 0, 0]}
                   />
@@ -243,11 +313,11 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
                     }}
-                    formatter={(value) => [`${value}%`, '']}
+                    formatter={(value) => [`${value}%`, ""]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -255,12 +325,16 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-2 mt-4">
               {riskBreakdown.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
+                  <div
+                    className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm text-muted-foreground">{item.name}</span>
-                  <span className="text-sm font-medium ml-auto">{item.value}%</span>
+                  <span className="text-sm text-muted-foreground">
+                    {item.name}
+                  </span>
+                  <span className="text-sm font-medium ml-auto">
+                    {item.value}%
+                  </span>
                 </div>
               ))}
             </div>
@@ -276,7 +350,7 @@ export default function DashboardPage() {
             <CardDescription>Latest credit scoring activity</CardDescription>
           </div>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/score-requests">
+            <Link href={ROUTES.ORG.SCORE_REQUESTS}>
               View all
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -285,27 +359,37 @@ export default function DashboardPage() {
         <CardContent>
           <div className="space-y-4">
             {recentRequests.map((request) => (
-              <div 
-                key={request.id} 
+              <div
+                key={request.id}
                 className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-4">
                   <div className="hidden sm:flex w-10 h-10 rounded-full bg-primary/10 items-center justify-center">
                     <span className="text-sm font-semibold text-primary">
-                      {request.applicant.split(' ').map(n => n[0]).join('')}
+                      {request.applicant
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
                     </span>
                   </div>
                   <div>
                     <p className="font-medium">{request.applicant}</p>
-                    <p className="text-sm text-muted-foreground">{request.id}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {request.id}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right hidden sm:block">
                     <p className="font-semibold">{request.score}</p>
-                    <p className="text-xs text-muted-foreground">{request.time}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {request.time}
+                    </p>
                   </div>
-                  <Badge variant="outline" className={getRiskColor(request.risk)}>
+                  <Badge
+                    variant="outline"
+                    className={getRiskColor(request.risk)}
+                  >
                     {getRiskLabel(request.risk)}
                   </Badge>
                 </div>
@@ -329,7 +413,7 @@ export function DashboardSkeleton() {
         </div>
         <Skeleton className="h-10 w-40" />
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i}>

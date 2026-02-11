@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Check, 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
   User,
   Briefcase,
   CreditCard,
@@ -17,70 +17,107 @@ import {
   FileCheck,
   Send,
   Loader2,
-  Zap
-} from 'lucide-react';
-import { toast } from 'sonner';
+  Zap,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { ROUTES } from "@/lib/constant";
 
 // Form schema
 const scoreRequestSchema = z.object({
   // Personal Information
-  fullName: z.string().min(2, 'Name must be at least 2 characters'),
-  dateOfBirth: z.string().min(1, 'Date of birth is required'),
-  nationalIdType: z.enum(['ghana_card', 'voter_id', 'passport', 'drivers_license']),
-  nationalIdNumber: z.string().min(1, 'ID number is required'),
-  gender: z.enum(['male', 'female', 'other']).optional(),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  email: z.string().email().optional().or(z.literal('')),
+  fullName: z.string().min(2, "Name must be at least 2 characters"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  nationalIdType: z.enum([
+    "ghana_card",
+    "voter_id",
+    "passport",
+    "drivers_license",
+  ]),
+  nationalIdNumber: z.string().min(1, "ID number is required"),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  email: z.string().email().optional().or(z.literal("")),
   address: z.string().optional(),
-  
+
   // Employment
-  employmentStatus: z.enum(['employed', 'self_employed', 'unemployed', 'retired', 'student']),
+  employmentStatus: z.enum([
+    "employed",
+    "self_employed",
+    "unemployed",
+    "retired",
+    "student",
+  ]),
   employerName: z.string().optional(),
   jobTitle: z.string().optional(),
   employmentDuration: z.string().optional(),
-  monthlyIncome: z.string().min(1, 'Monthly income is required'),
+  monthlyIncome: z.string().min(1, "Monthly income is required"),
   otherIncome: z.string().optional(),
-  
+
   // Loan Details
-  loanAmount: z.string().min(1, 'Loan amount is required'),
-  loanPurpose: z.enum(['personal', 'business', 'education', 'housing', 'vehicle', 'medical', 'agriculture', 'other']),
-  loanTenure: z.string().min(1, 'Loan tenure is required'),
-  collateralType: z.enum(['none', 'vehicle', 'property', 'equipment', 'guarantor', 'other']).optional(),
-  
+  loanAmount: z.string().min(1, "Loan amount is required"),
+  loanPurpose: z.enum([
+    "personal",
+    "business",
+    "education",
+    "housing",
+    "vehicle",
+    "medical",
+    "agriculture",
+    "other",
+  ]),
+  loanTenure: z.string().min(1, "Loan tenure is required"),
+  collateralType: z
+    .enum(["none", "vehicle", "property", "equipment", "guarantor", "other"])
+    .optional(),
+
   // Financial Profile
   hasExistingLoans: z.boolean().default(false),
   existingLoanBalance: z.string().optional(),
   existingLoanPayment: z.string().optional(),
   hasBankAccount: z.boolean().default(false),
   hasMobileMoney: z.boolean().default(false),
-  
+
   // Alternative Data
-  utilityHistory: z.enum(['excellent', 'good', 'fair', 'poor', 'no_data']).default('no_data'),
-  rentHistory: z.enum(['excellent', 'good', 'fair', 'poor', 'no_data']).default('no_data'),
+  utilityHistory: z
+    .enum(["excellent", "good", "fair", "poor", "no_data"])
+    .default("no_data"),
+  rentHistory: z
+    .enum(["excellent", "good", "fair", "poor", "no_data"])
+    .default("no_data"),
   telcoAccountAge: z.string().optional(),
   telcoAvgSpend: z.string().optional(),
-  telcoPaymentRegularity: z.enum(['always_on_time', 'mostly_on_time', 'sometimes_late', 'often_late']).default('always_on_time'),
-  
+  telcoPaymentRegularity: z
+    .enum(["always_on_time", "mostly_on_time", "sometimes_late", "often_late"])
+    .default("always_on_time"),
+
   // Consent
-  bureauConsent: z.boolean().refine(val => val === true, 'Bureau consent is required'),
+  bureauConsent: z
+    .boolean()
+    .refine((val) => val === true, "Bureau consent is required"),
   dataSharingConsent: z.boolean().default(false),
-  
+
   // Reference
   referenceId: z.string().optional(),
 });
@@ -88,13 +125,13 @@ const scoreRequestSchema = z.object({
 type FormData = z.infer<typeof scoreRequestSchema>;
 
 const steps = [
-  { id: 1, name: 'Personal Info', icon: User },
-  { id: 2, name: 'Employment', icon: Briefcase },
-  { id: 3, name: 'Loan Details', icon: CreditCard },
-  { id: 4, name: 'Financial', icon: Wallet },
-  { id: 5, name: 'Alt Data', icon: Zap },
-  { id: 6, name: 'Consent', icon: FileCheck },
-  { id: 7, name: 'Review', icon: Send },
+  { id: 1, name: "Personal Info", icon: User },
+  { id: 2, name: "Employment", icon: Briefcase },
+  { id: 3, name: "Loan Details", icon: CreditCard },
+  { id: 4, name: "Financial", icon: Wallet },
+  { id: 5, name: "Alt Data", icon: Zap },
+  { id: 6, name: "Consent", icon: FileCheck },
+  { id: 7, name: "Review", icon: Send },
 ];
 
 export default function NewScoreRequestPage() {
@@ -106,21 +143,26 @@ export default function NewScoreRequestPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(scoreRequestSchema) as any,
     defaultValues: {
-      nationalIdType: 'ghana_card',
-      employmentStatus: 'employed',
-      loanPurpose: 'personal',
+      nationalIdType: "ghana_card",
+      employmentStatus: "employed",
+      loanPurpose: "personal",
       hasExistingLoans: false,
       hasBankAccount: false,
       hasMobileMoney: false,
-      utilityHistory: 'no_data',
-      rentHistory: 'no_data',
-      telcoPaymentRegularity: 'always_on_time',
+      utilityHistory: "no_data",
+      rentHistory: "no_data",
+      telcoPaymentRegularity: "always_on_time",
       bureauConsent: false,
       dataSharingConsent: false,
     },
   });
 
-  const { register, watch, setValue, formState: { errors } } = form;
+  const {
+    register,
+    watch,
+    setValue,
+    formState: { errors },
+  } = form;
   const watchedValues = watch();
 
   const nextStep = () => {
@@ -139,12 +181,12 @@ export default function NewScoreRequestPage() {
     setIsSubmitting(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success('Score request submitted successfully!');
-      router.push('/score-requests');
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      toast.success("Score request submitted successfully!");
+      router.push(ROUTES.ORG.SCORE_REQUESTS);
     } catch {
-      toast.error('Failed to submit score request. Please try again.');
+      toast.error("Failed to submit score request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -161,10 +203,12 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="fullName"
                   placeholder="Kwame Asante"
-                  {...register('fullName')}
+                  {...register("fullName")}
                 />
                 {errors.fullName && (
-                  <p className="text-sm text-destructive">{errors.fullName.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.fullName.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -172,10 +216,12 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="dateOfBirth"
                   type="date"
-                  {...register('dateOfBirth')}
+                  {...register("dateOfBirth")}
                 />
                 {errors.dateOfBirth && (
-                  <p className="text-sm text-destructive">{errors.dateOfBirth.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.dateOfBirth.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -185,7 +231,12 @@ export default function NewScoreRequestPage() {
                 <Label htmlFor="nationalIdType">ID Type *</Label>
                 <Select
                   value={watchedValues.nationalIdType}
-                  onValueChange={(value) => setValue('nationalIdType', value as FormData['nationalIdType'])}
+                  onValueChange={(value) =>
+                    setValue(
+                      "nationalIdType",
+                      value as FormData["nationalIdType"],
+                    )
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select ID type" />
@@ -194,7 +245,9 @@ export default function NewScoreRequestPage() {
                     <SelectItem value="ghana_card">Ghana Card</SelectItem>
                     <SelectItem value="voter_id">Voter ID</SelectItem>
                     <SelectItem value="passport">Passport</SelectItem>
-                    <SelectItem value="drivers_license">Driver&apos;s License</SelectItem>
+                    <SelectItem value="drivers_license">
+                      Driver&apos;s License
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -203,10 +256,12 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="nationalIdNumber"
                   placeholder="GHA-123456789-0"
-                  {...register('nationalIdNumber')}
+                  {...register("nationalIdNumber")}
                 />
                 {errors.nationalIdNumber && (
-                  <p className="text-sm text-destructive">{errors.nationalIdNumber.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.nationalIdNumber.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -215,8 +270,10 @@ export default function NewScoreRequestPage() {
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
                 <Select
-                  value={watchedValues.gender || ''}
-                  onValueChange={(value) => setValue('gender', value as FormData['gender'])}
+                  value={watchedValues.gender || ""}
+                  onValueChange={(value) =>
+                    setValue("gender", value as FormData["gender"])
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
@@ -233,10 +290,12 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="phone"
                   placeholder="+233 20 123 4567"
-                  {...register('phone')}
+                  {...register("phone")}
                 />
                 {errors.phone && (
-                  <p className="text-sm text-destructive">{errors.phone.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.phone.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -248,7 +307,7 @@ export default function NewScoreRequestPage() {
                   id="email"
                   type="email"
                   placeholder="kwame@example.com"
-                  {...register('email')}
+                  {...register("email")}
                 />
               </div>
               <div className="space-y-2">
@@ -256,7 +315,7 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="address"
                   placeholder="123 Independence Ave, Accra"
-                  {...register('address')}
+                  {...register("address")}
                 />
               </div>
             </div>
@@ -271,7 +330,12 @@ export default function NewScoreRequestPage() {
                 <Label htmlFor="employmentStatus">Employment Status *</Label>
                 <Select
                   value={watchedValues.employmentStatus}
-                  onValueChange={(value) => setValue('employmentStatus', value as FormData['employmentStatus'])}
+                  onValueChange={(value) =>
+                    setValue(
+                      "employmentStatus",
+                      value as FormData["employmentStatus"],
+                    )
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -290,7 +354,7 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="employerName"
                   placeholder="Company name"
-                  {...register('employerName')}
+                  {...register("employerName")}
                 />
               </div>
             </div>
@@ -301,7 +365,7 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="jobTitle"
                   placeholder="Sales Manager"
-                  {...register('jobTitle')}
+                  {...register("jobTitle")}
                 />
               </div>
               <div className="space-y-2">
@@ -309,7 +373,7 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="employmentDuration"
                   placeholder="e.g., 3 years"
-                  {...register('employmentDuration')}
+                  {...register("employmentDuration")}
                 />
               </div>
             </div>
@@ -323,10 +387,12 @@ export default function NewScoreRequestPage() {
                   id="monthlyIncome"
                   type="number"
                   placeholder="5000"
-                  {...register('monthlyIncome')}
+                  {...register("monthlyIncome")}
                 />
                 {errors.monthlyIncome && (
-                  <p className="text-sm text-destructive">{errors.monthlyIncome.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.monthlyIncome.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -335,7 +401,7 @@ export default function NewScoreRequestPage() {
                   id="otherIncome"
                   type="number"
                   placeholder="0"
-                  {...register('otherIncome')}
+                  {...register("otherIncome")}
                 />
               </div>
             </div>
@@ -352,10 +418,12 @@ export default function NewScoreRequestPage() {
                   id="loanAmount"
                   type="number"
                   placeholder="50000"
-                  {...register('loanAmount')}
+                  {...register("loanAmount")}
                 />
                 {errors.loanAmount && (
-                  <p className="text-sm text-destructive">{errors.loanAmount.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.loanAmount.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -364,10 +432,12 @@ export default function NewScoreRequestPage() {
                   id="loanTenure"
                   type="number"
                   placeholder="24"
-                  {...register('loanTenure')}
+                  {...register("loanTenure")}
                 />
                 {errors.loanTenure && (
-                  <p className="text-sm text-destructive">{errors.loanTenure.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.loanTenure.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -377,7 +447,9 @@ export default function NewScoreRequestPage() {
                 <Label htmlFor="loanPurpose">Loan Purpose *</Label>
                 <Select
                   value={watchedValues.loanPurpose}
-                  onValueChange={(value) => setValue('loanPurpose', value as FormData['loanPurpose'])}
+                  onValueChange={(value) =>
+                    setValue("loanPurpose", value as FormData["loanPurpose"])
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select purpose" />
@@ -397,8 +469,13 @@ export default function NewScoreRequestPage() {
               <div className="space-y-2">
                 <Label htmlFor="collateralType">Collateral Type</Label>
                 <Select
-                  value={watchedValues.collateralType || 'none'}
-                  onValueChange={(value) => setValue('collateralType', value as FormData['collateralType'])}
+                  value={watchedValues.collateralType || "none"}
+                  onValueChange={(value) =>
+                    setValue(
+                      "collateralType",
+                      value as FormData["collateralType"],
+                    )
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select collateral" />
@@ -420,7 +497,7 @@ export default function NewScoreRequestPage() {
               <Input
                 id="referenceId"
                 placeholder="LOAN-2025-001"
-                {...register('referenceId')}
+                {...register("referenceId")}
               />
               <p className="text-xs text-muted-foreground">
                 Your internal reference for tracking this application
@@ -437,29 +514,37 @@ export default function NewScoreRequestPage() {
                 <Checkbox
                   id="hasExistingLoans"
                   checked={watchedValues.hasExistingLoans}
-                  onCheckedChange={(checked) => setValue('hasExistingLoans', checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setValue("hasExistingLoans", checked as boolean)
+                  }
                 />
-                <Label htmlFor="hasExistingLoans">Applicant has existing loans</Label>
+                <Label htmlFor="hasExistingLoans">
+                  Applicant has existing loans
+                </Label>
               </div>
 
               {watchedValues.hasExistingLoans && (
                 <div className="grid gap-4 md:grid-cols-2 pl-6">
                   <div className="space-y-2">
-                    <Label htmlFor="existingLoanBalance">Outstanding Balance (GHS)</Label>
+                    <Label htmlFor="existingLoanBalance">
+                      Outstanding Balance (GHS)
+                    </Label>
                     <Input
                       id="existingLoanBalance"
                       type="number"
                       placeholder="0"
-                      {...register('existingLoanBalance')}
+                      {...register("existingLoanBalance")}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="existingLoanPayment">Monthly Payment (GHS)</Label>
+                    <Label htmlFor="existingLoanPayment">
+                      Monthly Payment (GHS)
+                    </Label>
                     <Input
                       id="existingLoanPayment"
                       type="number"
                       placeholder="0"
-                      {...register('existingLoanPayment')}
+                      {...register("existingLoanPayment")}
                     />
                   </div>
                 </div>
@@ -473,18 +558,26 @@ export default function NewScoreRequestPage() {
                 <Checkbox
                   id="hasBankAccount"
                   checked={watchedValues.hasBankAccount}
-                  onCheckedChange={(checked) => setValue('hasBankAccount', checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setValue("hasBankAccount", checked as boolean)
+                  }
                 />
-                <Label htmlFor="hasBankAccount">Applicant has a bank account</Label>
+                <Label htmlFor="hasBankAccount">
+                  Applicant has a bank account
+                </Label>
               </div>
 
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="hasMobileMoney"
                   checked={watchedValues.hasMobileMoney}
-                  onCheckedChange={(checked) => setValue('hasMobileMoney', checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setValue("hasMobileMoney", checked as boolean)
+                  }
                 />
-                <Label htmlFor="hasMobileMoney">Applicant uses mobile money</Label>
+                <Label htmlFor="hasMobileMoney">
+                  Applicant uses mobile money
+                </Label>
               </div>
             </div>
           </div>
@@ -494,72 +587,100 @@ export default function NewScoreRequestPage() {
         return (
           <div className="space-y-6">
             <div className="space-y-4">
-               <h3 className="text-sm font-medium">Utility & Rent History</h3>
-               <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Utility Payment History</Label>
-                    <Select 
-                      value={watchedValues.utilityHistory} 
-                      onValueChange={(val) => setValue('utilityHistory', val as any)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="excellent">Excellent (No delays)</SelectItem>
-                        <SelectItem value="good">Good (1-2 delays)</SelectItem>
-                        <SelectItem value="fair">Fair (Frequent delays)</SelectItem>
-                        <SelectItem value="poor">Poor (Disconnected)</SelectItem>
-                        <SelectItem value="no_data">No Data</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Rent Payment History</Label>
-                    <Select 
-                      value={watchedValues.rentHistory} 
-                      onValueChange={(val) => setValue('rentHistory', val as any)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="excellent">Excellent</SelectItem>
-                        <SelectItem value="good">Good</SelectItem>
-                        <SelectItem value="fair">Fair</SelectItem>
-                        <SelectItem value="poor">Poor</SelectItem>
-                        <SelectItem value="no_data">No Data</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-               </div>
+              <h3 className="text-sm font-medium">Utility & Rent History</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Utility Payment History</Label>
+                  <Select
+                    value={watchedValues.utilityHistory}
+                    onValueChange={(val) =>
+                      setValue("utilityHistory", val as any)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excellent">
+                        Excellent (No delays)
+                      </SelectItem>
+                      <SelectItem value="good">Good (1-2 delays)</SelectItem>
+                      <SelectItem value="fair">
+                        Fair (Frequent delays)
+                      </SelectItem>
+                      <SelectItem value="poor">Poor (Disconnected)</SelectItem>
+                      <SelectItem value="no_data">No Data</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Rent Payment History</Label>
+                  <Select
+                    value={watchedValues.rentHistory}
+                    onValueChange={(val) => setValue("rentHistory", val as any)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excellent">Excellent</SelectItem>
+                      <SelectItem value="good">Good</SelectItem>
+                      <SelectItem value="fair">Fair</SelectItem>
+                      <SelectItem value="poor">Poor</SelectItem>
+                      <SelectItem value="no_data">No Data</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
             <Separator />
 
             <div className="space-y-4">
-               <h3 className="text-sm font-medium">Telco & Mobile Money Data</h3>
-               <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Account Age (Months)</Label>
-                    <Input type="number" placeholder="24" {...register('telcoAccountAge')} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Avg. Monthly Spend (GHS)</Label>
-                    <Input type="number" placeholder="150" {...register('telcoAvgSpend')} />
-                  </div>
-               </div>
-               <div className="space-y-2">
-                  <Label>Payment Regularity</Label>
-                  <Select 
-                    value={watchedValues.telcoPaymentRegularity} 
-                    onValueChange={(val) => setValue('telcoPaymentRegularity', val as any)}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="always_on_time">Always on time</SelectItem>
-                      <SelectItem value="mostly_on_time">Mostly on time</SelectItem>
-                      <SelectItem value="sometimes_late">Sometimes late</SelectItem>
-                      <SelectItem value="often_late">Often late</SelectItem>
-                    </SelectContent>
-                  </Select>
-               </div>
+              <h3 className="text-sm font-medium">Telco & Mobile Money Data</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Account Age (Months)</Label>
+                  <Input
+                    type="number"
+                    placeholder="24"
+                    {...register("telcoAccountAge")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Avg. Monthly Spend (GHS)</Label>
+                  <Input
+                    type="number"
+                    placeholder="150"
+                    {...register("telcoAvgSpend")}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Regularity</Label>
+                <Select
+                  value={watchedValues.telcoPaymentRegularity}
+                  onValueChange={(val) =>
+                    setValue("telcoPaymentRegularity", val as any)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="always_on_time">
+                      Always on time
+                    </SelectItem>
+                    <SelectItem value="mostly_on_time">
+                      Mostly on time
+                    </SelectItem>
+                    <SelectItem value="sometimes_late">
+                      Sometimes late
+                    </SelectItem>
+                    <SelectItem value="often_late">Often late</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         );
@@ -573,20 +694,25 @@ export default function NewScoreRequestPage() {
                   <Checkbox
                     id="bureauConsent"
                     checked={watchedValues.bureauConsent}
-                    onCheckedChange={(checked) => setValue('bureauConsent', checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      setValue("bureauConsent", checked as boolean)
+                    }
                   />
                   <div className="space-y-1">
                     <Label htmlFor="bureauConsent" className="font-medium">
                       Credit Bureau Check Authorization *
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      I confirm that the applicant has provided consent for their credit information 
-                      to be retrieved from credit bureaus for the purpose of this loan assessment.
+                      I confirm that the applicant has provided consent for
+                      their credit information to be retrieved from credit
+                      bureaus for the purpose of this loan assessment.
                     </p>
                   </div>
                 </div>
                 {errors.bureauConsent && (
-                  <p className="text-sm text-destructive mt-2">{errors.bureauConsent.message}</p>
+                  <p className="text-sm text-destructive mt-2">
+                    {errors.bureauConsent.message}
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -597,15 +723,18 @@ export default function NewScoreRequestPage() {
                   <Checkbox
                     id="dataSharingConsent"
                     checked={watchedValues.dataSharingConsent}
-                    onCheckedChange={(checked) => setValue('dataSharingConsent', checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      setValue("dataSharingConsent", checked as boolean)
+                    }
                   />
                   <div className="space-y-1">
                     <Label htmlFor="dataSharingConsent" className="font-medium">
                       Data Sharing for Model Improvement (Optional)
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      I consent to anonymized loan performance data being used to improve 
-                      credit scoring models for the benefit of all platform users.
+                      I consent to anonymized loan performance data being used
+                      to improve credit scoring models for the benefit of all
+                      platform users.
                     </p>
                   </div>
                 </div>
@@ -624,19 +753,27 @@ export default function NewScoreRequestPage() {
               <CardContent className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Full Name</span>
-                  <span className="font-medium">{watchedValues.fullName || '—'}</span>
+                  <span className="font-medium">
+                    {watchedValues.fullName || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date of Birth</span>
-                  <span className="font-medium">{watchedValues.dateOfBirth || '—'}</span>
+                  <span className="font-medium">
+                    {watchedValues.dateOfBirth || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ID Number</span>
-                  <span className="font-medium">{watchedValues.nationalIdNumber || '—'}</span>
+                  <span className="font-medium">
+                    {watchedValues.nationalIdNumber || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Phone</span>
-                  <span className="font-medium">{watchedValues.phone || '—'}</span>
+                  <span className="font-medium">
+                    {watchedValues.phone || "—"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -647,16 +784,24 @@ export default function NewScoreRequestPage() {
               </CardHeader>
               <CardContent className="grid gap-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Employment Status</span>
-                  <span className="font-medium capitalize">{watchedValues.employmentStatus?.replace('_', ' ') || '—'}</span>
+                  <span className="text-muted-foreground">
+                    Employment Status
+                  </span>
+                  <span className="font-medium capitalize">
+                    {watchedValues.employmentStatus?.replace("_", " ") || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Employer</span>
-                  <span className="font-medium">{watchedValues.employerName || '—'}</span>
+                  <span className="font-medium">
+                    {watchedValues.employerName || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Monthly Income</span>
-                  <span className="font-medium">GHS {watchedValues.monthlyIncome || '0'}</span>
+                  <span className="font-medium">
+                    GHS {watchedValues.monthlyIncome || "0"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -668,35 +813,52 @@ export default function NewScoreRequestPage() {
               <CardContent className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">GHS {watchedValues.loanAmount || '0'}</span>
+                  <span className="font-medium">
+                    GHS {watchedValues.loanAmount || "0"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tenure</span>
-                  <span className="font-medium">{watchedValues.loanTenure || '0'} months</span>
+                  <span className="font-medium">
+                    {watchedValues.loanTenure || "0"} months
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                   <span className="text-muted-foreground">Purpose</span>
-                   <span className="font-medium capitalize">{watchedValues.loanPurpose || '—'}</span>
+                  <span className="text-muted-foreground">Purpose</span>
+                  <span className="font-medium capitalize">
+                    {watchedValues.loanPurpose || "—"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Alternative Data Signals</CardTitle>
+                <CardTitle className="text-lg">
+                  Alternative Data Signals
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Utility History</span>
-                  <span className="font-medium capitalize">{watchedValues.utilityHistory || '—'}</span>
+                  <span className="font-medium capitalize">
+                    {watchedValues.utilityHistory || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                   <span className="text-muted-foreground">Rent History</span>
-                   <span className="font-medium capitalize">{watchedValues.rentHistory || '—'}</span>
+                  <span className="text-muted-foreground">Rent History</span>
+                  <span className="font-medium capitalize">
+                    {watchedValues.rentHistory || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                   <span className="text-muted-foreground">Telco Regularity</span>
-                   <span className="font-medium capitalize">{watchedValues.telcoPaymentRegularity?.replace('_', ' ') || '—'}</span>
+                  <span className="text-muted-foreground">
+                    Telco Regularity
+                  </span>
+                  <span className="font-medium capitalize">
+                    {watchedValues.telcoPaymentRegularity?.replace("_", " ") ||
+                      "—"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -713,7 +875,7 @@ export default function NewScoreRequestPage() {
       {/* Page header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/score-requests">
+          <Link href={ROUTES.ORG.SCORE_REQUESTS}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -732,12 +894,12 @@ export default function NewScoreRequestPage() {
             <div className="flex flex-col items-center">
               <div
                 className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors',
+                  "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
                   currentStep > step.id
-                    ? 'bg-primary border-primary text-primary-foreground'
+                    ? "bg-primary border-primary text-primary-foreground"
                     : currentStep === step.id
-                    ? 'border-primary text-primary'
-                    : 'border-muted text-muted-foreground'
+                      ? "border-primary text-primary"
+                      : "border-muted text-muted-foreground",
                 )}
               >
                 {currentStep > step.id ? (
@@ -746,18 +908,24 @@ export default function NewScoreRequestPage() {
                   <step.icon className="w-5 h-5" />
                 )}
               </div>
-              <span className={cn(
-                'text-xs mt-1 hidden sm:block',
-                currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'
-              )}>
+              <span
+                className={cn(
+                  "text-xs mt-1 hidden sm:block",
+                  currentStep >= step.id
+                    ? "text-foreground"
+                    : "text-muted-foreground",
+                )}
+              >
                 {step.name}
               </span>
             </div>
             {index < steps.length - 1 && (
-              <div className={cn(
-                'w-8 sm:w-16 h-0.5 mx-2',
-                currentStep > step.id ? 'bg-primary' : 'bg-muted'
-              )} />
+              <div
+                className={cn(
+                  "w-8 sm:w-16 h-0.5 mx-2",
+                  currentStep > step.id ? "bg-primary" : "bg-muted",
+                )}
+              />
             )}
           </div>
         ))}

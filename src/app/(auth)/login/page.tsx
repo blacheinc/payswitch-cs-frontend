@@ -12,10 +12,13 @@ import {
   Shield,
   TrendingUp,
   Building2,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/auth-context";
+import { ROUTES } from "@/lib/constant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +48,7 @@ type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { login, verify2FA, isLoading, requires2FA } = useAuth();
-  const [loginMode, setLoginMode] = useState<"org" | "admin">("org");
+  const [loginMode, setLoginMode] = useState<"org" | "admin">("admin");
   const [showPassword, setShowPassword] = useState(false);
 
   // Login form
@@ -85,9 +88,9 @@ export default function LoginPage() {
 
         // Determine redirect based on mode
         if (loginMode === "admin") {
-          router.push("/admin/dashboard");
+          router.push(ROUTES.ADMIN.DASHBOARD);
         } else {
-          router.push("/dashboard");
+          router.push(ROUTES.ORG.DASHBOARD);
         }
         return;
       }
@@ -103,9 +106,9 @@ export default function LoginPage() {
         toast.success("Welcome back!");
 
         if (loginMode === "admin") {
-          router.push("/admin/dashboard");
+          router.push(ROUTES.ADMIN.DASHBOARD);
         } else {
-          router.push("/dashboard");
+          router.push(ROUTES.ORG.DASHBOARD);
         }
       }
     } catch (error) {
@@ -127,9 +130,9 @@ export default function LoginPage() {
       toast.success("Welcome back!");
 
       if (loginMode === "admin") {
-        router.push("/admin/dashboard");
+        router.push(ROUTES.ADMIN.DASHBOARD);
       } else {
-        router.push("/dashboard");
+        router.push(ROUTES.ORG.DASHBOARD);
       }
     } catch (error) {
       const message =
@@ -156,11 +159,11 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Image
-              src="/payswitch_logo.png"
+              src="/payswitch_logo2.png"
               alt="PaySwitch Logo"
-              width={200}
+              width={160}
               height={60}
-              className="object-contain h-10 w-auto"
+              className="object-contain"
             />
 
             {/* <span className="text-xl font-bold tracking-tight">PaySwitch Credit</span> */}
@@ -301,7 +304,7 @@ export default function LoginPage() {
                       <div className="flex items-center justify-between">
                         <Label htmlFor="password">Password</Label>
                         <Link
-                          href="/forgot-password"
+                          href={ROUTES.AUTH.FORGOT_PASSWORD}
                           className="text-sm text-primary hover:underline"
                         >
                           Forgot password?
@@ -321,7 +324,11 @@ export default function LoginPage() {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? "Hide" : "Show"}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
                         </button>
                       </div>
                       {loginForm.formState.errors.password && (

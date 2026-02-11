@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -21,15 +21,16 @@ import {
   User,
   Building2,
   Terminal,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth-context';
-import { useTheme } from '@/contexts/theme-context';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { NotificationCenter } from '@/components/shared/notification-center';
+import { cn } from "@/lib/utils";
+import { ROUTES } from "@/lib/constant";
+import { useAuth } from "@/contexts/auth-context";
+import { useTheme } from "@/contexts/theme-context";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { NotificationCenter } from "@/components/shared/notification-center";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,9 +38,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface NavItem {
   title: string;
@@ -49,12 +50,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Score Requests', href: '/score-requests', icon: FileText },
-  { title: 'Developers', href: '/developers', icon: Terminal },
-  { title: 'Team', href: '/team', icon: Users },
-  { title: 'Reports', href: '/reports', icon: BarChart3 },
-  { title: 'Settings', href: '/settings', icon: Settings },
+  { title: "Dashboard", href: ROUTES.ORG.DASHBOARD, icon: LayoutDashboard },
+  { title: "Score Requests", href: ROUTES.ORG.SCORE_REQUESTS, icon: FileText },
+  { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Terminal },
+  { title: "Team", href: ROUTES.ORG.TEAM, icon: Users },
+  { title: "Reports", href: ROUTES.ORG.REPORTS, icon: BarChart3 },
+  { title: "Settings", href: ROUTES.ORG.SETTINGS, icon: Settings },
 ];
 
 interface OrgLayoutProps {
@@ -69,9 +70,9 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -79,20 +80,20 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className={cn(
-        'flex items-center gap-3 px-4 py-6',
-        collapsed && !isMobile && 'justify-center px-2'
-      )}>
-      
-          <Image 
-            src="/payswitch_logo.png" 
-            alt="PaySwitch Logo" 
-            width={128} 
-            height={128} 
-            className="object-contain"
-            unoptimized
-          />
-        
+      <div
+        className={cn(
+          "flex items-center gap-3 px-4 py-6",
+          collapsed && !isMobile && "justify-center px-2",
+        )}
+      >
+        <Image
+          src="/payswitch_logo.png"
+          alt="PaySwitch Logo"
+          width={128}
+          height={128}
+          className="object-contain"
+          unoptimized
+        />
       </div>
 
       <Separator />
@@ -102,7 +103,9 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         <div className="px-4 py-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/50">
             <Building2 className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium truncate">{organization.name}</span>
+            <span className="text-sm font-medium truncate">
+              {organization.name}
+            </span>
           </div>
         </div>
       )}
@@ -110,18 +113,19 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || 
-            (item.href !== '/dashboard' && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                collapsed && !isMobile && 'justify-center px-2'
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                collapsed && !isMobile && "justify-center px-2",
               )}
               title={collapsed && !isMobile ? item.title : undefined}
             >
@@ -148,7 +152,12 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
             className="w-full justify-center"
             onClick={() => setCollapsed(!collapsed)}
           >
-            <ChevronLeft className={cn('w-4 h-4 transition-transform', collapsed && 'rotate-180')} />
+            <ChevronLeft
+              className={cn(
+                "w-4 h-4 transition-transform",
+                collapsed && "rotate-180",
+              )}
+            />
           </Button>
         </div>
       )}
@@ -156,21 +165,25 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
       <Separator />
 
       {/* User section */}
-      <div className={cn('p-4', collapsed && !isMobile && 'px-2')}>
-        <div className={cn(
-          'flex items-center gap-3',
-          collapsed && !isMobile && 'justify-center'
-        )}>
+      <div className={cn("p-4", collapsed && !isMobile && "px-2")}>
+        <div
+          className={cn(
+            "flex items-center gap-3",
+            collapsed && !isMobile && "justify-center",
+          )}
+        >
           <Avatar className="h-9 w-9">
             <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {user?.name ? getInitials(user.name) : 'U'}
+              {user?.name ? getInitials(user.name) : "U"}
             </AvatarFallback>
           </Avatar>
           {(!collapsed || isMobile) && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+              <p className="text-sm font-medium truncate">
+                {user?.name || "User"}
+              </p>
               <p className="text-xs text-muted-foreground truncate capitalize">
-                {user?.roleLabel?.replace('_', ' ') || 'Member'}
+                {user?.roleLabel?.replace("_", " ") || "Member"}
               </p>
             </div>
           )}
@@ -182,18 +195,22 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
-      <aside className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r bg-card transition-all duration-300 hidden lg:block',
-        collapsed ? 'w-16' : 'w-64'
-      )}>
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 h-screen border-r bg-card transition-all duration-300 hidden lg:block",
+          collapsed ? "w-16" : "w-64",
+        )}
+      >
         <SidebarContent />
       </aside>
 
       {/* Main content area */}
-      <div className={cn(
-        'transition-all duration-300',
-        collapsed ? 'lg:ml-16' : 'lg:ml-64'
-      )}>
+      <div
+        className={cn(
+          "transition-all duration-300",
+          collapsed ? "lg:ml-16" : "lg:ml-64",
+        )}
+      >
         {/* Top header */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 lg:px-6">
           {/* Mobile menu */}
@@ -219,7 +236,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
 
             {/* Theme toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {resolvedTheme === 'dark' ? (
+              {resolvedTheme === "dark" ? (
                 <Sun className="h-5 w-5" />
               ) : (
                 <Moon className="h-5 w-5" />
@@ -233,7 +250,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {user?.name ? getInitials(user.name) : 'U'}
+                      {user?.name ? getInitials(user.name) : "U"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -241,19 +258,23 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{user?.name || 'User'}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    <p className="text-sm font-medium">
+                      {user?.name || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {user?.email}
+                    </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">
+                  <Link href={ROUTES.ORG.SETTINGS}>
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">
+                  <Link href={ROUTES.ORG.SETTINGS}>
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </Link>
@@ -269,10 +290,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 p-4 lg:p-6">
-          
-          {children}
-        </main>
+        <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

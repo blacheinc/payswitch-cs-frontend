@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constant";
+import { AlertTriangle } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -19,10 +20,10 @@ export default function NotFound() {
         </p>
         <div className="mt-6 flex gap-4">
           <Button variant="outline" asChild>
-            <Link href="/">Go back home</Link>
+            <Link href={ROUTES.AUTH.LOGIN}>Go back home</Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard">Go to Dashboard</Link>
+            <Link href={ROUTES.ORG.DASHBOARD}>Go to Dashboard</Link>
           </Button>
         </div>
       </div>
