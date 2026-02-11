@@ -23,7 +23,7 @@ export default function NotFound() {
             <Link href={ROUTES.AUTH.LOGIN}>Go back home</Link>
           </Button>
           <Button asChild>
-            <Link href={ROUTES.ORG.DASHBOARD}>Go to Dashboard</Link>
+            <Link href={ROUTES.ADMIN.DASHBOARD}>Go to Dashboard</Link>
           </Button>
         </div>
       </div>

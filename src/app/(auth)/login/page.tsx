@@ -51,6 +51,9 @@ export default function LoginPage() {
     useAuth();
   const [loginMode, setLoginMode] = useState<"org" | "admin">("admin");
   const [showPassword, setShowPassword] = useState(false);
+  const enableTenantToggle =
+    process.env.NEXT_PUBLIC_ENABLE_TENANT_TOGGLE === "true";
+  console.log("tenantToggle", typeof enableTenantToggle);
 
   // Login form
   const loginForm = useForm<LoginFormData>({
@@ -344,45 +347,46 @@ export default function LoginPage() {
                     </div>
 
                     {/* Mode Toggle Link */}
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="px-0 h-auto text-primary font-medium hover:no-underline hover:text-primary/80"
-                        onClick={() => {
-                          const nextMode =
-                            loginMode === "org" ? "admin" : "org";
-                          setLoginMode(nextMode);
+                    {!!enableTenantToggle && (
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="px-0 h-auto text-primary font-medium hover:no-underline hover:text-primary/80"
+                          onClick={() => {
+                            const nextMode =
+                              loginMode === "org" ? "admin" : "org";
+                            setLoginMode(nextMode);
 
-                          // Pre-fill mock credentials for better demo experience
-                          const useMockAuth =
-                            process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
-                          if (useMockAuth) {
-                            if (nextMode === "admin") {
-                              loginForm.setValue(
-                                "email",
-                                "admin@payswitch.com.gh",
+                            // Pre-fill mock credentials for better demo experience
+                            const useMockAuth =
+                              process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
+                            if (useMockAuth) {
+                              if (nextMode === "admin") {
+                                loginForm.setValue(
+                                  "email",
+                                  "admin@payswitch.com.gh",
+                                );
+                                loginForm.setValue("password", "password123");
+                              } else {
+                                loginForm.setValue(
+                                  "email",
+                                  "officer@fidelitybank.com.gh",
+                                );
+                                loginForm.setValue("password", "password123");
+                              }
+                              toast.info(
+                                `Switched to ${nextMode === "admin" ? "Admin" : "Organization"} mode`,
                               );
-                              loginForm.setValue("password", "password123");
-                            } else {
-                              loginForm.setValue(
-                                "email",
-                                "officer@fidelitybank.com.gh",
-                              );
-                              loginForm.setValue("password", "password123");
                             }
-                            toast.info(
-                              `Switched to ${nextMode === "admin" ? "Admin" : "Organization"} mode`,
-                            );
-                          }
-                        }}
-                      >
-                        {loginMode === "org"
-                          ? "Sign in as Admin"
-                          : "Sign in as Organization"}
-                      </Button>
-                    </div>
-
+                          }}
+                        >
+                          {loginMode === "org"
+                            ? "Sign in as Admin"
+                            : "Sign in as Organization"}
+                        </Button>
+                      </div>
+                    )}
                     <Button
                       type="submit"
                       className="w-full h-11"
