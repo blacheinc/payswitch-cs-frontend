@@ -85,7 +85,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         )}
       >
         <Image
-          src="/payswitch_logo.png"
+          src={
+            resolvedTheme === "dark"
+              ? "/payswitch_logo2.png"
+              : "/payswitch_logo.png"
+          }
           alt="PaySwitch Logo"
           width={128}
           height={128}
