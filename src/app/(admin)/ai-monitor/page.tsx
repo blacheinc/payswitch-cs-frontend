@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Activity,
   ShieldCheck,
@@ -12,8 +12,12 @@ import {
   RefreshCcw,
   Network,
   Database,
-  Search,
   BrainCircuit,
+  HardDrive,
+  Server,
+  Wifi,
+  WifiOff,
+  Settings2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -23,9 +27,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend,
   Cell,
   PieChart,
   Pie,
@@ -42,6 +43,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { AIAgent, AgentActionLog, AgentStatus } from "@/types/models";
 
@@ -157,9 +171,59 @@ const workloadAllocation = [
   { name: "Manual Review", value: 15, color: "hsl(var(--muted-foreground))" },
 ];
 
+const clusterNodes = [
+  {
+    id: "node-primary",
+    name: "Primary Node",
+    role: "Master",
+    status: "healthy" as const,
+    ip: "10.0.1.10",
+    cpu: 34,
+    memory: 62,
+    disk: 45,
+    uptime: "45d 12h 38m",
+    connections: 128,
+    maxConnections: 200,
+  },
+  {
+    id: "node-worker-1",
+    name: "Worker Node 1",
+    role: "Worker",
+    status: "healthy" as const,
+    ip: "10.0.1.11",
+    cpu: 58,
+    memory: 71,
+    disk: 38,
+    uptime: "32d 8h 15m",
+    connections: 95,
+    maxConnections: 200,
+  },
+  {
+    id: "node-worker-2",
+    name: "Worker Node 2",
+    role: "Worker",
+    status: "degraded" as const,
+    ip: "10.0.1.12",
+    cpu: 87,
+    memory: 89,
+    disk: 72,
+    uptime: "12d 3h 42m",
+    connections: 184,
+    maxConnections: 200,
+  },
+];
+
 export default function AIMonitorPage() {
   const [agents, setAgents] = useState<AIAgent[]>(mockAgents);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [orchestratorOpen, setOrchestratorOpen] = useState(false);
+  const [orchestratorConfig, setOrchestratorConfig] = useState({
+    autoRestart: true,
+    maxConcurrentAgents: 5,
+    driftThreshold: 0.15,
+    emailNotifications: true,
+    slackNotifications: false,
+  });
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -167,6 +231,11 @@ export default function AIMonitorPage() {
       setIsRefreshing(false);
       toast.success("Agent status updated");
     }, 1000);
+  };
+
+  const handleSaveConfig = () => {
+    setOrchestratorOpen(false);
+    toast.success("Orchestrator configuration saved successfully");
   };
 
   const getStatusColor = (status: AgentStatus) => {
@@ -206,7 +275,128 @@ export default function AIMonitorPage() {
             />
             Refresh Agents
           </Button>
-          <Button size="sm">Configure Orchestrator</Button>
+          <Dialog open={orchestratorOpen} onOpenChange={setOrchestratorOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Settings2 className="mr-2 h-4 w-4" />
+                Configure Orchestrator
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Orchestrator Configuration</DialogTitle>
+                <DialogDescription>
+                  Manage how AI agents are orchestrated across the platform.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">
+                      Agent Auto-Restart
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically restart agents that crash or become
+                      unresponsive.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={orchestratorConfig.autoRestart}
+                    onCheckedChange={(checked) =>
+                      setOrchestratorConfig((prev) => ({
+                        ...prev,
+                        autoRestart: checked,
+                      }))
+                    }
+                  />
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Max Concurrent Agents
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={orchestratorConfig.maxConcurrentAgents}
+                    onChange={(e) =>
+                      setOrchestratorConfig((prev) => ({
+                        ...prev,
+                        maxConcurrentAgents: parseInt(e.target.value) || 1,
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Maximum number of agents running simultaneously (1–20).
+                  </p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Drift Alert Threshold
+                  </Label>
+                  <Input
+                    type="number"
+                    step={0.01}
+                    min={0.01}
+                    max={1}
+                    value={orchestratorConfig.driftThreshold}
+                    onChange={(e) =>
+                      setOrchestratorConfig((prev) => ({
+                        ...prev,
+                        driftThreshold: parseFloat(e.target.value) || 0.01,
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Trigger retraining alert when data drift exceeds this value.
+                  </p>
+                </div>
+                <Separator />
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Notifications</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm text-muted-foreground">
+                      Email Alerts
+                    </Label>
+                    <Switch
+                      checked={orchestratorConfig.emailNotifications}
+                      onCheckedChange={(checked) =>
+                        setOrchestratorConfig((prev) => ({
+                          ...prev,
+                          emailNotifications: checked,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm text-muted-foreground">
+                      Slack Alerts
+                    </Label>
+                    <Switch
+                      checked={orchestratorConfig.slackNotifications}
+                      onCheckedChange={(checked) =>
+                        setOrchestratorConfig((prev) => ({
+                          ...prev,
+                          slackNotifications: checked,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setOrchestratorOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveConfig}>Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -545,6 +735,202 @@ export default function AIMonitorPage() {
               <Button variant="ghost" className="w-full mt-4 text-xs">
                 View All Activity Logs
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="health" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            {clusterNodes.map((node) => (
+              <Card key={node.id} className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-5 w-5 text-primary" />
+                      <div>
+                        <CardTitle className="text-base">{node.name}</CardTitle>
+                        <CardDescription className="text-xs">
+                          {node.role} · {node.ip}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={
+                        node.status === "healthy" ? "outline" : "destructive"
+                      }
+                      className="capitalize"
+                    >
+                      {node.status === "healthy" ? (
+                        <Wifi className="mr-1 h-3 w-3" />
+                      ) : (
+                        <WifiOff className="mr-1 h-3 w-3" />
+                      )}
+                      {node.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <Cpu className="h-3 w-3" /> CPU
+                        </span>
+                        <span
+                          className={`font-semibold ${
+                            node.cpu > 80
+                              ? "text-red-600"
+                              : node.cpu > 60
+                                ? "text-yellow-600"
+                                : "text-green-600"
+                          }`}
+                        >
+                          {node.cpu}%
+                        </span>
+                      </div>
+                      <Progress value={node.cpu} className="h-1.5" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <Database className="h-3 w-3" /> Memory
+                        </span>
+                        <span
+                          className={`font-semibold ${
+                            node.memory > 80
+                              ? "text-red-600"
+                              : node.memory > 60
+                                ? "text-yellow-600"
+                                : "text-green-600"
+                          }`}
+                        >
+                          {node.memory}%
+                        </span>
+                      </div>
+                      <Progress value={node.memory} className="h-1.5" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <HardDrive className="h-3 w-3" /> Disk
+                        </span>
+                        <span
+                          className={`font-semibold ${
+                            node.disk > 80
+                              ? "text-red-600"
+                              : node.disk > 60
+                                ? "text-yellow-600"
+                                : "text-green-600"
+                          }`}
+                        >
+                          {node.disk}%
+                        </span>
+                      </div>
+                      <Progress value={node.disk} className="h-1.5" />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground uppercase tracking-wider text-[10px]">
+                        Uptime
+                      </p>
+                      <p className="font-semibold flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-green-600" />
+                        {node.uptime}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground uppercase tracking-wider text-[10px]">
+                        Connections
+                      </p>
+                      <p className="font-semibold">
+                        {node.connections}
+                        <span className="text-muted-foreground font-normal">
+                          /{node.maxConnections}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Cluster Summary</CardTitle>
+              <CardDescription>
+                Aggregate resource usage across all compute nodes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Total Nodes</p>
+                  <p className="text-3xl font-bold">{clusterNodes.length}</p>
+                  <p className="text-xs text-green-600 flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    {
+                      clusterNodes.filter((n) => n.status === "healthy").length
+                    }{" "}
+                    healthy
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Avg. CPU Usage
+                  </p>
+                  <p className="text-3xl font-bold">
+                    {Math.round(
+                      clusterNodes.reduce((sum, n) => sum + n.cpu, 0) /
+                        clusterNodes.length,
+                    )}
+                    %
+                  </p>
+                  <Progress
+                    value={Math.round(
+                      clusterNodes.reduce((sum, n) => sum + n.cpu, 0) /
+                        clusterNodes.length,
+                    )}
+                    className="h-1.5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Avg. Memory</p>
+                  <p className="text-3xl font-bold">
+                    {Math.round(
+                      clusterNodes.reduce((sum, n) => sum + n.memory, 0) /
+                        clusterNodes.length,
+                    )}
+                    %
+                  </p>
+                  <Progress
+                    value={Math.round(
+                      clusterNodes.reduce((sum, n) => sum + n.memory, 0) /
+                        clusterNodes.length,
+                    )}
+                    className="h-1.5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Total Connections
+                  </p>
+                  <p className="text-3xl font-bold">
+                    {clusterNodes.reduce((sum, n) => sum + n.connections, 0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    of{" "}
+                    {clusterNodes.reduce((sum, n) => sum + n.maxConnections, 0)}{" "}
+                    max
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

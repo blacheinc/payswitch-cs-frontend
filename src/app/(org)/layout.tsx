@@ -115,7 +115,8 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            (item.href !== ROUTES.ORG.DASHBOARD &&
+              pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
@@ -129,7 +130,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
               )}
               title={collapsed && !isMobile ? item.title : undefined}
             >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <item.icon className="w-5 h-5 shrink-0" />
               {(!collapsed || isMobile) && (
                 <span className="flex-1">{item.title}</span>
               )}

@@ -47,7 +47,8 @@ type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, verify2FA, isLoading, requires2FA } = useAuth();
+  const { login, verify2FA, isLoading, requires2FA, setMockAuthenticated } =
+    useAuth();
   const [loginMode, setLoginMode] = useState<"org" | "admin">("admin");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -84,6 +85,10 @@ export default function LoginPage() {
         // Set cookie for middleware
         document.cookie =
           "auth-token=mock-token; path=/; max-age=86400; SameSite=Strict";
+
+        // Update auth context state so inactivity timer starts
+        setMockAuthenticated(loginMode === "admin");
+
         toast.success("Welcome back!");
 
         // Determine redirect based on mode

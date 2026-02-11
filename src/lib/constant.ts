@@ -1,3 +1,7 @@
+// Inactivity timeout in milliseconds (5 minutes)
+export const INACTIVITY_TIMEOUT_MS = 1 * 60 * 1000;
+
+// Routes
 export const ROUTES = {
   AUTH: {
     LOGIN: "/login",
