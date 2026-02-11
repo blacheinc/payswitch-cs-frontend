@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -76,19 +77,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={cn(
-        'flex items-center gap-3 px-4 py-6',
-        collapsed && !isMobile && 'justify-center px-2'
-      )}>
-        <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-          <TrendingUp className="w-6 h-6 text-white" />
-        </div>
-        {(!collapsed || isMobile) && (
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm">PaySwitch</span>
-            <span className="text-xs text-muted-foreground">Admin Portal</span>
+            'flex items-center gap-3 px-4 py-6',
+            collapsed && !isMobile && 'justify-center px-2'
+          )}>
+          
+              <Image 
+                src="/payswitch_logo.png" 
+                alt="PaySwitch Logo" 
+                width={128} 
+                height={128} 
+                className="xobject-contain"
+                unoptimized
+              />
           </div>
-        )}
-      </div>
 
       <Separator />
 

@@ -1,25 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Urbanist } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const urbanist = Urbanist({
+  variable: "--font-urbanist",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: {
     default: "PaySwitch Credit Scoring Platform",
-    template: "%s | PaySwitch Credit"
+    template: "%s | PaySwitch Credit",
   },
-  description: "AI-powered enterprise credit scoring for financial institutions across Ghana. Real-time risk assessment and decisioning engine.",
-  keywords: ["credit scoring", "AI", "fintech", "Ghana", "PaySwitch", "risk management", "loan origination"],
+  description:
+    "AI-powered enterprise credit scoring for financial institutions across Ghana. Real-time risk assessment and decisioning engine.",
+  keywords: [
+    "credit scoring",
+    "AI",
+    "fintech",
+    "Ghana",
+    "PaySwitch",
+    "risk management",
+    "loan origination",
+  ],
   authors: [{ name: "PaySwitch Ltd" }],
   openGraph: {
     type: "website",
@@ -38,7 +42,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "PaySwitch Credit Scoring Platform",
-    description: "Enterprise-grade AI credit scoring for Ghanaian financial institutions.",
+    description:
+      "Enterprise-grade AI credit scoring for Ghanaian financial institutions.",
     creator: "@payswitch",
   },
 };
@@ -50,12 +55,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Providers>
-          {children}
-        </Providers>
+      <body className={`${urbanist.variable} font-sans antialiased`}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

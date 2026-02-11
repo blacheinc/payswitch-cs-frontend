@@ -51,11 +51,11 @@ const scoreDistribution = [
 ];
 
 const riskBreakdown = [
-  { name: 'Very Low', value: 30, color: '#22c55e' },
-  { name: 'Low', value: 33, color: '#84cc16' },
-  { name: 'Medium', value: 23, color: '#eab308' },
-  { name: 'High', value: 10, color: '#f97316' },
-  { name: 'Very High', value: 4, color: '#ef4444' },
+  { name: 'Very Low', value: 30, color: 'var(--risk-very-low)' },
+  { name: 'Low', value: 33, color: 'var(--risk-low)' },
+  { name: 'Medium', value: 23, color: 'var(--risk-medium)' },
+  { name: 'High', value: 10, color: 'var(--risk-high)' },
+  { name: 'Very High', value: 4, color: 'var(--risk-very-high)' },
 ];
 
 const recentRequests = [
@@ -68,11 +68,11 @@ const recentRequests = [
 
 const getRiskColor = (risk: string) => {
   const colors: Record<string, string> = {
-    very_low: 'bg-green-500/10 text-green-600 border-green-200',
-    low: 'bg-lime-500/10 text-lime-600 border-lime-200',
-    medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
-    high: 'bg-orange-500/10 text-orange-600 border-orange-200',
-    very_high: 'bg-red-500/10 text-red-600 border-red-200',
+    very_low: 'bg-[var(--risk-very-low)]/10 text-[var(--risk-very-low)] border-[var(--risk-very-low)]/20',
+    low: 'bg-[var(--risk-low)]/10 text-[var(--risk-low)] border-[var(--risk-low)]/20',
+    medium: 'bg-[var(--risk-medium)]/10 text-[var(--risk-medium)] border-[var(--risk-medium)]/20',
+    high: 'bg-[var(--risk-high)]/10 text-[var(--risk-high)] border-[var(--risk-high)]/20',
+    very_high: 'bg-[var(--risk-very-high)]/10 text-[var(--risk-very-high)] border-[var(--risk-very-high)]/20',
   };
   return colors[risk] || colors.medium;
 };
