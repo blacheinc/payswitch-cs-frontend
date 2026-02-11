@@ -255,10 +255,7 @@ export default function DevelopersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Terminal className="h-6 w-6 text-primary" />
-            Developer Portal
-          </h1>
+          <h1 className="text-2xl font-bold">Developer Portal</h1>
           <p className="text-muted-foreground">
             API integration tools, documentation, and sandbox environment
           </p>
@@ -735,34 +732,6 @@ export default function DevelopersPage() {
                   </TableBody>
                 </Table>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Payload Example</CardTitle>
-              <CardDescription>
-                All webhooks include an X-PaySwitch-Signature header for
-                verification
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto">
-                {`POST /webhooks/credit-score HTTP/1.1
-Content-Type: application/json
-X-PaySwitch-Signature: sha256=xxxxxxxx
-
-{
-  "event": "score.completed",
-  "request_id": "scr_FID_20250203_00142",
-  "timestamp": "2025-02-03T14:32:15Z",
-  "data": {
-    "status": "completed",
-    "score": { "value": 724, "riskCategory": "low" },
-    "risk_factors": [ ... ]
-  }
-}`}
-              </pre>
             </CardContent>
           </Card>
         </TabsContent>

@@ -171,9 +171,15 @@ export default function CompliancePage() {
 
       <Tabs defaultValue="logs" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="logs">Audit Logs</TabsTrigger>
-          <TabsTrigger value="retention">Data Retention</TabsTrigger>
-          <TabsTrigger value="reports">Compliance Reports</TabsTrigger>
+          <TabsTrigger value="logs">
+            <Search className="mr-2 h-4 w-4" /> Audit Logs
+          </TabsTrigger>
+          <TabsTrigger value="retention">
+            <Calendar className="mr-2 h-4 w-4" /> Data Retention
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            <FileText className="mr-2 h-4 w-4" /> Compliance Reports
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="logs" className="space-y-4">

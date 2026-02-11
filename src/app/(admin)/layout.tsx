@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -12,6 +12,7 @@ import {
   Menu,
   TrendingUp,
   Bot,
+  Database,
   Activity,
   FileBarChart,
   Shield,
@@ -19,14 +20,14 @@ import {
   Moon,
   Sun,
   User,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth-context';
-import { useTheme } from '@/contexts/theme-context';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { NotificationCenter } from '@/components/shared/notification-center';
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
+import { useTheme } from "@/contexts/theme-context";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationCenter } from "@/components/shared/notification-center";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,9 +35,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface NavItem {
   title: string;
@@ -45,13 +46,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { title: 'Organizations', href: '/admin/organizations', icon: Building2 },
-  { title: 'Models', href: '/admin/models', icon: Bot },
-  { title: 'AI Monitor', href: '/admin/ai-monitor', icon: Activity },
-  { title: 'Compliance', href: '/admin/compliance', icon: Shield },
-  { title: 'Reports', href: '/admin/reports', icon: FileBarChart },
-  { title: 'Settings', href: '/admin/settings', icon: Settings },
+  { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "Organizations", href: "/admin/organizations", icon: Building2 },
+  { title: "Training", href: "/admin/training", icon: Database },
+  { title: "AI Monitor", href: "/admin/ai-monitor", icon: Activity },
+  { title: "Compliance", href: "/admin/compliance", icon: Shield },
+  { title: "Reports", href: "/admin/reports", icon: FileBarChart },
+  { title: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 interface AdminLayoutProps {
@@ -66,9 +67,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -76,20 +77,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className={cn(
-            'flex items-center gap-3 px-4 py-6',
-            collapsed && !isMobile && 'justify-center px-2'
-          )}>
-          
-              <Image 
-                src="/payswitch_logo.png" 
-                alt="PaySwitch Logo" 
-                width={128} 
-                height={128} 
-                className="xobject-contain"
-                unoptimized
-              />
-          </div>
+      <div
+        className={cn(
+          "flex items-center gap-3 px-4 py-6",
+          collapsed && !isMobile && "justify-center px-2",
+        )}
+      >
+        <Image
+          src="/payswitch_logo.png"
+          alt="PaySwitch Logo"
+          width={128}
+          height={128}
+          className="xobject-contain"
+          unoptimized
+        />
+      </div>
 
       <Separator />
 
@@ -102,11 +104,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                collapsed && !isMobile && 'justify-center px-2'
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                collapsed && !isMobile && "justify-center px-2",
               )}
               title={collapsed && !isMobile ? item.title : undefined}
             >
@@ -126,7 +128,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             className="w-full justify-center"
             onClick={() => setCollapsed(!collapsed)}
           >
-            <ChevronLeft className={cn('w-4 h-4 transition-transform', collapsed && 'rotate-180')} />
+            <ChevronLeft
+              className={cn(
+                "w-4 h-4 transition-transform",
+                collapsed && "rotate-180",
+              )}
+            />
           </Button>
         </div>
       )}
@@ -134,20 +141,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <Separator />
 
       {/* User section */}
-      <div className={cn('p-4', collapsed && !isMobile && 'px-2')}>
-        <div className={cn(
-          'flex items-center gap-3',
-          collapsed && !isMobile && 'justify-center'
-        )}>
+      <div className={cn("p-4", collapsed && !isMobile && "px-2")}>
+        <div
+          className={cn(
+            "flex items-center gap-3",
+            collapsed && !isMobile && "justify-center",
+          )}
+        >
           <Avatar className="h-9 w-9">
             <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {user?.name ? getInitials(user.name) : 'U'}
+              {user?.name ? getInitials(user.name) : "U"}
             </AvatarFallback>
           </Avatar>
           {(!collapsed || isMobile) && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name || 'Admin User'}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-sm font-medium truncate">
+                {user?.name || "Admin User"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
             </div>
           )}
         </div>
@@ -158,18 +171,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
-      <aside className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r bg-card transition-all duration-300 hidden lg:block',
-        collapsed ? 'w-16' : 'w-64'
-      )}>
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 h-screen border-r bg-card transition-all duration-300 hidden lg:block",
+          collapsed ? "w-16" : "w-64",
+        )}
+      >
         <SidebarContent />
       </aside>
 
       {/* Main content area */}
-      <div className={cn(
-        'transition-all duration-300',
-        collapsed ? 'lg:ml-16' : 'lg:ml-64'
-      )}>
+      <div
+        className={cn(
+          "transition-all duration-300",
+          collapsed ? "lg:ml-16" : "lg:ml-64",
+        )}
+      >
         {/* Top header */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 lg:px-6">
           {/* Mobile menu */}
@@ -195,7 +212,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* Theme toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {resolvedTheme === 'dark' ? (
+              {resolvedTheme === "dark" ? (
                 <Sun className="h-5 w-5" />
               ) : (
                 <Moon className="h-5 w-5" />
@@ -209,7 +226,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {user?.name ? getInitials(user.name) : 'U'}
+                      {user?.name ? getInitials(user.name) : "U"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -217,8 +234,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    <p className="text-sm font-medium">
+                      {user?.name || "Admin User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {user?.email}
+                    </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -245,9 +266,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 p-4 lg:p-6">
-          {children}
-        </main>
+        <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );
