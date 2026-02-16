@@ -31,8 +31,12 @@ interface AuthState {
 
 // Auth context interface
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<{ requires2FA: boolean }>;
-  verify2FA: (code: string) => Promise<void>;
+  setSession: (
+    accessToken: string,
+    refreshToken: string,
+    userType: string,
+    user: User,
+  ) => void;
   logout: () => void;
   refreshSession: () => Promise<void>;
   setMockAuthenticated: (isAdmin?: boolean) => void;
@@ -108,78 +112,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initializeAuth();
   }, [initializeAuth]);
 
-  // Login function
-  const login = async (
-    email: string,
-    password: string,
-  ): Promise<{ requires2FA: boolean }> => {
-    setState((prev) => ({ ...prev, isLoading: true }));
-
-    try {
-      const response = await apiClient.post<{
-        requires2FA?: boolean;
-        token?: string;
-        refreshToken?: string;
-        user?: User;
-      }>("/auth/login", { email, password });
-
-      if (response.data.requires2FA) {
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          requires2FA: true,
-          pendingEmail: email,
-        }));
-        return { requires2FA: true };
-      }
-
-      // Login successful
-      const { token, refreshToken, user } = response.data;
-
-      if (token && refreshToken && user) {
-        setAuthToken(token);
-        setRefreshToken(refreshToken);
-
-        setState({
-          user,
-          organization: getOrganization(user),
-          isAuthenticated: true,
-          isLoading: false,
-          isAdmin: checkIsAdmin(user),
-          requires2FA: false,
-          pendingEmail: null,
-        });
-      }
-
-      return { requires2FA: false };
-    } catch (error) {
-      setState((prev) => ({ ...prev, isLoading: false }));
-      throw error;
-    }
-  };
-
-  // Verify 2FA code
-  const verify2FA = async (code: string): Promise<void> => {
-    if (!state.pendingEmail) {
-      throw new Error("No pending authentication");
-    }
-
-    setState((prev) => ({ ...prev, isLoading: true }));
-
-    try {
-      const response = await apiClient.post<{
-        token: string;
-        refreshToken: string;
-        user: User;
-      }>("/auth/verify-2fa", {
-        email: state.pendingEmail,
-        code,
-      });
-
-      const { token, refreshToken, user } = response.data;
-
-      setAuthToken(token);
+  // Set session from mutation
+  const setSession = useCallback(
+    (
+      accessToken: string,
+      refreshToken: string,
+      userType: string,
+      user: User,
+    ) => {
+      setAuthToken(accessToken);
       setRefreshToken(refreshToken);
+
+      const isAdmin = userType === "admin";
 
       setState({
         user,
@@ -190,11 +134,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         requires2FA: false,
         pendingEmail: null,
       });
-    } catch (error) {
-      setState((prev) => ({ ...prev, isLoading: false }));
-      throw error;
-    }
-  };
+
+      // Set cookie for middleware
+      document.cookie = `auth-token=${accessToken}; path=/; max-age=86400; SameSite=Strict`;
+    },
+    [],
+  );
 
   // Logout function
   const logout = useCallback(() => {
@@ -308,8 +253,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Context value
   const value: AuthContextType = {
     ...state,
-    login,
-    verify2FA,
+    setSession,
     logout,
     refreshSession,
     setMockAuthenticated,

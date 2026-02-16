@@ -17,6 +17,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  useLoginMutation,
+  useVerify2FAMutation,
+} from "@/hooks/use-auth-mutations";
+
 import { useAuth } from "@/contexts/auth-context";
 import { ROUTES } from "@/lib/constant";
 import { Button } from "@/components/ui/button";
@@ -47,8 +52,7 @@ type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, verify2FA, isLoading, requires2FA, setMockAuthenticated } =
-    useAuth();
+  const { setSession, requires2FA, setMockAuthenticated } = useAuth();
   const [loginMode, setLoginMode] = useState<"org" | "admin">("admin");
   const [showPassword, setShowPassword] = useState(false);
   const enableTenantToggle =
@@ -71,6 +75,12 @@ export default function LoginPage() {
       code: "",
     },
   });
+
+  // Mutations
+  const loginMutation = useLoginMutation();
+  const verify2FAMutation = useVerify2FAMutation();
+
+  const isLoading = loginMutation.isPending || verify2FAMutation.isPending;
 
   // Handle login submit
   const handleLoginSubmit = async (data: LoginFormData) => {
@@ -103,14 +113,29 @@ export default function LoginPage() {
         return;
       }
 
-      const result = await login(data.email, data.password);
+      const result = await loginMutation.mutateAsync({
+        email: data.email,
+        password: data.password,
+      });
 
       if (result.requires2FA) {
         toast.info("Please enter your 2FA code");
-      } else {
-        // In real app, cookie should be set by backend or here if using JWT
-        document.cookie =
-          "auth-token=mock-token; path=/; max-age=86400; SameSite=Strict";
+        // We need to persist that 2FA is required in local state or context if we want to switch UI
+        // The service should ideally return this info.
+        // For now, assuming the mutation returns the response data
+      } else if (
+        result.accessToken &&
+        result.refreshToken &&
+        result.user &&
+        result.userType
+      ) {
+        // Success
+        setSession(
+          result.accessToken,
+          result.refreshToken,
+          result.userType,
+          result.user,
+        );
         toast.success("Welcome back!");
 
         if (loginMode === "admin") {
@@ -120,6 +145,7 @@ export default function LoginPage() {
         }
       }
     } catch (error) {
+      // Error is handled by mutation onError or here
       const message =
         error instanceof Error
           ? error.message
@@ -131,16 +157,30 @@ export default function LoginPage() {
   // Handle 2FA submit
   const handle2FASubmit = async (data: TwoFactorFormData) => {
     try {
-      await verify2FA(data.code);
-      // Set cookie for middleware
-      document.cookie =
-        "auth-token=mock-token; path=/; max-age=86400; SameSite=Strict";
-      toast.success("Welcome back!");
+      const result = await verify2FAMutation.mutateAsync({
+        code: data.code,
+        email: loginForm.getValues("email"), // pass email from form state
+      });
 
-      if (loginMode === "admin") {
-        router.push(ROUTES.ADMIN.DASHBOARD);
-      } else {
-        router.push(ROUTES.ORG.DASHBOARD);
+      if (
+        result.accessToken &&
+        result.refreshToken &&
+        result.user &&
+        result.userType
+      ) {
+        setSession(
+          result.accessToken,
+          result.refreshToken,
+          result.userType,
+          result.user,
+        );
+        toast.success("Welcome back!");
+
+        if (loginMode === "admin") {
+          router.push(ROUTES.ADMIN.DASHBOARD);
+        } else {
+          router.push(ROUTES.ORG.DASHBOARD);
+        }
       }
     } catch (error) {
       const message =

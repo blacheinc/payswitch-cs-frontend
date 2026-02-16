@@ -2,18 +2,28 @@
 
 // ==================== ENUMS ====================
 
-export type OrganizationStatus = 'pending' | 'active' | 'suspended';
-export type IndustryType = 'bank' | 'fintech' | 'mfi' | 'sacco' | 'other';
-export type UserRoleLabel = 'admin' | 'credit_officer' | 'developer' | 'viewer';
-export type UserStatus = 'pending' | 'active' | 'removed';
-export type ApiKeyEnvironment = 'sandbox' | 'production';
-export type ApiKeyStatus = 'active' | 'revoked';
-export type ScoreRequestStatus = 'pending' | 'processing' | 'completed' | 'failed';
-export type ScoreRequestSource = 'api' | 'web_portal' | 'bulk';
-export type RiskCategory = 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
-export type DataQualityFlag = 'sufficient' | 'limited' | 'thin_file';
-export type DecisionType = 'approved' | 'declined' | 'referred' | 'pending';
-export type ModelStatus = 'training' | 'validation' | 'staging' | 'production' | 'deprecated' | 'archived';
+export type OrganizationStatus = "pending" | "active" | "suspended";
+export type IndustryType = "bank" | "fintech" | "mfi" | "sacco" | "other";
+export type UserRoleLabel = "admin" | "credit_officer" | "developer" | "viewer";
+export type UserStatus = "pending" | "active" | "removed";
+export type ApiKeyEnvironment = "sandbox" | "production";
+export type ApiKeyStatus = "active" | "revoked";
+export type ScoreRequestStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
+export type ScoreRequestSource = "api" | "web_portal" | "bulk";
+export type RiskCategory = "very_low" | "low" | "medium" | "high" | "very_high";
+export type DataQualityFlag = "sufficient" | "limited" | "thin_file";
+export type DecisionType = "approved" | "declined" | "referred" | "pending";
+export type ModelStatus =
+  | "training"
+  | "validation"
+  | "staging"
+  | "production"
+  | "deprecated"
+  | "archived";
 
 // ==================== ORGANIZATION ====================
 
@@ -57,13 +67,23 @@ export interface User {
 
 export interface AdminUser extends User {
   isAdmin: true;
-  adminRole: 'super_admin' | 'data_science' | 'operations';
+  adminRole: "super_admin" | "data_science" | "operations";
 }
 
 export interface OrgUser extends User {
   organizationId: string;
   organization: Organization;
 }
+
+export interface AuthResponse {
+  requires2FA?: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: User;
+  userType?: string;
+}
+
+export interface LoginResponse extends AuthResponse {}
 
 // ==================== API KEYS ====================
 
@@ -94,10 +114,15 @@ export interface ApiKeyWithSecret extends ApiKey {
 export interface ApplicantInfo {
   fullName: string;
   dateOfBirth: string;
-  nationalIdType: 'ghana_card' | 'voter_id' | 'passport' | 'drivers_license' | 'nhis';
+  nationalIdType:
+    | "ghana_card"
+    | "voter_id"
+    | "passport"
+    | "drivers_license"
+    | "nhis";
   nationalIdNumber: string;
-  gender?: 'male' | 'female' | 'other';
-  maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed' | 'separated';
+  gender?: "male" | "female" | "other";
+  maritalStatus?: "single" | "married" | "divorced" | "widowed" | "separated";
   phone: string;
   email?: string;
   address?: {
@@ -107,11 +132,20 @@ export interface ApplicantInfo {
     digitalAddress?: string;
   };
   dependents?: number;
-  educationLevel?: 'none' | 'primary' | 'jhs' | 'shs' | 'vocational' | 'diploma' | 'bachelors' | 'masters' | 'doctorate';
+  educationLevel?:
+    | "none"
+    | "primary"
+    | "jhs"
+    | "shs"
+    | "vocational"
+    | "diploma"
+    | "bachelors"
+    | "masters"
+    | "doctorate";
 }
 
 export interface EmploymentInfo {
-  status: 'employed' | 'self_employed' | 'unemployed' | 'retired' | 'student';
+  status: "employed" | "self_employed" | "unemployed" | "retired" | "student";
   employerName?: string;
   employerIndustry?: string;
   jobTitle?: string;
@@ -119,7 +153,12 @@ export interface EmploymentInfo {
   totalWorkExperienceMonths?: number;
   monthlyIncome: number;
   incomeCurrency?: string;
-  incomeVerificationType?: 'payslip' | 'bank_statement' | 'tax_return' | 'employer_letter' | 'none';
+  incomeVerificationType?:
+    | "payslip"
+    | "bank_statement"
+    | "tax_return"
+    | "employer_letter"
+    | "none";
   otherIncome?: number;
   otherIncomeSource?: string;
 }
@@ -127,33 +166,56 @@ export interface EmploymentInfo {
 export interface LoanRequestInfo {
   amount: number;
   currency?: string;
-  purpose: 'personal' | 'business' | 'education' | 'housing' | 'vehicle' | 'medical' | 'agriculture' | 'debt_consolidation' | 'other';
+  purpose:
+    | "personal"
+    | "business"
+    | "education"
+    | "housing"
+    | "vehicle"
+    | "medical"
+    | "agriculture"
+    | "debt_consolidation"
+    | "other";
   purposeDescription?: string;
   tenureMonths: number;
-  collateralType?: 'none' | 'vehicle' | 'property' | 'equipment' | 'inventory' | 'cash_deposit' | 'guarantor' | 'other';
+  collateralType?:
+    | "none"
+    | "vehicle"
+    | "property"
+    | "equipment"
+    | "inventory"
+    | "cash_deposit"
+    | "guarantor"
+    | "other";
   collateralValue?: number;
 }
 
 export interface ExistingLoan {
   lenderName?: string;
-  loanType?: 'personal' | 'mortgage' | 'auto' | 'business' | 'credit_card' | 'other';
+  loanType?:
+    | "personal"
+    | "mortgage"
+    | "auto"
+    | "business"
+    | "credit_card"
+    | "other";
   originalAmount?: number;
   outstandingBalance?: number;
   monthlyPayment?: number;
-  status?: 'current' | 'past_due' | 'default' | 'paid_off';
+  status?: "current" | "past_due" | "default" | "paid_off";
   daysPastDue?: number;
 }
 
 export interface BankAccount {
   bankName?: string;
-  accountType?: 'savings' | 'current' | 'fixed_deposit';
+  accountType?: "savings" | "current" | "fixed_deposit";
   averageBalance3m?: number;
   accountAgeMonths?: number;
 }
 
 export interface MobileMoneyInfo {
   active: boolean;
-  providers?: ('mtn_momo' | 'vodafone_cash' | 'airteltigo_money')[];
+  providers?: ("mtn_momo" | "vodafone_cash" | "airteltigo_money")[];
   avgMonthlyInflow?: number;
   avgMonthlyOutflow?: number;
   accountAgeMonths?: number;
@@ -192,7 +254,7 @@ export interface ScoreRequestPayload {
   alternativeData?: AlternativeData;
   consent: ConsentInfo;
   metadata?: {
-    channel?: 'branch' | 'online' | 'mobile_app' | 'agent' | 'call_center';
+    channel?: "branch" | "online" | "mobile_app" | "agent" | "call_center";
     productType?: string;
     branchCode?: string;
     officerId?: string;
@@ -203,13 +265,13 @@ export interface ScoreRequestPayload {
 // ==================== ALTERNATIVE DATA ====================
 
 export interface UtilityPaymentInfo {
-  history: 'excellent' | 'good' | 'fair' | 'poor' | 'no_data';
+  history: "excellent" | "good" | "fair" | "poor" | "no_data";
   lastPaymentDate?: string;
   avgMonthlyBill?: number;
 }
 
 export interface RentPaymentInfo {
-  history: 'excellent' | 'good' | 'fair' | 'poor' | 'no_data';
+  history: "excellent" | "good" | "fair" | "poor" | "no_data";
   monthlyRent?: number;
   tenureMonths?: number;
 }
@@ -217,8 +279,12 @@ export interface RentPaymentInfo {
 export interface TelcoDataInfo {
   accountAgeMonths?: number;
   avgMonthlySpend?: number;
-  paymentRegularity: 'always_on_time' | 'mostly_on_time' | 'sometimes_late' | 'often_late';
-  momoUsageFrequency: 'high' | 'medium' | 'low' | 'none';
+  paymentRegularity:
+    | "always_on_time"
+    | "mostly_on_time"
+    | "sometimes_late"
+    | "often_late";
+  momoUsageFrequency: "high" | "medium" | "low" | "none";
 }
 
 export interface AlternativeData {
@@ -226,8 +292,8 @@ export interface AlternativeData {
   rentPaymentHistory?: RentPaymentInfo;
   telcoData?: TelcoDataInfo;
   socialSignals?: {
-    platform: 'linkedin' | 'professional_association';
-    verificationStatus: 'verified' | 'unverified';
+    platform: "linkedin" | "professional_association";
+    verificationStatus: "verified" | "unverified";
   }[];
 }
 
@@ -237,22 +303,30 @@ export interface ScoreComponent {
   score: number;
   maxScore: number;
   weight: number;
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  grade: "A" | "B" | "C" | "D" | "F";
 }
 
 export interface RiskFactor {
   code: string;
-  category: 'payment_history' | 'credit_utilization' | 'credit_age' | 'credit_mix' | 'new_credit' | 'income' | 'debt' | 'other';
+  category:
+    | "payment_history"
+    | "credit_utilization"
+    | "credit_age"
+    | "credit_mix"
+    | "new_credit"
+    | "income"
+    | "debt"
+    | "other";
   description: string;
-  impact: 'positive' | 'negative' | 'neutral';
-  severity: 'high' | 'medium' | 'low';
+  impact: "positive" | "negative" | "neutral";
+  severity: "high" | "medium" | "low";
   detail?: string;
 }
 
 export interface Recommendation {
-  type: 'approve' | 'verify' | 'condition' | 'decline' | 'refer';
+  type: "approve" | "verify" | "condition" | "decline" | "refer";
   message: string;
-  priority: 'required' | 'recommended' | 'optional';
+  priority: "required" | "recommended" | "optional";
 }
 
 export interface AffordabilityAssessment {
@@ -260,7 +334,11 @@ export interface AffordabilityAssessment {
   debtToIncomeCurrent?: number;
   debtToIncomeProjected?: number;
   disposableIncome?: number;
-  affordabilityAssessment?: 'comfortable' | 'manageable' | 'stretched' | 'unaffordable';
+  affordabilityAssessment?:
+    | "comfortable"
+    | "manageable"
+    | "stretched"
+    | "unaffordable";
   maxRecommendedAmount?: number;
 }
 
@@ -387,12 +465,17 @@ export interface ModelVersion {
 
 // ==================== AGENTIC AI ====================
 
-export type AgentStatus = 'idle' | 'running' | 'warning' | 'error' | 'offline';
+export type AgentStatus = "idle" | "running" | "warning" | "error" | "offline";
 
 export interface AIAgent {
   id: string;
   name: string;
-  role: 'data_quality' | 'feature_engineering' | 'risk_scoring' | 'retraining' | 'compliance_checker';
+  role:
+    | "data_quality"
+    | "feature_engineering"
+    | "risk_scoring"
+    | "retraining"
+    | "compliance_checker";
   status: AgentStatus;
   lastAction: string;
   lastActionAt: string;
@@ -410,8 +493,8 @@ export interface AgentActionLog {
   agentId: string;
   actionType: string;
   description: string;
-  impact: 'low' | 'medium' | 'high';
-  status: 'success' | 'failure' | 'in_progress';
+  impact: "low" | "medium" | "high";
+  status: "success" | "failure" | "in_progress";
   timestamp: string;
 }
 

@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useForgotPasswordMutation } from "@/hooks/use-auth-mutations";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -41,15 +42,23 @@ export default function ForgotPasswordPage() {
     formState: { errors },
   } = form;
 
+  const forgotPasswordMutation = useForgotPasswordMutation();
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Construct callback URL pointing to reset-password page
+      const callbackUrl = `${window.location.origin}${ROUTES.AUTH.RESET_PASSWORD}`;
+
+      await forgotPasswordMutation.mutateAsync({
+        email: data.email,
+        callbackUrl,
+      });
       console.log("Reset password for:", data.email);
       setIsSubmitted(true);
-      toast.success("Reset link sent to your email");
+      // toast success handled in mutation
     } catch {
+      // toast error handled in mutation or here if we want override
       toast.error("Failed to send reset link. Please try again.");
     } finally {
       setIsSubmitting(false);
