@@ -84,7 +84,7 @@
   --accent: #ebecf0;
   --accent-foreground: #172b4d;
 
-  --destructive: #e11d48;
+  --destructive: #de350b;
   --border: #dfe1e6;
   --input: #dfe1e6;
   --ring: #0c4eaa;
@@ -97,9 +97,9 @@
   --risk-very-high: #bf2600;
 
   /* Success and warning */
-  --success: #36b37e;
+  --success: #00875a;
   --success-foreground: #ffffff;
-  --warning: #ffab00;
+  --warning: #ff991f;
   --warning-foreground: #172b4d;
 
   /* Chart colors - Aligning with brand blue */
@@ -181,17 +181,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* font-family:
-      var(--font-urbanist),
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      "Helvetica Neue",
-      Arial,
-      sans-serif; */
   }
 }
 

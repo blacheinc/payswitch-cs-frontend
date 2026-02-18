@@ -9,12 +9,14 @@ import {
   ReactNode,
   useCallback,
 } from "react";
-import apiClient, {
-  setAuthToken,
-  setRefreshToken,
-  removeAuthToken,
-  getAuthToken,
-} from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
+import { API_ENDPOINTS } from "@/lib/constant";
+import {
+  saveSession,
+  getSession,
+  clearSession,
+  getAccessToken,
+} from "@/lib/session-storage";
 import { User, Organization, AdminUser, OrgUser } from "@/types/models";
 import { INACTIVITY_TIMEOUT_MS } from "@/lib/constant";
 
@@ -78,33 +80,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return (user as OrgUser).organization || null;
   };
 
-  // Initialize auth state from token
+  // Initialize auth state from stored session
   const initializeAuth = useCallback(async () => {
-    const token = getAuthToken();
+    const session = getSession();
 
-    if (!token) {
+    if (!session) {
       setState((prev) => ({ ...prev, isLoading: false }));
       return;
     }
 
-    try {
-      const response = await apiClient.get<{ user: User }>("/auth/me");
-      const user = response.data.user;
+    // Hydrate from stored session immediately
+    setState({
+      user: session.user,
+      organization: getOrganization(session.user),
+      isAuthenticated: true,
+      isLoading: false,
+      isAdmin: checkIsAdmin(session.user),
+      requires2FA: false,
+      pendingEmail: null,
+    });
 
-      setState({
-        user,
-        organization: getOrganization(user),
-        isAuthenticated: true,
-        isLoading: false,
-        isAdmin: checkIsAdmin(user),
-        requires2FA: false,
-        pendingEmail: null,
-      });
-    } catch {
-      // Token invalid - clear it
-      removeAuthToken();
-      setState((prev) => ({ ...prev, isLoading: false }));
-    }
+    // Note: /auth/me is not available in the current API spec.
+    // The session hydrated from localStorage/cookie is the source of truth.
+    // Re-enable this block when the backend adds a /auth/me endpoint.
   }, []);
 
   // Initialize on mount
@@ -120,10 +118,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       userType: string,
       user: User,
     ) => {
-      setAuthToken(accessToken);
-      setRefreshToken(refreshToken);
-
-      const isAdmin = userType === "admin";
+      // Persist complete session data (localStorage + cookie)
+      saveSession({ accessToken, refreshToken, userType, user });
 
       setState({
         user,
@@ -134,20 +130,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         requires2FA: false,
         pendingEmail: null,
       });
-
-      // Set cookie for middleware
-      document.cookie = `auth-token=${accessToken}; path=/; max-age=86400; SameSite=Strict`;
     },
     [],
   );
 
   // Logout function
   const logout = useCallback(() => {
-    removeAuthToken();
-    // Clear auth cookie (used by mock auth and middleware)
-    if (typeof document !== "undefined") {
-      document.cookie = "auth-token=; path=/; max-age=0; SameSite=Strict";
-    }
+    clearSession();
     setState({
       ...initialState,
       isLoading: false,
@@ -202,13 +191,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Check both context state and cookie for mock-auth compatibility
-    const hasAuthCookie =
-      typeof document !== "undefined" &&
-      document.cookie
-        .split(";")
-        .some((c) => c.trim().startsWith("auth-token="));
-    const isLoggedIn = state.isAuthenticated || hasAuthCookie;
+    // Check both context state and stored session for mock-auth compatibility
+    const hasSession = typeof window !== "undefined" && getSession() !== null;
+    const isLoggedIn = state.isAuthenticated || hasSession;
 
     if (!isLoggedIn) return;
 

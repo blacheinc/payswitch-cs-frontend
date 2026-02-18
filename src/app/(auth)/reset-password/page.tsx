@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useResetPasswordMutation } from "@/hooks/use-auth-mutations";
+import { useMutation } from "@tanstack/react-query";
+import { authService } from "@/lib/auth-service";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constant";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,7 @@ type FormData = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [isSuccess, setIsSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -72,33 +73,32 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const resetPasswordMutation = useResetPasswordMutation();
+  const resetPasswordMutation = useMutation({
+    mutationFn: (data: { token: string; password: string }) =>
+      authService.resetPassword(data.token, data.password),
+    onSuccess: () => {
+      toast.success("Password reset successfully");
+      setIsSuccess(true);
+      // Auto redirect after 3 seconds
+      setTimeout(() => {
+        router.push(ROUTES.AUTH.LOGIN);
+      }, 3000);
+    },
+    onError: () => {
+      toast.error("Failed to reset password. Link may be expired.");
+    },
+  });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = (data: FormData) => {
     if (!token) {
       toast.error("Invalid or missing reset token. Please request a new link.");
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await resetPasswordMutation.mutateAsync({
-        token,
-        password: data.password,
-      });
-      console.log("Password reset successful");
-      setIsSuccess(true);
-      toast.success("Password has been reset successfully");
-
-      // Auto redirect after 3 seconds
-      setTimeout(() => {
-        router.push(ROUTES.AUTH.LOGIN);
-      }, 3000);
-    } catch {
-      toast.error("Failed to reset password. Link may be expired.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    resetPasswordMutation.mutate({
+      token,
+      password: data.password,
+    });
   };
 
   if (isSuccess) {
@@ -241,9 +241,11 @@ export default function ResetPasswordPage() {
             <Button
               className="w-full"
               type="submit"
-              disabled={isSubmitting || !form.formState.isValid}
+              disabled={
+                resetPasswordMutation.isPending || !form.formState.isValid
+              }
             >
-              {isSubmitting ? (
+              {resetPasswordMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Resetting...

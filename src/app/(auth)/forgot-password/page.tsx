@@ -20,7 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useForgotPasswordMutation } from "@/hooks/use-auth-mutations";
+import { useMutation } from "@tanstack/react-query";
+import { authService } from "@/lib/auth-service";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -29,7 +30,6 @@ const forgotPasswordSchema = z.object({
 type FormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const form = useForm<FormData>({
@@ -42,27 +42,24 @@ export default function ForgotPasswordPage() {
     formState: { errors },
   } = form;
 
-  const forgotPasswordMutation = useForgotPasswordMutation();
-
-  const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
-    try {
-      // Construct callback URL pointing to reset-password page
-      const callbackUrl = `${window.location.origin}${ROUTES.AUTH.RESET_PASSWORD}`;
-
-      await forgotPasswordMutation.mutateAsync({
-        email: data.email,
-        callbackUrl,
-      });
-      console.log("Reset password for:", data.email);
+  const forgotPasswordMutation = useMutation({
+    mutationFn: (data: { email: string; callbackUrl: string }) =>
+      authService.forgotPassword(data.email, data.callbackUrl),
+    onSuccess: (data) => {
       setIsSubmitted(true);
-      // toast success handled in mutation
-    } catch {
-      // toast error handled in mutation or here if we want override
+      toast.success(data.message);
+    },
+    onError: () => {
       toast.error("Failed to send reset link. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+  });
+
+  const onSubmit = (data: FormData) => {
+    const callbackUrl = `${window.location.origin}${ROUTES.AUTH.RESET_PASSWORD}`;
+    forgotPasswordMutation.mutate({
+      email: data.email,
+      callbackUrl,
+    });
   };
 
   return (
@@ -85,9 +82,7 @@ export default function ForgotPasswordPage() {
           {isSubmitted ? (
             <div className="text-center space-y-4">
               <div className="p-4 bg-green-50 text-green-700 rounded-md text-sm">
-                If an account exists for{" "}
-                <strong>{form.getValues("email")}</strong>, we have sent a
-                password reset link to it.
+                {forgotPasswordMutation.data?.message}
               </div>
               <p className="text-sm text-muted-foreground">
                 Please check your email inbox and spam folder.
@@ -116,8 +111,12 @@ export default function ForgotPasswordPage() {
                   </p>
                 )}
               </div>
-              <Button className="w-full" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button
+                className="w-full"
+                type="submit"
+                disabled={forgotPasswordMutation.isPending}
+              >
+                {forgotPasswordMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Sending link...

@@ -1,0 +1,4368 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PaySwitch Credit Scoring API",
+    "description": "B2B SaaS Credit Scoring Platform API for Ghanaian Financial Institutions",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health Check",
+        "description": "Liveness probe – always returns ok if the process is running.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Readiness Check",
+        "description": "Readiness probe – checks all critical dependencies.",
+        "operationId": "readiness_check_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadinessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login",
+        "description": "Authenticate via email/password. Returns JWT tokens.",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh Token",
+        "description": "Exchange a refresh token for a new access token.",
+        "operationId": "refresh_token_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshTokenRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TokenResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout",
+        "description": "Invalidate the current session (client should discard tokens).",
+        "operationId": "logout_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Forgot Password",
+        "description": "Request a password reset email.",
+        "operationId": "forgot_password_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ForgotPasswordRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Reset Password",
+        "description": "Reset password using a reset token.",
+        "operationId": "reset_password_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResetPasswordRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify Email",
+        "description": "Verify email address with token from welcome email.",
+        "operationId": "verify_email_auth_verify_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VerifyEmailRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/2fa/setup": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Setup 2Fa",
+        "description": "Generate TOTP secret for 2FA setup.",
+        "operationId": "setup_2fa_auth_2fa_setup_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Setup2FAResponse" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/auth/2fa/verify": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify 2Fa",
+        "description": "Verify TOTP code during 2FA login flow.",
+        "operationId": "verify_2fa_auth_2fa_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Verify2FARequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Verify2FAResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Change Password",
+        "description": "Change own password (authenticated users).",
+        "operationId": "change_password_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChangePasswordRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/admin/organizations": {
+      "post": {
+        "tags": ["Admin – Organizations"],
+        "summary": "Create Organization",
+        "description": "Create a new organization (admin only).",
+        "operationId": "create_organization_admin_organizations_post",
+        "security": [{ "HTTPBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Admin – Organizations"],
+        "summary": "List Organizations",
+        "description": "List all organizations (paginated).",
+        "operationId": "list_organizations_admin_organizations_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OrganizationResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{org_id}": {
+      "get": {
+        "tags": ["Admin – Organizations"],
+        "summary": "Get Organization",
+        "description": "Get organization details.",
+        "operationId": "get_organization_admin_organizations__org_id__get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Org Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Admin – Organizations"],
+        "summary": "Update Organization",
+        "description": "Update organization details.",
+        "operationId": "update_organization_admin_organizations__org_id__patch",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Org Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{org_id}/provision": {
+      "post": {
+        "tags": ["Admin – Organizations"],
+        "summary": "Provision Organization",
+        "description": "Provision org: activate, create admin user, generate API keys, send welcome email.",
+        "operationId": "provision_organization_admin_organizations__org_id__provision_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Org Id" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProvisionOrganizationRequest"
+                  },
+                  { "type": "null" }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProvisionResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{org_id}/suspend": {
+      "post": {
+        "tags": ["Admin – Organizations"],
+        "summary": "Suspend Organization",
+        "description": "Suspend an organization (with reason).",
+        "operationId": "suspend_organization_admin_organizations__org_id__suspend_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Org Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SuspendRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{org_id}/activate": {
+      "post": {
+        "tags": ["Admin – Organizations"],
+        "summary": "Activate Organization",
+        "description": "Re-activate a suspended organization.",
+        "operationId": "activate_organization_admin_organizations__org_id__activate_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Org Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/upload": {
+      "post": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Upload Training Data",
+        "description": "Upload a bank data file for mapping and training.\n\nAccepts CSV, JSON, XLSX, TSV, or TXT files.\nThe file is parsed synchronously to extract headers and sample rows,\nthen a Service Bus event is published to trigger the Data Quality Agent.",
+        "operationId": "upload_training_data_admin_training_data_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_training_data_admin_training_data_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/admin/training-data": {
+      "get": {
+        "tags": ["Admin – Training Data"],
+        "summary": "List Uploads",
+        "description": "List all training data uploads (paginated).",
+        "operationId": "list_uploads_admin_training_data_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TrainingUploadResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/{upload_id}": {
+      "get": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Get Upload",
+        "description": "Get upload details + quality report.",
+        "operationId": "get_upload_admin_training_data__upload_id__get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/{upload_id}/status": {
+      "get": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Get Upload Status",
+        "description": "Lightweight status poll for frontend.",
+        "operationId": "get_upload_status_admin_training_data__upload_id__status_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/{upload_id}/mapping": {
+      "get": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Get Mapping",
+        "description": "Get field mappings + sample data for admin review.",
+        "operationId": "get_mapping_admin_training_data__upload_id__mapping_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Update Mapping",
+        "description": "Admin corrects field mappings before approval.",
+        "operationId": "update_mapping_admin_training_data__upload_id__mapping_put",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateMappingsRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/{upload_id}/approve": {
+      "post": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Approve Upload",
+        "description": "Approve mapping and trigger data transformation.",
+        "operationId": "approve_upload_admin_training_data__upload_id__approve_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  { "$ref": "#/components/schemas/ApproveUploadRequest" },
+                  { "type": "null" }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/{upload_id}/reject": {
+      "post": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Reject Upload",
+        "description": "Reject a mapping with a reason.",
+        "operationId": "reject_upload_admin_training_data__upload_id__reject_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RejectUploadRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/{upload_id}/retry": {
+      "post": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Retry Upload",
+        "description": "Re-trigger the Data Quality Agent for a failed upload.",
+        "operationId": "retry_upload_admin_training_data__upload_id__retry_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/training-data/{upload_id}/mapping-callback": {
+      "post": {
+        "tags": ["Admin – Training Data"],
+        "summary": "Mapping Callback",
+        "description": "Callback endpoint for the Data Quality Agent to submit mapping results.\n\nThis is called by the Azure Function after processing is complete.\nIn production, this would be protected by a service-to-service auth token.",
+        "operationId": "mapping_callback_admin_training_data__upload_id__mapping_callback_post",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Upload Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingCallbackPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" },
+                  "title": "Response Mapping Callback Admin Training Data  Upload Id  Mapping Callback Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/sources": {
+      "post": {
+        "tags": ["Admin – Data Sources"],
+        "summary": "Create Source",
+        "description": "Register a new data source (bank/institution).",
+        "operationId": "create_source_admin_sources_post",
+        "security": [{ "HTTPBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDataSourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DataSourceResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Admin – Data Sources"],
+        "summary": "List Sources",
+        "description": "List all registered data sources.",
+        "operationId": "list_sources_admin_sources_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "source_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Source Type"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DataSourceResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/sources/{source_id}": {
+      "get": {
+        "tags": ["Admin – Data Sources"],
+        "summary": "Get Source",
+        "description": "Get source details, including template availability.",
+        "operationId": "get_source_admin_sources__source_id__get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSourceDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/sources/{source_id}/template": {
+      "get": {
+        "tags": ["Admin – Data Sources"],
+        "summary": "Get Template",
+        "description": "Get the active mapping template for a data source.",
+        "operationId": "get_template_admin_sources__source_id__template_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    { "$ref": "#/components/schemas/MappingTemplateResponse" },
+                    { "type": "null" }
+                  ],
+                  "title": "Response Get Template Admin Sources  Source Id  Template Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/sources/{source_id}/uploads": {
+      "get": {
+        "tags": ["Admin – Data Sources"],
+        "summary": "List Source Uploads",
+        "description": "List all uploads for a specific data source.",
+        "operationId": "list_source_uploads_admin_sources__source_id__uploads_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TrainingUploadResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score-requests": {
+      "post": {
+        "tags": ["Scoring API"],
+        "summary": "Create Score Request",
+        "description": "Submit a credit score request.\n\nSupports both API key and JWT authentication.\nUse the `Idempotency-Key` header to prevent duplicate requests.",
+        "operationId": "create_score_request_v1_score_requests_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScoreRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Scoring API"],
+        "summary": "List Score Requests",
+        "description": "List all score requests for the authenticated organization.",
+        "operationId": "list_score_requests_v1_score_requests_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ScoreRequestSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score-requests/{request_id}": {
+      "get": {
+        "tags": ["Scoring API"],
+        "summary": "Get Score Request",
+        "description": "Get the result of a score request by tracking ID.",
+        "operationId": "get_score_request_v1_score_requests__request_id__get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Request Id" }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score-requests/{request_id}/outcome": {
+      "post": {
+        "tags": ["Scoring API"],
+        "summary": "Record Outcome",
+        "description": "Record the lending decision for a score request (for model feedback).",
+        "operationId": "record_outcome_v1_score_requests__request_id__outcome_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Request Id" }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RecordOutcomeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OutcomeResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score-requests/{request_id}/performance": {
+      "post": {
+        "tags": ["Scoring API"],
+        "summary": "Record Performance",
+        "description": "Report loan performance data (for model training feedback loop).",
+        "operationId": "record_performance_v1_score_requests__request_id__performance_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Request Id" }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPerformanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PerformanceResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/profile": {
+      "get": {
+        "tags": ["Org Portal – Profile"],
+        "summary": "Get Org Profile",
+        "operationId": "get_org_profile_org_profile_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      },
+      "patch": {
+        "tags": ["Org Portal – Profile"],
+        "summary": "Update Org Profile",
+        "operationId": "update_org_profile_org_profile_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/org/users": {
+      "post": {
+        "tags": ["Org Portal – Users"],
+        "summary": "Invite User",
+        "description": "Invite a new user to the organization.",
+        "operationId": "invite_user_org_users_post",
+        "security": [{ "HTTPBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InviteUserRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OrgUserResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Org Portal – Users"],
+        "summary": "List Users",
+        "operationId": "list_users_org_users_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OrgUserResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/users/{user_id}": {
+      "delete": {
+        "tags": ["Org Portal – Users"],
+        "summary": "Remove User",
+        "description": "Remove a user from the organization.",
+        "operationId": "remove_user_org_users__user_id__delete",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "User Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/api-keys": {
+      "get": {
+        "tags": ["Org Portal – API Keys"],
+        "summary": "List Api Keys",
+        "operationId": "list_api_keys_org_api_keys_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/ApiKeyResponse" },
+                  "type": "array",
+                  "title": "Response List Api Keys Org Api Keys Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      },
+      "post": {
+        "tags": ["Org Portal – API Keys"],
+        "summary": "Create Api Key",
+        "description": "Generate a new API key.",
+        "operationId": "create_api_key_org_api_keys_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateApiKeyRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/org/api-keys/{key_id}": {
+      "delete": {
+        "tags": ["Org Portal – API Keys"],
+        "summary": "Revoke Api Key",
+        "operationId": "revoke_api_key_org_api_keys__key_id__delete",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Key Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/webhooks/events": {
+      "get": {
+        "tags": ["Org Portal – Webhooks"],
+        "summary": "List Webhook Events",
+        "description": "Return all supported webhook event types.",
+        "operationId": "list_webhook_events_org_webhooks_events_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "additionalProperties": true, "type": "object" },
+                  "type": "array",
+                  "title": "Response List Webhook Events Org Webhooks Events Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/webhooks": {
+      "get": {
+        "tags": ["Org Portal – Webhooks"],
+        "summary": "List Webhooks",
+        "operationId": "list_webhooks_org_webhooks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/WebhookResponse" },
+                  "type": "array",
+                  "title": "Response List Webhooks Org Webhooks Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      },
+      "post": {
+        "tags": ["Org Portal – Webhooks"],
+        "summary": "Create Webhook",
+        "operationId": "create_webhook_org_webhooks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateWebhookRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WebhookResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/org/webhooks/{webhook_id}": {
+      "patch": {
+        "tags": ["Org Portal – Webhooks"],
+        "summary": "Update Webhook",
+        "operationId": "update_webhook_org_webhooks__webhook_id__patch",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "webhook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Webhook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateWebhookRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WebhookResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Org Portal – Webhooks"],
+        "summary": "Delete Webhook",
+        "operationId": "delete_webhook_org_webhooks__webhook_id__delete",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "webhook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Webhook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/api-logs": {
+      "get": {
+        "tags": ["Org Portal – API Logs"],
+        "summary": "List Api Logs",
+        "description": "Paginated list of API request logs for the authenticated organisation.",
+        "operationId": "list_api_logs_org_api_logs_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter by HTTP method",
+              "title": "Method"
+            },
+            "description": "Filter by HTTP method"
+          },
+          {
+            "name": "status_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "description": "Exact status code",
+              "title": "Status Code"
+            },
+            "description": "Exact status code"
+          },
+          {
+            "name": "status_class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "pattern": "^[1-5]xx$" },
+                { "type": "null" }
+              ],
+              "description": "Status class filter, e.g. 4xx or 5xx",
+              "title": "Status Class"
+            },
+            "description": "Status class filter, e.g. 4xx or 5xx"
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Partial path match",
+              "title": "Path"
+            },
+            "description": "Partial path match"
+          },
+          {
+            "name": "api_key_prefix",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter by API key prefix",
+              "title": "Api Key Prefix"
+            },
+            "description": "Filter by API key prefix"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "ISO date, e.g. 2026-01-01",
+              "title": "From Date"
+            },
+            "description": "ISO date, e.g. 2026-01-01"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "ISO date, e.g. 2026-02-01",
+              "title": "To Date"
+            },
+            "description": "ISO date, e.g. 2026-02-01"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AffordabilityAssessment": {
+        "properties": {
+          "estimated_monthly_payment": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Estimated Monthly Payment"
+          },
+          "debt_to_income_current": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Debt To Income Current"
+          },
+          "debt_to_income_projected": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Debt To Income Projected"
+          },
+          "disposable_income": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Disposable Income"
+          },
+          "affordability_assessment": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Affordability Assessment"
+          },
+          "max_recommended_amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Max Recommended Amount"
+          }
+        },
+        "type": "object",
+        "title": "AffordabilityAssessment"
+      },
+      "AlternativeData": {
+        "properties": {
+          "utility_payment_history": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Utility Payment History"
+          },
+          "rent_payment_history": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Rent Payment History"
+          },
+          "telco_data": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/TelcoData" },
+              { "type": "null" }
+            ]
+          },
+          "social_signals": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/SocialSignals" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "AlternativeData"
+      },
+      "ApiKeyCreatedResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "key": { "type": "string", "title": "Key" },
+          "key_prefix": { "type": "string", "title": "Key Prefix" },
+          "name": { "type": "string", "title": "Name" },
+          "environment": { "type": "string", "title": "Environment" },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Store this key securely. It will not be shown again."
+          }
+        },
+        "type": "object",
+        "required": ["id", "key", "key_prefix", "name", "environment"],
+        "title": "ApiKeyCreatedResponse",
+        "description": "Returned only on creation – full key shown once."
+      },
+      "ApiKeyResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "key_prefix": { "type": "string", "title": "Key Prefix" },
+          "name": { "type": "string", "title": "Name" },
+          "environment": { "type": "string", "title": "Environment" },
+          "status": { "type": "string", "title": "Status" },
+          "last_used_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Last Used At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key_prefix",
+          "name",
+          "environment",
+          "status",
+          "last_used_at",
+          "created_at"
+        ],
+        "title": "ApiKeyResponse"
+      },
+      "ApplicantAddress": {
+        "properties": {
+          "street": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Street"
+          },
+          "city": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "City"
+          },
+          "region": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Region"
+          },
+          "digital_address": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Digital Address"
+          }
+        },
+        "type": "object",
+        "title": "ApplicantAddress"
+      },
+      "ApplicantInfo": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Full Name"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "title": "Date Of Birth"
+          },
+          "national_id_type": {
+            "type": "string",
+            "title": "National Id Type",
+            "description": "ghana_card, voter_id, passport, drivers_license, nhis"
+          },
+          "national_id_number": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "National Id Number"
+          },
+          "gender": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Gender",
+            "description": "male, female, other"
+          },
+          "marital_status": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Marital Status"
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+?[0-9]{10,15}$",
+            "title": "Phone"
+          },
+          "email": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Email"
+          },
+          "address": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ApplicantAddress" },
+              { "type": "null" }
+            ]
+          },
+          "dependents": {
+            "anyOf": [
+              { "type": "integer", "maximum": 20.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Dependents"
+          },
+          "education_level": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Education Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "date_of_birth",
+          "national_id_type",
+          "national_id_number",
+          "phone"
+        ],
+        "title": "ApplicantInfo"
+      },
+      "ApproveUploadRequest": {
+        "properties": {
+          "notes": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "ApproveUploadRequest",
+        "description": "Optional body for approval (can be empty)."
+      },
+      "ApproveUploadResponse": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Upload Id"
+          },
+          "status": { "type": "string", "title": "Status" },
+          "transformed_file_path": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Transformed File Path"
+          },
+          "warnings": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["upload_id", "status"],
+        "title": "ApproveUploadResponse"
+      },
+      "AssetsInfo": {
+        "properties": {
+          "owns_property": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Owns Property"
+          },
+          "property_value": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Property Value"
+          },
+          "owns_vehicle": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Owns Vehicle"
+          },
+          "vehicle_value": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Vehicle Value"
+          },
+          "savings_investments": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Savings Investments"
+          }
+        },
+        "type": "object",
+        "title": "AssetsInfo"
+      },
+      "BankAccount": {
+        "properties": {
+          "bank_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Bank Name"
+          },
+          "account_type": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Account Type"
+          },
+          "average_balance_3m": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Average Balance 3M"
+          },
+          "account_age_months": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Account Age Months"
+          }
+        },
+        "type": "object",
+        "title": "BankAccount"
+      },
+      "Body_upload_training_data_admin_training_data_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File",
+            "description": "Training data file"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id",
+            "description": "Data source UUID"
+          }
+        },
+        "type": "object",
+        "required": ["file", "source_id"],
+        "title": "Body_upload_training_data_admin_training_data_upload_post"
+      },
+      "BureauData": {
+        "properties": {
+          "bureau_score": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Bureau Score"
+          },
+          "bureau_provider": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Bureau Provider"
+          },
+          "total_accounts": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Total Accounts"
+          },
+          "delinquent_accounts": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Delinquent Accounts"
+          },
+          "oldest_account_months": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Oldest Account Months"
+          },
+          "recent_inquiries_6m": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Recent Inquiries 6M"
+          },
+          "public_records": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Public Records"
+          }
+        },
+        "type": "object",
+        "title": "BureauData"
+      },
+      "ChangePasswordRequest": {
+        "properties": {
+          "current_password": { "type": "string", "title": "Current Password" },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": ["current_password", "new_password"],
+        "title": "ChangePasswordRequest"
+      },
+      "ConsentInfo": {
+        "properties": {
+          "bureau_check_authorized": {
+            "type": "boolean",
+            "title": "Bureau Check Authorized",
+            "default": true
+          },
+          "consent_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Consent Date"
+          },
+          "consent_reference": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Consent Reference"
+          },
+          "data_sharing_authorized": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Data Sharing Authorized"
+          }
+        },
+        "type": "object",
+        "required": ["consent_date"],
+        "title": "ConsentInfo"
+      },
+      "CreateApiKeyRequest": {
+        "properties": {
+          "name": { "type": "string", "maxLength": 100, "title": "Name" },
+          "environment": {
+            "type": "string",
+            "title": "Environment",
+            "description": "sandbox or production"
+          }
+        },
+        "type": "object",
+        "required": ["name", "environment"],
+        "title": "CreateApiKeyRequest"
+      },
+      "CreateDataSourceRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Name",
+            "description": "Institution name, e.g. 'GCB Bank'"
+          },
+          "short_code": {
+            "type": "string",
+            "maxLength": 50,
+            "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+            "title": "Short Code",
+            "description": "URL-safe slug, e.g. 'gcb-bank'"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type",
+            "description": "bank | bureau | telco | utility | mfi | other"
+          },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": ["name", "short_code", "source_type"],
+        "title": "CreateDataSourceRequest"
+      },
+      "CreateOrganizationRequest": {
+        "properties": {
+          "name": { "type": "string", "maxLength": 200, "title": "Name" },
+          "short_name": {
+            "type": "string",
+            "maxLength": 50,
+            "pattern": "^[a-z0-9_-]+$",
+            "title": "Short Name"
+          },
+          "industry_type": {
+            "type": "string",
+            "title": "Industry Type",
+            "description": "bank, fintech, mfi, sacco, other"
+          },
+          "primary_contact_name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200 },
+              { "type": "null" }
+            ],
+            "title": "Primary Contact Name"
+          },
+          "primary_contact_email": {
+            "anyOf": [
+              { "type": "string", "format": "email" },
+              { "type": "null" }
+            ],
+            "title": "Primary Contact Email"
+          },
+          "primary_contact_phone": {
+            "anyOf": [
+              { "type": "string", "maxLength": 20 },
+              { "type": "null" }
+            ],
+            "title": "Primary Contact Phone"
+          },
+          "address": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Address"
+          }
+        },
+        "type": "object",
+        "required": ["name", "short_name", "industry_type"],
+        "title": "CreateOrganizationRequest"
+      },
+      "CreateScoreRequestInput": {
+        "properties": {
+          "reference_id": {
+            "anyOf": [
+              { "type": "string", "maxLength": 100 },
+              { "type": "null" }
+            ],
+            "title": "Reference Id"
+          },
+          "applicant": { "$ref": "#/components/schemas/ApplicantInfo" },
+          "employment": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/EmploymentInfo" },
+              { "type": "null" }
+            ]
+          },
+          "loan_request": { "$ref": "#/components/schemas/LoanRequestInfo" },
+          "financial_profile": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/FinancialProfile" },
+              { "type": "null" }
+            ]
+          },
+          "bureau_data": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BureauData" },
+              { "type": "null" }
+            ]
+          },
+          "alternative_data": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/AlternativeData" },
+              { "type": "null" }
+            ]
+          },
+          "consent": { "$ref": "#/components/schemas/ConsentInfo" },
+          "metadata": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/RequestMetadata" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["applicant", "loan_request", "consent"],
+        "title": "CreateScoreRequestInput",
+        "description": "Full credit score request – matches PRD Section 7.1."
+      },
+      "CreateWebhookRequest": {
+        "properties": {
+          "url": { "type": "string", "maxLength": 500, "title": "Url" },
+          "events": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Events",
+            "default": ["score.completed"]
+          },
+          "description": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200 },
+              { "type": "null" }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": ["url"],
+        "title": "CreateWebhookRequest"
+      },
+      "DataSourceDetailResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "name": { "type": "string", "title": "Name" },
+          "short_code": { "type": "string", "title": "Short Code" },
+          "source_type": { "type": "string", "title": "Source Type" },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description"
+          },
+          "total_uploads": {
+            "type": "integer",
+            "title": "Total Uploads",
+            "default": 0
+          },
+          "last_upload_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Last Upload At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Updated At"
+          },
+          "has_active_template": {
+            "type": "boolean",
+            "title": "Has Active Template",
+            "default": false
+          },
+          "active_template_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Active Template Id"
+          }
+        },
+        "type": "object",
+        "required": ["id", "name", "short_code", "source_type", "created_at"],
+        "title": "DataSourceDetailResponse",
+        "description": "Includes upload count and template availability."
+      },
+      "DataSourceResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "name": { "type": "string", "title": "Name" },
+          "short_code": { "type": "string", "title": "Short Code" },
+          "source_type": { "type": "string", "title": "Source Type" },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description"
+          },
+          "total_uploads": {
+            "type": "integer",
+            "title": "Total Uploads",
+            "default": 0
+          },
+          "last_upload_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Last Upload At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "name", "short_code", "source_type", "created_at"],
+        "title": "DataSourceResponse"
+      },
+      "EmploymentInfo": {
+        "properties": {
+          "status": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Status",
+            "description": "employed, self_employed, unemployed, retired, student"
+          },
+          "employer_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Employer Name"
+          },
+          "employer_industry": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Employer Industry"
+          },
+          "job_title": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Job Title"
+          },
+          "duration_months": {
+            "anyOf": [
+              { "type": "integer", "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Duration Months"
+          },
+          "total_work_experience_months": {
+            "anyOf": [
+              { "type": "integer", "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Total Work Experience Months"
+          },
+          "monthly_income": {
+            "anyOf": [{ "type": "number", "minimum": 0.0 }, { "type": "null" }],
+            "title": "Monthly Income"
+          },
+          "income_currency": {
+            "type": "string",
+            "title": "Income Currency",
+            "default": "GHS"
+          },
+          "income_verification_type": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Income Verification Type"
+          },
+          "other_income": {
+            "anyOf": [{ "type": "number", "minimum": 0.0 }, { "type": "null" }],
+            "title": "Other Income"
+          },
+          "other_income_source": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Other Income Source"
+          }
+        },
+        "type": "object",
+        "title": "EmploymentInfo"
+      },
+      "ExistingLoan": {
+        "properties": {
+          "lender_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Lender Name"
+          },
+          "loan_type": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Loan Type"
+          },
+          "original_amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Original Amount"
+          },
+          "outstanding_balance": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Outstanding Balance"
+          },
+          "monthly_payment": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Monthly Payment"
+          },
+          "status": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Status"
+          },
+          "days_past_due": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Days Past Due"
+          }
+        },
+        "type": "object",
+        "title": "ExistingLoan"
+      },
+      "FieldMappingItem": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Id"
+          },
+          "source_field": { "type": "string", "title": "Source Field" },
+          "target_feature": { "type": "string", "title": "Target Feature" },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 0.0
+          },
+          "confidence_level": {
+            "type": "string",
+            "title": "Confidence Level",
+            "default": "red"
+          },
+          "mapping_source": {
+            "type": "string",
+            "title": "Mapping Source",
+            "default": "llm"
+          },
+          "sample_values": {
+            "anyOf": [{ "items": {}, "type": "array" }, { "type": "null" }],
+            "title": "Sample Values"
+          },
+          "data_type_detected": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Data Type Detected"
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "default": false
+          },
+          "admin_override_target": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Admin Override Target"
+          }
+        },
+        "type": "object",
+        "required": ["source_field", "target_feature"],
+        "title": "FieldMappingItem"
+      },
+      "FinancialProfile": {
+        "properties": {
+          "existing_loans": {
+            "anyOf": [
+              {
+                "items": { "$ref": "#/components/schemas/ExistingLoan" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Existing Loans"
+          },
+          "has_bank_account": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Has Bank Account"
+          },
+          "bank_accounts": {
+            "anyOf": [
+              {
+                "items": { "$ref": "#/components/schemas/BankAccount" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Bank Accounts"
+          },
+          "mobile_money": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/MobileMoneyInfo" },
+              { "type": "null" }
+            ]
+          },
+          "has_credit_card": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Has Credit Card"
+          },
+          "credit_card_utilization": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Credit Card Utilization"
+          },
+          "monthly_expenses": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Monthly Expenses"
+          },
+          "assets": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/AssetsInfo" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "FinancialProfile"
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": { "type": "string", "format": "email", "title": "Email" },
+          "callback_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Callback Url"
+          }
+        },
+        "type": "object",
+        "required": ["email"],
+        "title": "ForgotPasswordRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": { "$ref": "#/components/schemas/ValidationError" },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": { "type": "string", "title": "Status", "default": "ok" },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "0.1.0"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment",
+            "default": "development"
+          }
+        },
+        "type": "object",
+        "title": "HealthResponse"
+      },
+      "InviteUserRequest": {
+        "properties": {
+          "email": { "type": "string", "format": "email", "title": "Email" },
+          "name": { "type": "string", "maxLength": 200, "title": "Name" },
+          "role_label": {
+            "type": "string",
+            "title": "Role Label",
+            "description": "admin, credit_officer, developer, viewer",
+            "default": "viewer"
+          },
+          "callback_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Callback Url"
+          }
+        },
+        "type": "object",
+        "required": ["email", "name"],
+        "title": "InviteUserRequest"
+      },
+      "LoanRequestInfo": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "GHS"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose",
+            "description": "personal, business, education, housing, vehicle, medical, agriculture, debt_consolidation, other"
+          },
+          "purpose_description": {
+            "anyOf": [
+              { "type": "string", "maxLength": 500 },
+              { "type": "null" }
+            ],
+            "title": "Purpose Description"
+          },
+          "tenure_months": {
+            "type": "integer",
+            "maximum": 360.0,
+            "minimum": 1.0,
+            "title": "Tenure Months"
+          },
+          "collateral_type": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Collateral Type"
+          },
+          "collateral_value": {
+            "anyOf": [{ "type": "number", "minimum": 0.0 }, { "type": "null" }],
+            "title": "Collateral Value"
+          }
+        },
+        "type": "object",
+        "required": ["amount", "purpose", "tenure_months"],
+        "title": "LoanRequestInfo"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": { "type": "string", "format": "email", "title": "Email" },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": ["email", "password"],
+        "title": "LoginRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "access_token": { "type": "string", "title": "Access Token" },
+          "refresh_token": { "type": "string", "title": "Refresh Token" },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": { "type": "integer", "title": "Expires In" },
+          "requires_2fa": {
+            "type": "boolean",
+            "title": "Requires 2Fa",
+            "default": false
+          },
+          "user_type": { "type": "string", "title": "User Type" }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expires_in",
+          "user_type"
+        ],
+        "title": "LoginResponse"
+      },
+      "MappingCallbackPayload": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Upload Id"
+          },
+          "mappings": {
+            "items": { "$ref": "#/components/schemas/FieldMappingItem" },
+            "type": "array",
+            "title": "Mappings"
+          },
+          "quality_report": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Quality Report"
+          },
+          "features_mapped": { "type": "integer", "title": "Features Mapped" },
+          "features_total": {
+            "type": "integer",
+            "title": "Features Total",
+            "default": 18
+          }
+        },
+        "type": "object",
+        "required": ["upload_id", "mappings", "features_mapped"],
+        "title": "MappingCallbackPayload",
+        "description": "Payload the Data Quality Agent sends back after mapping."
+      },
+      "MappingResultResponse": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Upload Id"
+          },
+          "status": { "type": "string", "title": "Status" },
+          "features_mapped": { "type": "integer", "title": "Features Mapped" },
+          "target_features_total": {
+            "type": "integer",
+            "title": "Target Features Total",
+            "default": 18
+          },
+          "has_target_variable": {
+            "type": "boolean",
+            "title": "Has Target Variable",
+            "default": false
+          },
+          "quality_warnings": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Quality Warnings",
+            "default": []
+          },
+          "mappings": {
+            "items": { "$ref": "#/components/schemas/FieldMappingItem" },
+            "type": "array",
+            "title": "Mappings"
+          },
+          "sample_data": {
+            "anyOf": [
+              {
+                "items": { "additionalProperties": true, "type": "object" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Sample Data"
+          }
+        },
+        "type": "object",
+        "required": ["upload_id", "status", "features_mapped", "mappings"],
+        "title": "MappingResultResponse",
+        "description": "Full mapping result for admin review."
+      },
+      "MappingTemplateResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "data_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Data Source Id"
+          },
+          "version": { "type": "integer", "title": "Version" },
+          "mappings": {
+            "items": { "additionalProperties": true, "type": "object" },
+            "type": "array",
+            "title": "Mappings"
+          },
+          "is_active": { "type": "boolean", "title": "Is Active" },
+          "created_from_upload_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Created From Upload Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "data_source_id",
+          "version",
+          "mappings",
+          "is_active",
+          "created_at"
+        ],
+        "title": "MappingTemplateResponse"
+      },
+      "MobileMoneyInfo": {
+        "properties": {
+          "active": { "type": "boolean", "title": "Active", "default": false },
+          "providers": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Providers"
+          },
+          "avg_monthly_inflow": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Avg Monthly Inflow"
+          },
+          "avg_monthly_outflow": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Avg Monthly Outflow"
+          },
+          "account_age_months": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Account Age Months"
+          }
+        },
+        "type": "object",
+        "title": "MobileMoneyInfo"
+      },
+      "ModelInfo": {
+        "properties": {
+          "model_version": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Model Version"
+          },
+          "model_type": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Model Type"
+          },
+          "features_used": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Features Used"
+          },
+          "data_sources": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Data Sources"
+          }
+        },
+        "type": "object",
+        "title": "ModelInfo"
+      },
+      "OrgUserResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "email": { "type": "string", "title": "Email" },
+          "name": { "type": "string", "title": "Name" },
+          "role_label": { "type": "string", "title": "Role Label" },
+          "status": { "type": "string", "title": "Status" },
+          "last_login_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Last Login At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role_label",
+          "status",
+          "last_login_at",
+          "created_at"
+        ],
+        "title": "OrgUserResponse"
+      },
+      "OrganizationResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "name": { "type": "string", "title": "Name" },
+          "short_name": { "type": "string", "title": "Short Name" },
+          "industry_type": { "type": "string", "title": "Industry Type" },
+          "primary_contact_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Primary Contact Name"
+          },
+          "primary_contact_email": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Primary Contact Email"
+          },
+          "primary_contact_phone": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Primary Contact Phone"
+          },
+          "address": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Address"
+          },
+          "status": { "type": "string", "title": "Status" },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "short_name",
+          "industry_type",
+          "primary_contact_name",
+          "primary_contact_email",
+          "primary_contact_phone",
+          "address",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OrganizationResponse"
+      },
+      "OutcomeResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Decision recorded successfully"
+          },
+          "request_id": { "type": "string", "title": "Request Id" },
+          "decision": { "type": "string", "title": "Decision" }
+        },
+        "type": "object",
+        "required": ["request_id", "decision"],
+        "title": "OutcomeResponse"
+      },
+      "PaginatedResponse": {
+        "properties": {
+          "items": { "items": {}, "type": "array", "title": "Items" },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" }
+        },
+        "type": "object",
+        "required": ["items", "total", "page", "per_page", "total_pages"],
+        "title": "PaginatedResponse",
+        "description": "Standard paginated response envelope."
+      },
+      "PaginatedResponse_DataSourceResponse_": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/DataSourceResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" }
+        },
+        "type": "object",
+        "required": ["items", "total", "page", "per_page", "total_pages"],
+        "title": "PaginatedResponse[DataSourceResponse]"
+      },
+      "PaginatedResponse_OrgUserResponse_": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/OrgUserResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" }
+        },
+        "type": "object",
+        "required": ["items", "total", "page", "per_page", "total_pages"],
+        "title": "PaginatedResponse[OrgUserResponse]"
+      },
+      "PaginatedResponse_OrganizationResponse_": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/OrganizationResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" }
+        },
+        "type": "object",
+        "required": ["items", "total", "page", "per_page", "total_pages"],
+        "title": "PaginatedResponse[OrganizationResponse]"
+      },
+      "PaginatedResponse_ScoreRequestSummary_": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/ScoreRequestSummary" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" }
+        },
+        "type": "object",
+        "required": ["items", "total", "page", "per_page", "total_pages"],
+        "title": "PaginatedResponse[ScoreRequestSummary]"
+      },
+      "PaginatedResponse_TrainingUploadResponse_": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/TrainingUploadResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" }
+        },
+        "type": "object",
+        "required": ["items", "total", "page", "per_page", "total_pages"],
+        "title": "PaginatedResponse[TrainingUploadResponse]"
+      },
+      "PerformanceResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Performance data recorded"
+          },
+          "request_id": { "type": "string", "title": "Request Id" }
+        },
+        "type": "object",
+        "required": ["request_id"],
+        "title": "PerformanceResponse"
+      },
+      "ProvisionOrganizationRequest": {
+        "properties": {
+          "callback_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Callback Url"
+          }
+        },
+        "type": "object",
+        "title": "ProvisionOrganizationRequest"
+      },
+      "ProvisionResponse": {
+        "properties": {
+          "organization": {
+            "$ref": "#/components/schemas/OrganizationResponse"
+          },
+          "admin_email": { "type": "string", "title": "Admin Email" },
+          "sandbox_api_key": { "type": "string", "title": "Sandbox Api Key" },
+          "production_api_key": {
+            "type": "string",
+            "title": "Production Api Key"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Organization provisioned. Welcome email sent to admin."
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization",
+          "admin_email",
+          "sandbox_api_key",
+          "production_api_key"
+        ],
+        "title": "ProvisionResponse"
+      },
+      "ReadinessResponse": {
+        "properties": {
+          "status": { "type": "string", "title": "Status", "default": "ok" },
+          "checks": {
+            "additionalProperties": { "type": "string" },
+            "type": "object",
+            "title": "Checks",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "title": "ReadinessResponse"
+      },
+      "Recommendation": {
+        "properties": {
+          "type": { "type": "string", "title": "Type" },
+          "message": { "type": "string", "title": "Message" },
+          "priority": { "type": "string", "title": "Priority" }
+        },
+        "type": "object",
+        "required": ["type", "message", "priority"],
+        "title": "Recommendation"
+      },
+      "RecordOutcomeRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "title": "Decision",
+            "description": "approved, declined, referred"
+          },
+          "approved_amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Approved Amount"
+          },
+          "approved_tenure_months": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Approved Tenure Months"
+          },
+          "interest_rate": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Interest Rate"
+          },
+          "decline_reason": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Decline Reason"
+          },
+          "decision_notes": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Decision Notes"
+          },
+          "decision_date": {
+            "anyOf": [
+              { "type": "string", "format": "date" },
+              { "type": "null" }
+            ],
+            "title": "Decision Date"
+          }
+        },
+        "type": "object",
+        "required": ["decision"],
+        "title": "RecordOutcomeRequest"
+      },
+      "RecordPerformanceRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "current, past_due_30, past_due_60, past_due_90, default, paid_off, write_off"
+          },
+          "days_past_due": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Days Past Due"
+          },
+          "outstanding_balance": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Outstanding Balance"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          }
+        },
+        "type": "object",
+        "required": ["status", "as_of_date"],
+        "title": "RecordPerformanceRequest"
+      },
+      "RefreshTokenRequest": {
+        "properties": {
+          "refresh_token": { "type": "string", "title": "Refresh Token" }
+        },
+        "type": "object",
+        "required": ["refresh_token"],
+        "title": "RefreshTokenRequest"
+      },
+      "RejectUploadRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": ["reason"],
+        "title": "RejectUploadRequest"
+      },
+      "RequestMetadata": {
+        "properties": {
+          "channel": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Channel"
+          },
+          "product_type": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Product Type"
+          },
+          "branch_code": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Branch Code"
+          },
+          "officer_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Officer Id"
+          },
+          "callback_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Callback Url"
+          }
+        },
+        "type": "object",
+        "title": "RequestMetadata"
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "token": { "type": "string", "title": "Token" },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": ["token", "new_password"],
+        "title": "ResetPasswordRequest"
+      },
+      "RiskFactor": {
+        "properties": {
+          "code": { "type": "string", "title": "Code" },
+          "category": { "type": "string", "title": "Category" },
+          "description": { "type": "string", "title": "Description" },
+          "impact": { "type": "string", "title": "Impact" },
+          "severity": { "type": "string", "title": "Severity" },
+          "detail": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": ["code", "category", "description", "impact", "severity"],
+        "title": "RiskFactor"
+      },
+      "ScoreComponent": {
+        "properties": {
+          "score": { "type": "integer", "title": "Score" },
+          "max_score": { "type": "integer", "title": "Max Score" },
+          "weight": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Weight"
+          },
+          "grade": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Grade"
+          }
+        },
+        "type": "object",
+        "required": ["score", "max_score"],
+        "title": "ScoreComponent"
+      },
+      "ScoreComponents": {
+        "properties": {
+          "payment_history": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponent" },
+              { "type": "null" }
+            ]
+          },
+          "credit_utilization": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponent" },
+              { "type": "null" }
+            ]
+          },
+          "credit_history_length": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponent" },
+              { "type": "null" }
+            ]
+          },
+          "credit_mix": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponent" },
+              { "type": "null" }
+            ]
+          },
+          "new_credit": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponent" },
+              { "type": "null" }
+            ]
+          },
+          "income_stability": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponent" },
+              { "type": "null" }
+            ]
+          },
+          "debt_burden": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponent" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ScoreComponents"
+      },
+      "ScoreError": {
+        "properties": {
+          "code": { "type": "string", "title": "Code" },
+          "message": { "type": "string", "title": "Message" },
+          "details": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": ["code", "message"],
+        "title": "ScoreError"
+      },
+      "ScoreRequestResponse": {
+        "properties": {
+          "request_id": { "type": "string", "title": "Request Id" },
+          "reference_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Reference Id"
+          },
+          "status": { "type": "string", "title": "Status" },
+          "score": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreValue" },
+              { "type": "null" }
+            ]
+          },
+          "score_components": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreComponents" },
+              { "type": "null" }
+            ]
+          },
+          "risk_factors": {
+            "anyOf": [
+              {
+                "items": { "$ref": "#/components/schemas/RiskFactor" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Risk Factors"
+          },
+          "recommendations": {
+            "anyOf": [
+              {
+                "items": { "$ref": "#/components/schemas/Recommendation" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Recommendations"
+          },
+          "affordability": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/AffordabilityAssessment" },
+              { "type": "null" }
+            ]
+          },
+          "model_info": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ModelInfo" },
+              { "type": "null" }
+            ]
+          },
+          "timestamps": { "$ref": "#/components/schemas/ScoreTimestamps" },
+          "error": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoreError" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["request_id", "status", "timestamps"],
+        "title": "ScoreRequestResponse",
+        "description": "Full score response – matches PRD Section 7.2."
+      },
+      "ScoreRequestSummary": {
+        "properties": {
+          "request_id": { "type": "string", "title": "Request Id" },
+          "tracking_id": { "type": "string", "title": "Tracking Id" },
+          "reference_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Reference Id"
+          },
+          "status": { "type": "string", "title": "Status" },
+          "score_value": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Score Value"
+          },
+          "risk_category": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Risk Category"
+          },
+          "request_source": { "type": "string", "title": "Request Source" },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "scored_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Scored At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "tracking_id",
+          "reference_id",
+          "status",
+          "score_value",
+          "risk_category",
+          "request_source",
+          "created_at",
+          "scored_at"
+        ],
+        "title": "ScoreRequestSummary"
+      },
+      "ScoreTimestamps": {
+        "properties": {
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
+          "scored_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Scored At"
+          },
+          "valid_until": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "type": "object",
+        "required": ["requested_at"],
+        "title": "ScoreTimestamps"
+      },
+      "ScoreValue": {
+        "properties": {
+          "value": {
+            "type": "integer",
+            "maximum": 850.0,
+            "minimum": 300.0,
+            "title": "Value"
+          },
+          "max_value": {
+            "type": "integer",
+            "title": "Max Value",
+            "default": 850
+          },
+          "min_value": {
+            "type": "integer",
+            "title": "Min Value",
+            "default": 300
+          },
+          "percentile": {
+            "anyOf": [
+              { "type": "integer", "maximum": 100.0, "minimum": 1.0 },
+              { "type": "null" }
+            ],
+            "title": "Percentile"
+          },
+          "risk_category": { "type": "string", "title": "Risk Category" },
+          "risk_category_description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Risk Category Description"
+          },
+          "confidence": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Confidence"
+          },
+          "data_quality_flag": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Data Quality Flag"
+          }
+        },
+        "type": "object",
+        "required": ["value", "risk_category"],
+        "title": "ScoreValue"
+      },
+      "Setup2FAResponse": {
+        "properties": {
+          "secret": { "type": "string", "title": "Secret" },
+          "uri": { "type": "string", "title": "Uri" },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Scan the QR code with your authenticator app"
+          }
+        },
+        "type": "object",
+        "required": ["secret", "uri"],
+        "title": "Setup2FAResponse"
+      },
+      "SocialSignals": {
+        "properties": {
+          "linkedin_profile": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Linkedin Profile"
+          },
+          "professional_associations": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Professional Associations"
+          }
+        },
+        "type": "object",
+        "title": "SocialSignals"
+      },
+      "SuccessResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Success"
+          }
+        },
+        "type": "object",
+        "title": "SuccessResponse"
+      },
+      "SuspendRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 5,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": ["reason"],
+        "title": "SuspendRequest"
+      },
+      "TelcoData": {
+        "properties": {
+          "account_age_months": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Account Age Months"
+          },
+          "avg_monthly_spend": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Avg Monthly Spend"
+          },
+          "payment_regularity": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Payment Regularity"
+          }
+        },
+        "type": "object",
+        "title": "TelcoData"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": { "type": "string", "title": "Access Token" },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": { "type": "integer", "title": "Expires In" }
+        },
+        "type": "object",
+        "required": ["access_token", "expires_in"],
+        "title": "TokenResponse"
+      },
+      "TrainingUploadResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "data_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Data Source Id"
+          },
+          "data_source_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Data Source Name"
+          },
+          "status": { "type": "string", "title": "Status" },
+          "file_name": { "type": "string", "title": "File Name" },
+          "file_format": { "type": "string", "title": "File Format" },
+          "file_size_bytes": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "File Size Bytes"
+          },
+          "record_count": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Record Count"
+          },
+          "valid_record_count": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Valid Record Count"
+          },
+          "features_mapped": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Features Mapped"
+          },
+          "target_features_total": {
+            "type": "integer",
+            "title": "Target Features Total",
+            "default": 18
+          },
+          "quality_score": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Quality Score"
+          },
+          "quality_report": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Quality Report"
+          },
+          "rejection_reason": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Rejection Reason"
+          },
+          "error_message": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Error Message"
+          },
+          "uploaded_by_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Uploaded By Id"
+          },
+          "approved_by_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Approved By Id"
+          },
+          "approved_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Approved At"
+          },
+          "completed_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "data_source_id",
+          "status",
+          "file_name",
+          "file_format",
+          "created_at"
+        ],
+        "title": "TrainingUploadResponse"
+      },
+      "UpdateFieldMappingItem": {
+        "properties": {
+          "source_field": { "type": "string", "title": "Source Field" },
+          "target_feature": { "type": "string", "title": "Target Feature" },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": ["source_field", "target_feature"],
+        "title": "UpdateFieldMappingItem",
+        "description": "Admin correction for a single mapping."
+      },
+      "UpdateMappingsRequest": {
+        "properties": {
+          "mappings": {
+            "items": { "$ref": "#/components/schemas/UpdateFieldMappingItem" },
+            "type": "array",
+            "title": "Mappings"
+          }
+        },
+        "type": "object",
+        "required": ["mappings"],
+        "title": "UpdateMappingsRequest",
+        "description": "Batch update for field mappings."
+      },
+      "UpdateOrganizationRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200 },
+              { "type": "null" }
+            ],
+            "title": "Name"
+          },
+          "primary_contact_name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200 },
+              { "type": "null" }
+            ],
+            "title": "Primary Contact Name"
+          },
+          "primary_contact_email": {
+            "anyOf": [
+              { "type": "string", "format": "email" },
+              { "type": "null" }
+            ],
+            "title": "Primary Contact Email"
+          },
+          "primary_contact_phone": {
+            "anyOf": [
+              { "type": "string", "maxLength": 20 },
+              { "type": "null" }
+            ],
+            "title": "Primary Contact Phone"
+          },
+          "address": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Address"
+          }
+        },
+        "type": "object",
+        "title": "UpdateOrganizationRequest"
+      },
+      "UpdateWebhookRequest": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              { "type": "string", "maxLength": 500 },
+              { "type": "null" }
+            ],
+            "title": "Url"
+          },
+          "events": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Events"
+          },
+          "is_active": {
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+            "title": "Is Active"
+          },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "UpdateWebhookRequest"
+      },
+      "UploadStatusResponse": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Upload Id"
+          },
+          "status": { "type": "string", "title": "Status" },
+          "features_mapped": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Features Mapped"
+          },
+          "target_features_total": {
+            "type": "integer",
+            "title": "Target Features Total",
+            "default": 18
+          },
+          "error_message": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": ["upload_id", "status"],
+        "title": "UploadStatusResponse",
+        "description": "Lightweight status poll response."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": { "type": "string", "title": "Message" },
+          "type": { "type": "string", "title": "Error Type" },
+          "input": { "title": "Input" },
+          "ctx": { "type": "object", "title": "Context" }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      },
+      "Verify2FARequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Code"
+          },
+          "temp_token": { "type": "string", "title": "Temp Token" }
+        },
+        "type": "object",
+        "required": ["code", "temp_token"],
+        "title": "Verify2FARequest"
+      },
+      "Verify2FAResponse": {
+        "properties": {
+          "access_token": { "type": "string", "title": "Access Token" },
+          "refresh_token": { "type": "string", "title": "Refresh Token" },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": { "type": "integer", "title": "Expires In" }
+        },
+        "type": "object",
+        "required": ["access_token", "refresh_token", "expires_in"],
+        "title": "Verify2FAResponse"
+      },
+      "VerifyEmailRequest": {
+        "properties": { "token": { "type": "string", "title": "Token" } },
+        "type": "object",
+        "required": ["token"],
+        "title": "VerifyEmailRequest"
+      },
+      "WebhookResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "url": { "type": "string", "title": "Url" },
+          "events": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Events"
+          },
+          "is_active": { "type": "boolean", "title": "Is Active" },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "events",
+          "is_active",
+          "description",
+          "created_at"
+        ],
+        "title": "WebhookResponse"
+      }
+    },
+    "securitySchemes": { "HTTPBearer": { "type": "http", "scheme": "bearer" } }
+  }
+}

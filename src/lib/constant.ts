@@ -1,5 +1,5 @@
 // Inactivity timeout in milliseconds (5 minutes)
-export const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
+export const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 // Routes
 export const ROUTES = {
@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
     LOGIN: "/auth/login",
     LOGOUT: "/auth/logout",
     REFRESH: "/auth/refresh",
+    ME: "/auth/me",
     VERIFY_2FA: "/auth/2fa/verify",
     SETUP_2FA: "/auth/2fa/setup",
     CHANGE_PASSWORD: "/auth/change-password",

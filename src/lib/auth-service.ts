@@ -1,8 +1,9 @@
 import apiClient from "./api-client";
-import { User, LoginResponse, AuthResponse } from "@/types/models";
+import type { User } from "@/types/models";
+import type { AuthResult, Setup2FAResponse } from "@/types/auth-type";
 import { API_ENDPOINTS } from "@/lib/constant";
 
-// Helper to parse JWT
+// Helper to parse JWT and extract a User object
 function parseJwt(token: string): User {
   try {
     const base64Url = token.split(".")[1];
@@ -18,20 +19,17 @@ function parseJwt(token: string): User {
 
     const decoded = JSON.parse(jsonPayload);
 
-    // Map JWT claims to User object
-    // Adjust these fields based on actual JWT content from your backend
     return {
       id: decoded.sub || decoded.id || "unknown",
-      email: decoded.email || decoded.sub, // 'sub' is often email in some systems if not separate
+      email: decoded.email || decoded.sub,
       name:
         decoded.name || (decoded.email ? decoded.email.split("@")[0] : "User"),
-      roleLabel: decoded.role || decoded.user_type || "viewer", // Mapping to UserRoleLabel if possible
+      roleLabel: decoded.role || decoded.user_type || "viewer",
       status: "active",
-      createdAt: new Date().toISOString(), // Placeholder
+      createdAt: new Date().toISOString(),
     } as User;
   } catch (e) {
     console.error("Failed to parse JWT", e);
-    // Return a fallback user
     return {
       id: "unknown",
       email: "unknown",
@@ -43,7 +41,8 @@ function parseJwt(token: string): User {
   }
 }
 
-// Define strict API response types to match backend (snake_case)
+// ---- Raw API response types (snake_case, matching backend) ----
+
 interface ApiLoginResponse {
   access_token: string;
   refresh_token: string;
@@ -60,44 +59,58 @@ interface Api2FAResponse {
   expires_in: number;
 }
 
+/** POST /auth/refresh → only returns a new access_token (no refresh_token rotation) */
+interface ApiTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+interface ApiSetup2FAResponse {
+  secret: string;
+  uri: string;
+  message: string;
+}
+
+// ---- Service ----
+
 export const authService = {
+  // POST /auth/login
   async login(credentials: {
     email: string;
     password: string;
-  }): Promise<AuthResponse> {
+  }): Promise<AuthResult> {
     const response = await apiClient.post<ApiLoginResponse>(
       API_ENDPOINTS.AUTH.LOGIN,
       credentials,
     );
     const data = response.data;
 
-    // Handle 2FA case
     if (data.requires_2fa) {
       return {
         requires2FA: true,
-        accessToken: data.access_token, // Used as temp token for 2FA
+        accessToken: data.access_token, // temp token for 2FA
       };
     }
 
-    // Extract user from token since API doesn't return it
     const user = parseJwt(data.access_token);
 
     return {
       requires2FA: false,
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
-      user: user,
+      tokenType: data.token_type,
+      expiresIn: data.expires_in,
+      user,
       userType: data.user_type,
     };
   },
 
+  // POST /auth/2fa/verify — spec requires { code, temp_token }
   async verify2FA(data: {
-    email: string;
     code: string;
-    tempToken?: string;
-  }): Promise<AuthResponse> {
-    // Spec requires: { code, temp_token }
-    // Note: 'email' is in the input data but not used in the payload for this endpoint per spec.
+    tempToken: string;
+  }): Promise<AuthResult> {
     const payload = {
       code: data.code,
       temp_token: data.tempToken,
@@ -108,55 +121,105 @@ export const authService = {
       payload,
     );
 
-    // Extract user from token
     const user = parseJwt(response.data.access_token);
-    // Determine user type from token role mapping
     const userType = user.roleLabel || "viewer";
 
     return {
       accessToken: response.data.access_token,
       refreshToken: response.data.refresh_token,
-      user: user,
-      userType: userType,
+      tokenType: response.data.token_type,
+      expiresIn: response.data.expires_in,
+      user,
+      userType,
     };
   },
 
-  async logout(): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT);
+  // POST /auth/logout → SuccessResponse
+  async logout(): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.LOGOUT,
+    );
+    return response.data;
   },
 
+  // POST /auth/refresh → TokenResponse (no refresh_token rotation)
   async refreshToken(
     token: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const response = await apiClient.post<{
-      access_token: string;
-      // refresh_token might not be returned if rotation isn't enabled, but we check for it
-      refresh_token?: string;
-    }>(API_ENDPOINTS.AUTH.REFRESH, {
-      refresh_token: token,
-    });
+  ): Promise<{ accessToken: string; expiresIn: number }> {
+    const response = await apiClient.post<ApiTokenResponse>(
+      API_ENDPOINTS.AUTH.REFRESH,
+      { refresh_token: token },
+    );
 
     return {
       accessToken: response.data.access_token,
-      // Use new refresh token if provided, else keep old one (handled by caller typically, but here we return what we get)
-      // If API doesn't return it, the interceptor will need to handle retaining the old one or we return undefined/old one here.
-      // API Spec for TokenResponse: access_token, token_type, expires_in. No refresh_token listed?
-      // If so, we might need to reuse the old one.
-      refreshToken: response.data.refresh_token || token,
+      expiresIn: response.data.expires_in,
     };
   },
 
-  async forgotPassword(email: string, callbackUrl?: string): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
-      email,
-      callback_url: callbackUrl,
-    });
+  // POST /auth/forgot-password → SuccessResponse
+  async forgotPassword(
+    email: string,
+    callbackUrl?: string,
+  ): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+      {
+        email,
+        callback_url: callbackUrl,
+      },
+    );
+    return response.data;
   },
 
-  async resetPassword(token: string, password: string): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
-      token,
-      new_password: password,
-    });
+  // POST /auth/reset-password → SuccessResponse
+  async resetPassword(
+    token: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.RESET_PASSWORD,
+      {
+        token,
+        new_password: password,
+      },
+    );
+    return response.data;
+  },
+
+  // POST /auth/verify-email → SuccessResponse
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.VERIFY_EMAIL,
+      { token },
+    );
+    return response.data;
+  },
+
+  // POST /auth/change-password → SuccessResponse (authenticated)
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.CHANGE_PASSWORD,
+      {
+        current_password: currentPassword,
+        new_password: newPassword,
+      },
+    );
+    return response.data;
+  },
+
+  // POST /auth/2fa/setup → Setup2FAResponse (authenticated)
+  async setup2FA(): Promise<Setup2FAResponse> {
+    const response = await apiClient.post<ApiSetup2FAResponse>(
+      API_ENDPOINTS.AUTH.SETUP_2FA,
+    );
+    return {
+      secret: response.data.secret,
+      uri: response.data.uri,
+      message: response.data.message,
+    };
   },
 };

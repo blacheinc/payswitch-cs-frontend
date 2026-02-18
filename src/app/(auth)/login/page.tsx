@@ -16,14 +16,12 @@ import {
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
 
-import {
-  useLoginMutation,
-  useVerify2FAMutation,
-} from "@/hooks/use-auth-mutations";
-
+import { authService } from "@/lib/auth-service";
 import { useAuth } from "@/contexts/auth-context";
 import { ROUTES } from "@/lib/constant";
+import { saveSession } from "@/lib/session-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,59 +75,17 @@ export default function LoginPage() {
   });
 
   // Mutations
-  const loginMutation = useLoginMutation();
-  const verify2FAMutation = useVerify2FAMutation();
-
-  const isLoading = loginMutation.isPending || verify2FAMutation.isPending;
-
-  // Handle login submit
-  const handleLoginSubmit = async (data: LoginFormData) => {
-    try {
-      const useMockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
-
-      if (useMockAuth) {
-        // Mock login for frontend verification
-        // Simulate 2FA requirement for specific email
-        if (data.email.includes("2fa")) {
-          toast.info("Please enter your 2FA code");
-          return;
-        }
-
-        // Set cookie for middleware
-        document.cookie =
-          "auth-token=mock-token; path=/; max-age=86400; SameSite=Strict";
-
-        // Update auth context state so inactivity timer starts
-        setMockAuthenticated(loginMode === "admin");
-
-        toast.success("Welcome back!");
-
-        // Determine redirect based on mode
-        if (loginMode === "admin") {
-          router.push(ROUTES.ADMIN.DASHBOARD);
-        } else {
-          router.push(ROUTES.ORG.DASHBOARD);
-        }
-        return;
-      }
-
-      const result = await loginMutation.mutateAsync({
-        email: data.email,
-        password: data.password,
-      });
-
+  const loginMutation = useMutation({
+    mutationFn: authService.login,
+    onSuccess: (result) => {
       if (result.requires2FA) {
         toast.info("Please enter your 2FA code");
-        // We need to persist that 2FA is required in local state or context if we want to switch UI
-        // The service should ideally return this info.
-        // For now, assuming the mutation returns the response data
       } else if (
         result.accessToken &&
         result.refreshToken &&
         result.user &&
         result.userType
       ) {
-        // Success
         setSession(
           result.accessToken,
           result.refreshToken,
@@ -144,24 +100,19 @@ export default function LoginPage() {
           router.push(ROUTES.ORG.DASHBOARD);
         }
       }
-    } catch (error) {
-      // Error is handled by mutation onError or here
+    },
+    onError: (error) => {
       const message =
         error instanceof Error
           ? error.message
           : "Login failed. Please try again.";
       toast.error(message);
-    }
-  };
+    },
+  });
 
-  // Handle 2FA submit
-  const handle2FASubmit = async (data: TwoFactorFormData) => {
-    try {
-      const result = await verify2FAMutation.mutateAsync({
-        code: data.code,
-        email: loginForm.getValues("email"), // pass email from form state
-      });
-
+  const verify2FAMutation = useMutation({
+    mutationFn: authService.verify2FA,
+    onSuccess: (result) => {
       if (
         result.accessToken &&
         result.refreshToken &&
@@ -182,13 +133,65 @@ export default function LoginPage() {
           router.push(ROUTES.ORG.DASHBOARD);
         }
       }
-    } catch (error) {
+    },
+    onError: (error) => {
       const message =
         error instanceof Error
           ? error.message
           : "Invalid code. Please try again.";
       toast.error(message);
+    },
+  });
+
+  const isLoading = loginMutation.isPending || verify2FAMutation.isPending;
+
+  // Handle login submit
+  const handleLoginSubmit = (data: LoginFormData) => {
+    const useMockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
+
+    if (useMockAuth) {
+      if (data.email.includes("2fa")) {
+        toast.info("Please enter your 2FA code");
+        return;
+      }
+
+      // Persist an encoded mock session so the proxy can read it
+      saveSession({
+        accessToken: "mock-token",
+        refreshToken: "mock-refresh-token",
+        userType: loginMode === "admin" ? "admin" : "org",
+        user: {
+          id: loginMode === "admin" ? "mock-admin" : "mock-user",
+          email: data.email,
+          name: loginMode === "admin" ? "Admin User" : "Org User",
+          roleLabel: loginMode === "admin" ? "admin" : "viewer",
+          status: "active",
+          createdAt: new Date().toISOString(),
+        },
+      });
+      setMockAuthenticated(loginMode === "admin");
+      toast.success("Welcome back!");
+
+      if (loginMode === "admin") {
+        router.push(ROUTES.ADMIN.DASHBOARD);
+      } else {
+        router.push(ROUTES.ORG.DASHBOARD);
+      }
+      return;
     }
+
+    loginMutation.mutate({
+      email: data.email,
+      password: data.password,
+    });
+  };
+
+  // Handle 2FA submit
+  const handle2FASubmit = (data: TwoFactorFormData) => {
+    verify2FAMutation.mutate({
+      code: data.code,
+      tempToken: loginMutation.data?.accessToken || "",
+    });
   };
 
   return (

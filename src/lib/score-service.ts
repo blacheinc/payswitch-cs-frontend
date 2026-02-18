@@ -8,8 +8,14 @@ import {
   PaginationParams,
 } from "@/types/models";
 
-// Define strict API response types if different from models
-// For now assuming models match API responses for these main entities
+// Query key factory for React Query cache management
+export const SCORE_KEYS = {
+  all: ["score-requests"] as const,
+  lists: () => [...SCORE_KEYS.all, "list"] as const,
+  list: (params: PaginationParams) => [...SCORE_KEYS.lists(), params] as const,
+  details: () => [...SCORE_KEYS.all, "detail"] as const,
+  detail: (id: string) => [...SCORE_KEYS.details(), id] as const,
+};
 
 export const scoreService = {
   // GET: Fetch all score requests (paginated)

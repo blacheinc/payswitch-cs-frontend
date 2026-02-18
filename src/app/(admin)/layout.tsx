@@ -231,7 +231,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {user?.name ? getInitials(user.name) : "U"}
+                      {user?.name ? getInitials(user.name) : "A"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
