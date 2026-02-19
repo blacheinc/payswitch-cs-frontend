@@ -186,16 +186,16 @@ export default function AdminDashboardPage() {
                     tickFormatter={(value) => `${value}`}
                   />
                   <Tooltip
-                    cursor={{ fill: "hsl(var(--muted))", opacity: 0.2 }}
+                    cursor={{ fill: "var(--primary)", opacity: 0.2 }}
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "var(--background)",
+                      border: "1px solid var(--border)",
                       borderRadius: "8px",
                     }}
                   />
                   <Bar
                     dataKey="requests"
-                    fill="hsl(var(--primary))"
+                    fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>

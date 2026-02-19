@@ -320,12 +320,12 @@ export default function ReportsPage() {
                       >
                         <stop
                           offset="5%"
-                          stopColor="hsl(var(--primary))"
+                          stopColor="var(--primary)"
                           stopOpacity={0.3}
                         />
                         <stop
                           offset="95%"
-                          stopColor="hsl(var(--primary))"
+                          stopColor="var(--primary)"
                           stopOpacity={0}
                         />
                       </linearGradient>
@@ -357,8 +357,8 @@ export default function ReportsPage() {
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "var(--background)",
+                        border: "1px solid var(--border)",
                         borderRadius: "8px",
                       }}
                     />
@@ -367,7 +367,7 @@ export default function ReportsPage() {
                       type="monotone"
                       dataKey="requests"
                       name="Total Requests"
-                      stroke="hsl(var(--primary))"
+                      stroke="var(--primary)"
                       fillOpacity={1}
                       fill="url(#colorRequests)"
                     />
@@ -409,17 +409,17 @@ export default function ReportsPage() {
                     <XAxis dataKey="name" tickLine={false} axisLine={false} />
                     <YAxis tickLine={false} axisLine={false} />
                     <Tooltip
-                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.2 }}
+                      cursor={{ fill: "var(--primary)", opacity: 0.2 }}
                       contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "var(--background)",
+                        border: "1px solid var(--border)",
                         borderRadius: "8px",
                       }}
                     />
                     <Bar
                       dataKey="value"
                       name="Percentage"
-                      fill="hsl(var(--primary))"
+                      fill="var(--primary)"
                       radius={[4, 4, 0, 0]}
                     />
                   </BarChart>

@@ -489,12 +489,12 @@ export default function AIMonitorPage() {
                     <linearGradient id="colorAuto" x1="0" y1="0" x2="0" y2="1">
                       <stop
                         offset="5%"
-                        stopColor="hsl(var(--primary))"
+                        stopColor="var(--primary)"
                         stopOpacity={0.3}
                       />
                       <stop
                         offset="95%"
-                        stopColor="hsl(var(--primary))"
+                        stopColor="var(--primary)"
                         stopOpacity={0}
                       />
                     </linearGradient>
@@ -503,8 +503,8 @@ export default function AIMonitorPage() {
                   <YAxis tickLine={false} axisLine={false} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "var(--background)",
+                      border: "1px solid var(--border)",
                       borderRadius: "8px",
                     }}
                   />
@@ -517,7 +517,7 @@ export default function AIMonitorPage() {
                     type="monotone"
                     dataKey="autonomous"
                     stackId="1"
-                    stroke="hsl(var(--primary))"
+                    stroke="var(--primary)"
                     fillOpacity={1}
                     fill="url(#colorAuto)"
                   />
@@ -525,9 +525,9 @@ export default function AIMonitorPage() {
                     type="monotone"
                     dataKey="manual"
                     stackId="2"
-                    stroke="hsl(var(--muted-foreground))"
+                    stroke="var(--muted-foreground)"
                     fillOpacity={0.1}
-                    fill="hsl(var(--muted-foreground))"
+                    fill="var(--muted-foreground)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -559,8 +559,8 @@ export default function AIMonitorPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "var(--background)",
+                      border: "1px solid var(--border)",
                       borderRadius: "8px",
                     }}
                   />
