@@ -49,8 +49,10 @@ export default function ForgotPasswordPage() {
       setIsSubmitted(true);
       toast.success(data.message);
     },
-    onError: () => {
-      toast.error("Failed to send reset link. Please try again.");
+    onError: (error) => {
+      toast.error(
+        error.message || "Failed to send reset link. Please try again.",
+      );
     },
   });
 

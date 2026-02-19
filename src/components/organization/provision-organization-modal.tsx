@@ -16,7 +16,6 @@ import {
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
 import { ROUTES } from "@/lib/constant";
-import { getErrorMessage } from "@/types/models";
 
 interface ProvisionOrganizationModalProps {
   open: boolean;
@@ -47,7 +46,7 @@ export function ProvisionOrganizationModal({
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Failed to provision organization"));
+      toast.error(error.message || "Failed to provision organization");
     },
   });
 

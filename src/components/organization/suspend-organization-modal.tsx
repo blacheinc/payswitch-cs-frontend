@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
-import { getErrorMessage } from "@/types/models";
 
 interface SuspendOrganizationModalProps {
   open: boolean;
@@ -44,7 +43,7 @@ export function SuspendOrganizationModal({
       toast.success("Organization suspended");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Failed to suspend organization"));
+      toast.error(error.message || "Failed to suspend organization");
     },
   });
 

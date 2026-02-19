@@ -84,8 +84,10 @@ export default function ResetPasswordPage() {
         router.push(ROUTES.AUTH.LOGIN);
       }, 3000);
     },
-    onError: () => {
-      toast.error("Failed to reset password. Link may be expired.");
+    onError: (error) => {
+      toast.error(
+        error.message || "Failed to reset password. Link may be expired.",
+      );
     },
   });
 

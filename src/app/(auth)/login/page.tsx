@@ -22,6 +22,7 @@ import { authService } from "@/lib/auth-service";
 import { useAuth } from "@/contexts/auth-context";
 import { ROUTES } from "@/lib/constant";
 import { saveSession } from "@/lib/session-storage";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,11 +103,7 @@ export default function LoginPage() {
       }
     },
     onError: (error) => {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Login failed. Please try again.";
-      toast.error(message);
+      toast.error(error.message || "Login failed. Please try again.");
     },
   });
 
@@ -135,11 +132,7 @@ export default function LoginPage() {
       }
     },
     onError: (error) => {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Invalid code. Please try again.";
-      toast.error(message);
+      toast.error(error.message || "Invalid code. Please try again.");
     },
   });
 

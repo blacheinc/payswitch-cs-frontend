@@ -19,7 +19,6 @@ import {
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
 import type { OrganizationResponse } from "@/types/organization-type";
-import { getErrorMessage } from "@/types/models";
 
 interface EditOrganizationModalProps {
   open: boolean;
@@ -65,7 +64,7 @@ export function EditOrganizationModal({
       toast.success("Organization updated successfully");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Failed to update organization"));
+      toast.error(error.message || "Failed to update organization");
     },
   });
 

@@ -27,7 +27,6 @@ import { Separator } from "@/components/ui/separator";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
 import { INDUSTRY_TYPE_ENUM } from "@/lib/constant";
-import { getErrorMessage } from "@/types/models";
 
 interface AddOrganizationModalProps {
   open: boolean;
@@ -67,7 +66,7 @@ export function AddOrganizationModal({
       toast.success("Organization created successfully");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Failed to create organization"));
+      toast.error(error.message || "Failed to create organization");
     },
   });
 

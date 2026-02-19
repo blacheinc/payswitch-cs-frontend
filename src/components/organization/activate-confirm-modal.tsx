@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
-import { getErrorMessage } from "@/types/models";
 
 interface ActivateConfirmModalProps {
   open: boolean;
@@ -40,7 +39,7 @@ export function ActivateConfirmModal({
       toast.success("Organization activated");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Failed to activate organization"));
+      toast.error(error.message || "Failed to activate organization");
     },
   });
 

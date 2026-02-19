@@ -133,14 +133,30 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // The API wraps errors as { error: { code, message, details } }
-    // but some endpoints may use a flat shape — handle both.
+    // The API uses two error shapes:
+    // 1) Business-logic: { code, message, details? } (flat)
+    //    or wrapped:     { error: { code, message, details? } }
+    // 2) FastAPI 422:    { detail: [{ loc, msg, type }] }
     const body = error.response?.data;
+
+    // Handle FastAPI 422 validation errors
+    const detail = (body as unknown as Record<string, unknown>)?.detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0] as { msg?: string };
+      const apiError: ApiError = {
+        code: "VALIDATION_ERROR",
+        message: first.msg || "Validation error",
+        details: { validationErrors: detail },
+        statusCode: error.response?.status || 422,
+      };
+      return Promise.reject(apiError);
+    }
+
+    // Handle business-logic errors (nested or flat)
     const nested = (body as unknown as Record<string, unknown>)?.error as
       | Record<string, unknown>
       | undefined;
 
-    // Transform error to consistent format
     const apiError: ApiError = {
       code: (nested?.code as string) || body?.code || "UNKNOWN_ERROR",
       message:
