@@ -132,7 +132,7 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Forgot Password",
-        "description": "Request a password reset email.",
+        "description": "Request a password reset email. Token expires in 1 hour.",
         "operationId": "forgot_password_auth_forgot_password_post",
         "requestBody": {
           "content": {
@@ -166,7 +166,7 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Reset Password",
-        "description": "Reset password using a reset token.",
+        "description": "Reset password using a reset token (must not be expired).",
         "operationId": "reset_password_auth_reset_password_post",
         "requestBody": {
           "content": {
@@ -623,6 +623,124 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{org_id}/users": {
+      "get": {
+        "tags": ["Admin – Organizations"],
+        "summary": "List Org Users",
+        "description": "List users for an organization (admin only).",
+        "operationId": "list_org_users_admin_organizations__org_id__users_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Org Id" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OrgUserResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{org_id}/users/{user_id}": {
+      "patch": {
+        "tags": ["Admin – Organizations"],
+        "summary": "Update Org User",
+        "description": "Update an organization user's details (admin only).",
+        "operationId": "update_org_user_admin_organizations__org_id__users__user_id__patch",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Org Id" }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "User Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateUserRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OrgUserResponse" }
               }
             }
           },
@@ -4234,6 +4352,28 @@
         },
         "type": "object",
         "title": "UpdateOrganizationRequest"
+      },
+      "UpdateUserRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200 },
+              { "type": "null" }
+            ],
+            "title": "Name"
+          },
+          "role_label": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Role Label"
+          },
+          "status": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Status",
+            "description": "active, pending, suspended, removed"
+          }
+        },
+        "type": "object",
+        "title": "UpdateUserRequest"
       },
       "UpdateWebhookRequest": {
         "properties": {

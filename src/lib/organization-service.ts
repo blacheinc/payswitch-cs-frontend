@@ -1,5 +1,5 @@
 import apiClient from "./api-client";
-import { API_ENDPOINTS } from "@/lib/constant";
+import { API_ENDPOINTS, TABLE_ITEM_PER_PAGE } from "@/lib/constant";
 import type { PaginatedResponse, PaginationParams } from "@/types/api-type";
 import type {
   CreateOrganizationRequest,
@@ -8,6 +8,7 @@ import type {
   SuspendOrganizationRequest,
   OrganizationResponse,
   ProvisionResponse,
+  OrgUserResponse,
 } from "@/types/organization-type";
 
 // ---- Raw API shapes (snake_case) ----
@@ -44,6 +45,24 @@ interface ApiProvisionResponse {
   message: string;
 }
 
+interface ApiOrgUserResponse {
+  id: string;
+  email: string;
+  name: string;
+  role_label: string;
+  status: string;
+  last_login_at: string | null;
+  created_at: string;
+}
+
+interface ApiPaginatedUsers {
+  items: ApiOrgUserResponse[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 // ---- Mappers ----
 
 function mapOrg(raw: ApiOrganizationResponse): OrganizationResponse {
@@ -64,6 +83,18 @@ function mapOrg(raw: ApiOrganizationResponse): OrganizationResponse {
   };
 }
 
+function mapUser(raw: ApiOrgUserResponse): OrgUserResponse {
+  return {
+    id: raw.id,
+    email: raw.email,
+    name: raw.name,
+    roleLabel: raw.role_label,
+    status: raw.status,
+    lastLoginAt: raw.last_login_at,
+    createdAt: raw.created_at,
+  };
+}
+
 // ---- Query keys ----
 
 export const ORG_KEYS = {
@@ -71,6 +102,8 @@ export const ORG_KEYS = {
   list: (params?: PaginationParams) =>
     [...ORG_KEYS.all, "list", params] as const,
   detail: (id: string) => [...ORG_KEYS.all, "detail", id] as const,
+  users: (orgId: string, params?: PaginationParams) =>
+    [...ORG_KEYS.all, "users", orgId, params] as const,
 };
 
 // ---- Service ----
@@ -85,7 +118,7 @@ export const organizationService = {
       {
         params: {
           page: params?.page,
-          per_page: params?.perPage,
+          per_page: TABLE_ITEM_PER_PAGE,
           search: params?.search || undefined,
           status: params?.status || undefined,
         },
@@ -183,5 +216,31 @@ export const organizationService = {
       API_ENDPOINTS.ADMIN.ACTIVATE(id),
     );
     return response.data;
+  },
+
+  /** GET /admin/organizations/{org_id}/users — paginated list */
+  async listUsers(
+    orgId: string,
+    params?: PaginationParams,
+  ): Promise<PaginatedResponse<OrgUserResponse>> {
+    const response = await apiClient.get<ApiPaginatedUsers>(
+      API_ENDPOINTS.ADMIN.ORG_USERS(orgId),
+      {
+        params: {
+          page: params?.page,
+          per_page: TABLE_ITEM_PER_PAGE,
+          status: params?.status || undefined,
+        },
+      },
+    );
+
+    const data = response.data;
+    return {
+      items: data.items.map(mapUser),
+      total: data.total,
+      page: data.page,
+      perPage: data.per_page,
+      totalPages: data.total_pages,
+    };
   },
 };

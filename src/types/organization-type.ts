@@ -60,3 +60,14 @@ export interface ProvisionResponse {
   productionApiKey: string;
   message: string;
 }
+
+/** GET /admin/organizations/{org_id}/users */
+export interface OrgUserResponse {
+  id: string;
+  email: string;
+  name: string;
+  roleLabel: string;
+  status: string;
+  lastLoginAt: string | null;
+  createdAt: string;
+}

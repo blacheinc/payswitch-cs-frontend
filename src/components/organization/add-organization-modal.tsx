@@ -26,7 +26,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
-import { industryTypeEnum } from "@/lib/constant";
+import { INDUSTRY_TYPE_ENUM } from "@/lib/constant";
 import { getErrorMessage } from "@/types/models";
 
 interface AddOrganizationModalProps {
@@ -139,7 +139,7 @@ export function AddOrganizationModal({
                     <SelectValue placeholder="Select industry" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.values(industryTypeEnum).map((industry) => (
+                    {Object.values(INDUSTRY_TYPE_ENUM).map((industry) => (
                       <SelectItem key={industry.value} value={industry.value}>
                         {industry.label}
                       </SelectItem>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   Pencil,
@@ -18,12 +19,23 @@ import {
   AlertCircleIcon,
   Copy,
   Check,
+  Users,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
 
@@ -49,6 +61,15 @@ export default function OrganizationDetailPage() {
     enabled: !!orgId,
   });
 
+  // ---- Fetch users ----
+  const [usersPage, setUsersPage] = useState(1);
+  const { data: usersData, isLoading: isUsersLoading } = useQuery({
+    queryKey: ORG_KEYS.users(orgId, { page: usersPage, perPage: 10 }),
+    queryFn: () =>
+      organizationService.listUsers(orgId, { page: usersPage, perPage: 10 }),
+    enabled: !!orgId,
+  });
+
   // ---- Modal state ----
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSuspendOpen, setIsSuspendOpen] = useState(false);
@@ -65,6 +86,23 @@ export default function OrganizationDetailPage() {
       default:
         return (
           <Badge variant="secondary" className="capitalize">
+            {status}
+          </Badge>
+        );
+    }
+  };
+
+  const getUserStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge variant="success">Active</Badge>;
+      case "suspended":
+        return <Badge variant="destructive">Suspended</Badge>;
+      case "removed":
+        return <Badge variant="destructive">Removed</Badge>;
+      default:
+        return (
+          <Badge variant="warning" className="capitalize">
             {status}
           </Badge>
         );
@@ -261,6 +299,103 @@ export default function OrganizationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Users table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="h-5 w-5" />
+            Organization Users
+            {usersData && (
+              <Badge variant="secondary" className="ml-2">
+                {usersData.total}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isUsersLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !usersData?.items.length ? (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              No users found for this organization.
+            </p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Login</TableHead>
+                      <TableHead>Joined</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {usersData.items.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">
+                          {user.name}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {user.email}
+                        </TableCell>
+                        <TableCell className="capitalize text-sm">
+                          {user.roleLabel}
+                        </TableCell>
+                        <TableCell>{getUserStatusBadge(user.status)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {user.lastLoginAt
+                            ? format(
+                                new Date(user.lastLoginAt),
+                                "MMM d, yyyy, h:mm a",
+                              )
+                            : "Never"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(user.createdAt), "MMM d, yyyy")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {usersData.totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Page {usersData.page} of {usersData.totalPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={usersPage <= 1}
+                      onClick={() => setUsersPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={usersPage >= usersData.totalPages}
+                      onClick={() => setUsersPage((p) => p + 1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modals */}
       <EditOrganizationModal

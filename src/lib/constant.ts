@@ -1,6 +1,8 @@
 // Inactivity timeout in milliseconds (5 minutes)
 export const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
+export const TABLE_ITEM_PER_PAGE = 10;
+
 // Routes
 export const ROUTES = {
   AUTH: {
@@ -60,6 +62,7 @@ export const API_ENDPOINTS = {
     PROVISION: (id: string) => `/admin/organizations/${id}/provision`,
     SUSPEND: (id: string) => `/admin/organizations/${id}/suspend`,
     ACTIVATE: (id: string) => `/admin/organizations/${id}/activate`,
+    ORG_USERS: (orgId: string) => `/admin/organizations/${orgId}/users`,
     SOURCES: "/admin/sources",
     TRAINING_DATA: "/admin/training-data",
     UPLOAD_TRAINING: "/admin/training-data/upload",
@@ -73,7 +76,7 @@ export const API_ENDPOINTS = {
   },
 };
 
-export const industryTypeEnum = {
+export const INDUSTRY_TYPE_ENUM = {
   BANK: {
     value: "bank",
     label: "Bank",
