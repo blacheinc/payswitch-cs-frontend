@@ -72,3 +72,26 @@ export const API_ENDPOINTS = {
     LOGS: "/org/api-logs",
   },
 };
+
+export const industryTypeEnum = {
+  BANK: {
+    value: "bank",
+    label: "Bank",
+  },
+  FINTECH: {
+    value: "fintech",
+    label: "Fintech",
+  },
+  MFI: {
+    value: "mfi",
+    label: "Microfinance Bank",
+  },
+  SACCO: {
+    value: "sacco",
+    label: "SACCO",
+  },
+  OTHER: {
+    value: "other",
+    label: "Other",
+  },
+};

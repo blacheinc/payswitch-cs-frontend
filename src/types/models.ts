@@ -546,3 +546,24 @@ export interface ApiError {
   details?: Record<string, unknown>;
   statusCode: number;
 }
+
+/** Extract a human-readable message from any error thrown by apiClient. */
+export function getErrorMessage(
+  error: unknown,
+  fallback = "An unexpected error occurred",
+): string {
+  // ApiError object rejected by the response interceptor
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as ApiError).message === "string"
+  ) {
+    return (error as ApiError).message;
+  }
+  // Standard Error instance
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
+}

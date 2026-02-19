@@ -133,14 +133,22 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // The API wraps errors as { error: { code, message, details } }
+    // but some endpoints may use a flat shape — handle both.
+    const body = error.response?.data;
+    const nested = (body as unknown as Record<string, unknown>)?.error as
+      | Record<string, unknown>
+      | undefined;
+
     // Transform error to consistent format
     const apiError: ApiError = {
-      code: error.response?.data?.code || "UNKNOWN_ERROR",
+      code: (nested?.code as string) || body?.code || "UNKNOWN_ERROR",
       message:
-        error.response?.data?.message ||
+        (nested?.message as string) ||
+        body?.message ||
         error.message ||
         "An unexpected error occurred",
-      details: error.response?.data?.details,
+      details: (nested?.details as Record<string, unknown>) || body?.details,
       statusCode: error.response?.status || 500,
     };
 

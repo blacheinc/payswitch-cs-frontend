@@ -3358,6 +3358,14 @@
             "title": "Address"
           },
           "status": { "type": "string", "title": "Status" },
+          "suspension_reason": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Suspension Reason"
+          },
+          "webhook_secret": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Webhook Secret"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -3380,6 +3388,8 @@
           "primary_contact_phone",
           "address",
           "status",
+          "suspension_reason",
+          "webhook_secret",
           "created_at",
           "updated_at"
         ],
