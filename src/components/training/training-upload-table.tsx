@@ -1,0 +1,307 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import {
+  FileSpreadsheet,
+  Eye,
+  Download,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  ShieldCheck,
+  XCircle,
+  MoreVertical,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+import type { TrainingUploadResponse } from "@/types/training-type";
+import type { PaginatedResponse } from "@/types/api-type";
+
+interface TrainingUploadTableProps {
+  data: PaginatedResponse<TrainingUploadResponse> | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  page: number;
+  onPageChange: (page: number) => void;
+  onDelete?: (id: string) => void;
+}
+
+export function TrainingUploadTable({
+  data,
+  isLoading,
+  isError,
+  page,
+  onPageChange,
+  onDelete,
+}: TrainingUploadTableProps) {
+  const router = useRouter();
+  const uploads = data?.items ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "—";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "processed":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200 gap-1"
+          >
+            <CheckCircle className="h-3 w-3" /> Processed
+          </Badge>
+        );
+      case "processing":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-700 border-blue-200 gap-1"
+          >
+            <Clock className="h-3 w-3 animate-spin" /> Processing
+          </Badge>
+        );
+      case "pending_review":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-amber-50 text-amber-700 border-amber-200 gap-1"
+          >
+            <Clock className="h-3 w-3" /> Pending Review
+          </Badge>
+        );
+      case "approved":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1"
+          >
+            <ShieldCheck className="h-3 w-3" /> Approved
+          </Badge>
+        );
+      case "rejected":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-orange-50 text-orange-700 border-orange-200 gap-1"
+          >
+            <XCircle className="h-3 w-3" /> Rejected
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 gap-1"
+          >
+            <AlertCircle className="h-3 w-3" /> Failed
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="gap-1 capitalize">
+            {status.replace("_", " ")}
+          </Badge>
+        );
+    }
+  };
+
+  const getQualityColor = (score: number) => {
+    if (score >= 90) return "text-green-600";
+    if (score >= 70) return "text-amber-600";
+    return "text-red-600";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        Failed to load datasets. Please try again.
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>File Name</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Format</TableHead>
+              <TableHead>Size</TableHead>
+              <TableHead>Records</TableHead>
+              <TableHead>Quality</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Uploaded</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {uploads.length === 0 ? (
+              <TableEmpty
+                colSpan={9}
+                title="No datasets found"
+                description="Upload a dataset to get started with model training."
+              />
+            ) : (
+              uploads.map((upload) => (
+                <TableRow key={upload.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium truncate max-w-[180px]">
+                        {upload.fileName}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    {upload.dataSourceName}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] uppercase"
+                    >
+                      {upload.fileFormat}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    {formatFileSize(upload.fileSizeBytes)}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    <div>
+                      {upload.recordCount > 0
+                        ? upload.recordCount.toLocaleString()
+                        : "—"}
+                      {upload.validRecordCount > 0 &&
+                        upload.validRecordCount !== upload.recordCount && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({upload.validRecordCount.toLocaleString()} valid)
+                          </span>
+                        )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {upload.qualityScore > 0 ? (
+                      <div className="space-y-0.5">
+                        <div
+                          className={`text-sm font-medium ${getQualityColor(
+                            upload.qualityScore,
+                          )}`}
+                        >
+                          {upload.qualityScore}%
+                        </div>
+                        <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {upload.featuresMapped}/{upload.targetFeaturesTotal}{" "}
+                          features
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(upload.status)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {format(new Date(upload.createdAt), "MMM d, yyyy")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/training/${upload.id}`)}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </DropdownMenuItem>
+                        {onDelete && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => onDelete(upload.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} ({data?.total ?? 0} total)
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

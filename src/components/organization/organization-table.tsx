@@ -17,6 +17,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
@@ -85,14 +86,6 @@ export function OrganizationTable({
     );
   }
 
-  if (organizations.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        No organizations found.
-      </div>
-    );
-  }
-
   return (
     <>
       <Table>
@@ -110,55 +103,63 @@ export function OrganizationTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {organizations.map((org) => (
-            <TableRow key={org.id}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback>{getInitials(org.name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{org.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {org.shortName}
-                    </span>
+          {organizations.length === 0 ? (
+            <TableEmpty
+              colSpan={9}
+              title="No organizations found"
+              description="There are no organizations to display. Add one to get started."
+            />
+          ) : (
+            organizations.map((org) => (
+              <TableRow key={org.id}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback>{getInitials(org.name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{org.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {org.shortName}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell className="capitalize">{org.industryType}</TableCell>
-              <TableCell>{getStatusBadge(org.status)}</TableCell>
-              <TableCell>{org.primaryContactName || "—"}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {org.primaryContactEmail || "—"}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {org.primaryContactPhone || "—"}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {format(new Date(org.createdAt), "MMM d, yyyy, h:mm a")}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {format(new Date(org.updatedAt), "MMM d, yyyy, h:mm a")}
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => router.push(`/organizations/${org.id}`)}
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Details
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell className="capitalize">{org.industryType}</TableCell>
+                <TableCell>{getStatusBadge(org.status)}</TableCell>
+                <TableCell>{org.primaryContactName || "—"}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {org.primaryContactEmail || "—"}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {org.primaryContactPhone || "—"}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {format(new Date(org.createdAt), "MMM d, yyyy, h:mm a")}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {format(new Date(org.updatedAt), "MMM d, yyyy, h:mm a")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => router.push(`/organizations/${org.id}`)}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
 

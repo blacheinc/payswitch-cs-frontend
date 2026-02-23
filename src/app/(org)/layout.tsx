@@ -295,7 +295,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="flex-1 p-4 mb-5 lg:p-6">{children}</main>
       </div>
     </div>
   );
