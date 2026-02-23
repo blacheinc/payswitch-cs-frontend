@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -8,7 +8,6 @@ import {
   Loader2,
   AlertCircle,
   Clock,
-  CheckCircle,
   FileSpreadsheet,
   Building2,
   RefreshCcw,
@@ -20,24 +19,23 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
-import { MappingEditor } from "@/components/training/mapping-editor";
-import type { UpdateFieldMappingItem } from "@/types/training-type";
 
 export default function TrainingDetailPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [pollInterval, setPollInterval] = useState<number | false>(false);
+  const pollInterval = useQuery({
+    queryKey: TRAINING_KEYS.uploadStatus(id),
+    queryFn: () => trainingService.getUploadStatus(id),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "processing" || status === "queued" ? 3000 : false;
+    },
+  }).data?.status;
 
   // Queries
   const { data: upload, isLoading: isLoadingUpload } = useQuery({
@@ -45,53 +43,16 @@ export default function TrainingDetailPage() {
     queryFn: () => trainingService.getUpload(id),
   });
 
-  const { data: statusData } = useQuery({
-    queryKey: TRAINING_KEYS.uploadStatus(id),
-    queryFn: () => trainingService.getUploadStatus(id),
-    refetchInterval: pollInterval,
-    enabled: !!pollInterval,
-  });
-
-  const { data: mappingData } = useQuery({
-    queryKey: TRAINING_KEYS.uploadMapping(id),
-    queryFn: () => trainingService.getMapping(id),
-    enabled:
-      upload?.status === "pending_review" ||
-      upload?.status === "processed" ||
-      upload?.status === "approved",
-  });
-
-  // Polling logic
+  // Handle status change from polling (handled by React Query invalidation)
   useEffect(() => {
-    if (upload?.status === "processing" || upload?.status === "queued") {
-      setPollInterval(3000); // Poll every 3 seconds
-    } else {
-      setPollInterval(false);
-    }
-  }, [upload?.status]);
-
-  // Handle status change from polling
-  useEffect(() => {
-    if (statusData?.status && statusData.status !== upload?.status) {
+    if (pollInterval && pollInterval !== upload?.status) {
       queryClient.invalidateQueries({
         queryKey: TRAINING_KEYS.uploadDetail(id),
       });
     }
-  }, [statusData?.status, upload?.status, id, queryClient]);
+  }, [pollInterval, upload?.status, id, queryClient]);
 
   // Mutations
-  const updateMappingMutation = useMutation({
-    mutationFn: (mappings: UpdateFieldMappingItem[]) =>
-      trainingService.updateMapping(id, { mappings }),
-    onSuccess: () => {
-      toast.success("Mappings updated successfully.");
-      queryClient.invalidateQueries({
-        queryKey: TRAINING_KEYS.uploadMapping(id),
-      });
-    },
-    onError: () => toast.error("Failed to update mappings."),
-  });
-
   const approveMutation = useMutation({
     mutationFn: () => trainingService.approveUpload(id),
     onSuccess: () => {
@@ -272,66 +233,78 @@ export default function TrainingDetailPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          {/* Quality Report */}
+        {/* Action Area: Quality Report & Status */}
+        <div className="lg:col-span-2 space-y-6">
           <Card className={upload.qualityScore === 0 ? "opacity-50" : ""}>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" /> Data Quality
+                <BarChart3 className="h-4 w-4" /> Data Quality Report
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="text-center space-y-2">
-                <div
-                  className={`text-4xl font-black ${
-                    upload.qualityScore >= 90
-                      ? "text-green-600"
-                      : upload.qualityScore >= 70
-                        ? "text-amber-600"
-                        : "text-red-600"
-                  }`}
-                >
-                  {upload.qualityScore}%
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="text-center space-y-2">
+                  <div
+                    className={`text-6xl font-black ${
+                      upload.qualityScore >= 90
+                        ? "text-green-600"
+                        : upload.qualityScore >= 70
+                          ? "text-amber-600"
+                          : "text-red-600"
+                    }`}
+                  >
+                    {upload.qualityScore}%
+                  </div>
+                  <p className="text-sm font-medium">Overall Quality Score</p>
+                  <Progress value={upload.qualityScore} className="h-2 mt-4" />
                 </div>
-                <p className="text-sm font-medium">Overall Quality Score</p>
+
+                <div className="space-y-4">
+                  {upload.qualityReport &&
+                  Object.entries(upload.qualityReport).length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Detailed Metrics
+                      </p>
+                      <div className="space-y-2">
+                        {Object.entries(upload.qualityReport).map(
+                          ([key, value]) => (
+                            <div
+                              key={key}
+                              className="flex justify-between items-center text-sm"
+                            >
+                              <span className="capitalize text-muted-foreground">
+                                {key.replace(/_/g, " ")}
+                              </span>
+                              <span className="font-medium">
+                                {typeof value === "number"
+                                  ? `${(value * 100).toFixed(1)}%`
+                                  : String(value)}
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 bg-muted/30 rounded-lg text-center">
+                      <Clock className="h-8 w-8 text-muted-foreground mb-2 animate-pulse" />
+                      <p className="text-sm text-muted-foreground">
+                        Quality analysis in progress...
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <Progress value={upload.qualityScore} className="h-2" />
-
-              {upload.qualityReport &&
-                Object.entries(upload.qualityReport).length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Metrics
-                    </p>
-                    <div className="space-y-2">
-                      {Object.entries(upload.qualityReport).map(
-                        ([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex justify-between items-center text-sm"
-                          >
-                            <span className="capitalize">
-                              {key.replace(/_/g, " ")}
-                            </span>
-                            <span>
-                              {typeof value === "number"
-                                ? `${(value * 100).toFixed(1)}%`
-                                : String(value)}
-                            </span>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                )}
-
               {upload.status === "failed" && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
-                  <p className="text-xs font-bold text-red-800 mb-1 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> Processing Error
+                <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-lg">
+                  <p className="text-sm font-bold text-red-800 mb-1 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" /> Processing Error
                   </p>
-                  <p className="text-xs text-red-700 leading-relaxed">
+                  <p className="text-sm text-red-700 leading-relaxed">
                     {upload.errorMessage ||
                       upload.rejectionReason ||
                       "Unknown error occurred during processing."}
@@ -340,12 +313,9 @@ export default function TrainingDetailPage() {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Action Area: Mapping & Review */}
-        <div className="lg:col-span-2 space-y-6">
-          {upload.status === "processing" ? (
-            <Card className="border-dashed flex flex-col items-center justify-center p-12 text-center h-full min-h-[400px]">
+          {upload.status === "processing" && (
+            <Card className="border-dashed flex flex-col items-center justify-center p-12 text-center h-full min-h-[300px]">
               <div className="relative mb-6">
                 <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
                 <div className="relative b-12 bg-primary/10 p-6 rounded-full">
@@ -353,48 +323,25 @@ export default function TrainingDetailPage() {
                 </div>
               </div>
               <h3 className="text-xl font-bold mb-2">Analyzing Dataset...</h3>
-              <p className="text-muted-foreground max-w-sm">
-                Our AI agents are currently parsing your file, extracting
-                samples, identifying fields, and generating suggested mappings.
+              <p className="text-muted-foreground max-w-sm text-sm">
+                Our AI agents are parsing your file, extracting samples, and
+                evaluating data integrity.
               </p>
               <Progress value={45} className="w-[200px] mt-6 h-1.5" />
             </Card>
-          ) : mappingData ? (
-            <Card className="h-fit">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Field Mapping Review</CardTitle>
-                  <CardDescription>
-                    Review and confirm how source fields map to model target
-                    features.
-                  </CardDescription>
-                </div>
-                {upload.status === "approved" && (
-                  <Badge
-                    variant="outline"
-                    className="text-green-700 border-green-200 bg-green-50"
-                  >
-                    <ShieldCheck className="h-3 w-3 mr-1" /> Mapping Finalized
-                  </Badge>
-                )}
-              </CardHeader>
-              <CardContent>
-                <MappingEditor
-                  mappings={mappingData.mappings}
-                  onSave={(updates) => updateMappingMutation.mutate(updates)}
-                  isSaving={updateMappingMutation.isPending}
-                />
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-dashed flex flex-col items-center justify-center p-12 text-center">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-              <h3 className="text-lg font-medium text-muted-foreground">
-                No mapping data available
+          )}
+
+          {upload.status === "approved" && (
+            <Card className="bg-green-50/50 border-green-100 border-dashed flex flex-col items-center justify-center p-12 text-center h-full min-h-[300px]">
+              <div className="p-6 bg-green-100 rounded-full mb-6">
+                <ShieldCheck className="h-12 w-12 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-green-800 mb-2">
+                Training Initiated
               </h3>
-              <p className="text-sm text-muted-foreground mt-2">
-                Mapping will be generated once the dataset is successfully
-                processed.
+              <p className="text-green-700 max-w-sm text-sm">
+                This dataset has been approved and moved to the model training
+                pipeline.
               </p>
             </Card>
           )}

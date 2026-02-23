@@ -6,10 +6,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Eye,
   Trash2,
   MoreVertical,
 } from "lucide-react";
 
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -48,6 +50,7 @@ export function DataSourceTable({
   onPageChange,
   onDelete,
 }: DataSourceTableProps) {
+  const router = useRouter();
   const sources = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
 
@@ -138,6 +141,14 @@ export function DataSourceTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(`/training/sources/${source.id}`)
+                          }
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
                         {onDelete && (
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"

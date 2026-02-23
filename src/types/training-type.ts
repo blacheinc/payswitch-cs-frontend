@@ -50,19 +50,7 @@ export interface TrainingUploadResponse {
   updatedAt: string | null;
 }
 
-// ==================== MAPPING & STATUS ====================
-
-/** Admin correction for a single mapping. */
-export interface UpdateFieldMappingItem {
-  sourceField: string;
-  targetFeature: string;
-  isApproved?: boolean;
-}
-
-/** PUT /admin/training-data/{upload_id}/mapping */
-export interface UpdateMappingsRequest {
-  mappings: UpdateFieldMappingItem[];
-}
+// ==================== STATUS ====================
 
 /** GET /admin/training-data/{upload_id}/status */
 export interface UploadStatusResponse {
@@ -71,21 +59,4 @@ export interface UploadStatusResponse {
   featuresMapped: number | null;
   targetFeaturesTotal: number;
   errorMessage: string | null;
-}
-
-/** Single item in the mapping review result. */
-export interface MappingItem {
-  sourceField: string;
-  targetFeature: string | null;
-  confidence: number;
-  isRequired: boolean;
-  sampleValues: string[];
-}
-
-/** GET /admin/training-data/{upload_id}/mapping */
-export interface MappingResultResponse {
-  uploadId: string;
-  status: string;
-  mappings: MappingItem[];
-  sampleRows: Record<string, any>[];
 }

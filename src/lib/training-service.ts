@@ -1,13 +1,11 @@
 import apiClient from "./api-client";
 import { API_ENDPOINTS, TABLE_ITEM_PER_PAGE } from "@/lib/constant";
-import type { PaginatedResponse, PaginationParams } from "@/types/api-type";
-import type {
+import { PaginatedResponse, PaginationParams } from "@/types/api-type";
+import {
   DataSourceResponse,
   CreateDataSourceRequest,
   TrainingUploadResponse,
   UploadStatusResponse,
-  MappingResultResponse,
-  UpdateMappingsRequest,
 } from "@/types/training-type";
 
 // ---- Raw API shapes (snake_case) ----
@@ -64,21 +62,6 @@ interface ApiPaginatedUploads {
   total_pages: number;
 }
 
-interface ApiMappingItem {
-  source_field: string;
-  target_feature: string | null;
-  confidence: number;
-  is_required: boolean;
-  sample_values: string[];
-}
-
-interface ApiMappingResultResponse {
-  upload_id: string;
-  status: string;
-  mappings: ApiMappingItem[];
-  sample_rows: Record<string, any>[];
-}
-
 interface ApiUploadStatusResponse {
   upload_id: string;
   status: string;
@@ -129,23 +112,6 @@ function mapUpload(raw: ApiTrainingUploadResponse): TrainingUploadResponse {
   };
 }
 
-function mapMappingResult(
-  raw: ApiMappingResultResponse,
-): MappingResultResponse {
-  return {
-    uploadId: raw.upload_id,
-    status: raw.status,
-    mappings: raw.mappings.map((m) => ({
-      sourceField: m.source_field,
-      targetFeature: m.target_feature,
-      confidence: m.confidence,
-      isRequired: m.is_required,
-      sampleValues: m.sample_values,
-    })),
-    sampleRows: raw.sample_rows,
-  };
-}
-
 function mapUploadStatus(raw: ApiUploadStatusResponse): UploadStatusResponse {
   return {
     uploadId: raw.upload_id,
@@ -164,7 +130,6 @@ export const TRAINING_KEYS = {
     [...TRAINING_KEYS.all, "uploads", params] as const,
   uploadDetail: (id: string) => [...TRAINING_KEYS.all, "upload", id] as const,
   uploadStatus: (id: string) => [...TRAINING_KEYS.all, "status", id] as const,
-  uploadMapping: (id: string) => [...TRAINING_KEYS.all, "mapping", id] as const,
   sources: (params?: PaginationParams) =>
     [...TRAINING_KEYS.all, "sources", params] as const,
   sourceDetail: (id: string) => [...TRAINING_KEYS.all, "source", id] as const,
@@ -238,32 +203,6 @@ export const trainingService = {
       API_ENDPOINTS.ADMIN.TRAINING_STATUS(id),
     );
     return mapUploadStatus(response.data);
-  },
-
-  /** GET /admin/training-data/{upload_id}/mapping */
-  async getMapping(id: string): Promise<MappingResultResponse> {
-    const response = await apiClient.get<ApiMappingResultResponse>(
-      API_ENDPOINTS.ADMIN.TRAINING_MAPPING(id),
-    );
-    return mapMappingResult(response.data);
-  },
-
-  /** PUT /admin/training-data/{upload_id}/mapping */
-  async updateMapping(
-    id: string,
-    data: UpdateMappingsRequest,
-  ): Promise<MappingResultResponse> {
-    const response = await apiClient.put<ApiMappingResultResponse>(
-      API_ENDPOINTS.ADMIN.TRAINING_MAPPING(id),
-      {
-        mappings: data.mappings.map((m) => ({
-          source_field: m.sourceField,
-          target_feature: m.targetFeature,
-          is_approved: m.isApproved,
-        })),
-      },
-    );
-    return mapMappingResult(response.data);
   },
 
   /** POST /admin/training-data/{upload_id}/approve */
@@ -346,14 +285,6 @@ export const trainingService = {
     return mapSource(response.data);
   },
 
-  /** GET /admin/sources/{source_id}/template */
-  async getTemplate(id: string): Promise<any> {
-    const response = await apiClient.get(
-      API_ENDPOINTS.ADMIN.SOURCE_TEMPLATE(id),
-    );
-    return response.data;
-  },
-
   /** GET /admin/sources/{source_id}/uploads — paginated */
   async listSourceUploads(
     sourceId: string,
@@ -365,6 +296,7 @@ export const trainingService = {
         params: {
           page: params?.page,
           per_page: params?.perPage || TABLE_ITEM_PER_PAGE,
+          search: params?.search || undefined,
         },
       },
     );
