@@ -95,7 +95,7 @@ export default function LoginPage() {
         );
         toast.success("Welcome back!");
 
-        if (loginMode === "admin") {
+        if (result?.userType === "admin") {
           router.push(ROUTES.ADMIN.DASHBOARD);
         } else {
           router.push(ROUTES.ORG.DASHBOARD);

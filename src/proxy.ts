@@ -3,9 +3,9 @@ import type { NextRequest } from "next/server";
 import CryptoJS from "crypto-js";
 import { ROUTES } from "@/lib/constant";
 
-// --- DISABLE ORG ROUTES: Comment out lines below to re-enable ---
-const DISABLED_ROUTES = Object.values(ROUTES.ORG);
-// --- END DISABLE ORG ROUTES ---
+// // --- DISABLE ORG ROUTES: Comment out lines below to re-enable ---
+// const DISABLED_ROUTES = Object.values(ROUTES.ORG);
+// // --- END DISABLE ORG ROUTES ---
 
 // Same secret used by session-storage.ts
 const SECRET =
@@ -36,15 +36,15 @@ export function proxy(request: NextRequest) {
   // Get the pathname of the request (e.g. /, /protected)
   const path = request.nextUrl.pathname;
 
-  // --- DISABLE ORG ROUTES: Comment out lines below to re-enable ---
-  if (
-    DISABLED_ROUTES.some(
-      (route) => path === route || path.startsWith(route + "/"),
-    )
-  ) {
-    return NextResponse.rewrite(new URL("/_not-found", request.url));
-  }
-  // --- END DISABLE ORG ROUTES ---
+  // // --- DISABLE ORG ROUTES: Comment out lines below to re-enable ---
+  // if (
+  //   DISABLED_ROUTES.some(
+  //     (route) => path === route || path.startsWith(route + "/"),
+  //   )
+  // ) {
+  //   return NextResponse.rewrite(new URL("/_not-found", request.url));
+  // }
+  // // --- END DISABLE ORG ROUTES ---
 
   // Define public paths that don't require authentication
   const isPublicPath =
