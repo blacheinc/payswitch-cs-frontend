@@ -205,34 +205,6 @@ export const trainingService = {
     return mapUploadStatus(response.data);
   },
 
-  /** POST /admin/training-data/{upload_id}/approve */
-  async approveUpload(id: string): Promise<any> {
-    const response = await apiClient.post(
-      API_ENDPOINTS.ADMIN.APPROVE_TRAINING(id),
-    );
-    return response.data;
-  },
-
-  /** POST /admin/training-data/{upload_id}/reject */
-  async rejectUpload(
-    id: string,
-    reason: string,
-  ): Promise<TrainingUploadResponse> {
-    const response = await apiClient.post<ApiTrainingUploadResponse>(
-      API_ENDPOINTS.ADMIN.REJECT_TRAINING(id),
-      { reason },
-    );
-    return mapUpload(response.data);
-  },
-
-  /** POST /admin/training-data/{upload_id}/retry */
-  async retryUpload(id: string): Promise<UploadStatusResponse> {
-    const response = await apiClient.post<ApiUploadStatusResponse>(
-      API_ENDPOINTS.ADMIN.RETRY_TRAINING(id),
-    );
-    return mapUploadStatus(response.data);
-  },
-
   // ==================== DATA SOURCES ====================
 
   /** GET /admin/sources — paginated list */

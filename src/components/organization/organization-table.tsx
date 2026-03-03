@@ -33,6 +33,7 @@ import {
 
 import type { OrganizationResponse } from "@/types/organization-type";
 import type { PaginatedResponse } from "@/types/api-type";
+import { formatDate } from "@/lib/utils";
 
 interface OrganizationTableProps {
   data: PaginatedResponse<OrganizationResponse> | undefined;
@@ -135,10 +136,10 @@ export function OrganizationTable({
                   {org.primaryContactPhone || "—"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {format(new Date(org.createdAt), "MMM d, yyyy, h:mm a")}
+                  {formatDate(org.createdAt)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {format(new Date(org.updatedAt), "MMM d, yyyy, h:mm a")}
+                  {formatDate(org.updatedAt)}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

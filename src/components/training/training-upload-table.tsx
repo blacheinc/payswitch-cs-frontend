@@ -1,20 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import {
   FileSpreadsheet,
   Eye,
-  Download,
   Trash2,
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  ShieldCheck,
-  XCircle,
   MoreVertical,
 } from "lucide-react";
 
@@ -38,6 +31,7 @@ import {
 
 import type { TrainingUploadResponse } from "@/types/training-type";
 import type { PaginatedResponse } from "@/types/api-type";
+import { formatDate } from "@/lib/utils";
 
 interface TrainingUploadTableProps {
   data: PaginatedResponse<TrainingUploadResponse> | undefined;
@@ -67,68 +61,25 @@ export function TrainingUploadTable({
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadgeStyle = (status: string) => {
     switch (status) {
       case "processed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 border-green-200 gap-1"
-          >
-            <CheckCircle className="h-3 w-3" /> Processed
-          </Badge>
-        );
+        return {
+          variant: "outline" as const,
+          className: "bg-green-50 text-green-700 border-green-200",
+        };
       case "processing":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-blue-50 text-blue-700 border-blue-200 gap-1"
-          >
-            <Clock className="h-3 w-3 animate-spin" /> Processing
-          </Badge>
-        );
-      case "pending_review":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-amber-50 text-amber-700 border-amber-200 gap-1"
-          >
-            <Clock className="h-3 w-3" /> Pending Review
-          </Badge>
-        );
-      case "approved":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1"
-          >
-            <ShieldCheck className="h-3 w-3" /> Approved
-          </Badge>
-        );
-      case "rejected":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-orange-50 text-orange-700 border-orange-200 gap-1"
-          >
-            <XCircle className="h-3 w-3" /> Rejected
-          </Badge>
-        );
+        return {
+          variant: "outline" as const,
+          className: "bg-blue-50 text-blue-700 border-blue-200",
+        };
       case "failed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-200 gap-1"
-          >
-            <AlertCircle className="h-3 w-3" /> Failed
-          </Badge>
-        );
+        return {
+          variant: "outline" as const,
+          className: "bg-red-50 text-red-700 border-red-200",
+        };
       default:
-        return (
-          <Badge variant="outline" className="gap-1 capitalize">
-            {status.replace("_", " ")}
-          </Badge>
-        );
+        return { variant: "outline" as const, className: "" };
     }
   };
 
@@ -235,9 +186,16 @@ export function TrainingUploadTable({
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell>{getStatusBadge(upload.status)}</TableCell>
+                  <TableCell>
+                    <Badge
+                      {...getStatusBadgeStyle(upload.status)}
+                      className={`capitalize ${getStatusBadgeStyle(upload.status).className}`}
+                    >
+                      {upload.status.replace(/_/g, " ")}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                    {format(new Date(upload.createdAt), "MMM d, yyyy")}
+                    {formatDate(upload.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -253,10 +211,7 @@ export function TrainingUploadTable({
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled>
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </DropdownMenuItem>
+
                         {onDelete && (
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"

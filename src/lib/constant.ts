@@ -65,15 +65,11 @@ export const API_ENDPOINTS = {
     ORG_USERS: (orgId: string) => `/admin/organizations/${orgId}/users`,
     SOURCES: "/admin/sources",
     SOURCE_BY_ID: (id: string) => `/admin/sources/${id}`,
-    SOURCE_TEMPLATE: (id: string) => `/admin/sources/${id}/template`,
     SOURCE_UPLOADS: (id: string) => `/admin/sources/${id}/uploads`,
     TRAINING_DATA: "/admin/training-data",
     TRAINING_BY_ID: (id: string) => `/admin/training-data/${id}`,
     TRAINING_STATUS: (id: string) => `/admin/training-data/${id}/status`,
-    TRAINING_MAPPING: (id: string) => `/admin/training-data/${id}/mapping`,
-    APPROVE_TRAINING: (id: string) => `/admin/training-data/${id}/approve`,
-    REJECT_TRAINING: (id: string) => `/admin/training-data/${id}/reject`,
-    RETRY_TRAINING: (id: string) => `/admin/training-data/${id}/retry`,
+
     UPLOAD_TRAINING: "/admin/training-data/upload",
   },
   ORG: {

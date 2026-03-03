@@ -3,26 +3,13 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChevronLeft,
-  Loader2,
-  AlertCircle,
-  Building2,
-  Calendar,
-  Layers,
-  Search,
-} from "lucide-react";
+import { ArrowLeft, Loader2, Building2, Search, Layers } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
 import { TrainingUploadTable } from "@/components/training/training-upload-table";
@@ -57,23 +44,20 @@ export default function DataSourceDetailPage() {
 
   if (isLoadingSource) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading source details...</p>
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!source) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-xl font-bold">Data Source not found</h2>
-        <Button
-          variant="link"
-          onClick={() => router.push("/training")}
-          className="mt-2"
-        >
+      <div className="space-y-4 py-12 text-center">
+        <p className="text-muted-foreground">
+          Failed to load data source details.
+        </p>
+        <Button variant="outline" onClick={() => router.push("/training")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Training Data
         </Button>
       </div>
@@ -82,114 +66,135 @@ export default function DataSourceDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Back button + header */}
       <div className="flex flex-col gap-4">
         <Button
           variant="ghost"
-          size="sm"
-          className="w-fit -ml-2 h-8 text-muted-foreground"
+          className="w-fit"
           onClick={() => router.push("/training")}
         >
-          <ChevronLeft className="mr-1 h-4 w-4" /> Back to Training Data
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Training Data
         </Button>
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <Building2 className="h-6 w-6 text-primary" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary text-xl font-bold">
+              {source.name.substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">{source.name}</h1>
                 <Badge variant="secondary" className="font-mono">
                   {source.shortCode}
                 </Badge>
               </div>
-              <p className="text-muted-foreground">
-                Institutional Data Source • {source.sourceType}
+              <p className="text-sm text-muted-foreground">
+                {source.sourceType} • Institutional Data Source
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* Source Metadata */}
-        <div className="xl:col-span-1 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground uppercase font-semibold">
-                  Description
-                </span>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {source.description || "No description provided."}
-                </p>
-              </div>
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Layers className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">Total Uploads:</span>
-                  <span className="font-medium">{source.totalUploads}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">Short Code:</span>
-                  <span className="font-mono text-[10px] font-bold">
-                    {source.shortCode}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">Registered:</span>
-                  <span className="font-medium">
-                    {format(new Date(source.createdAt), "MMM d, yyyy")}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Details card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-5 w-5 text-primary" />
+              Source Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <DetailRow
+              label="Description"
+              value={source.description || "No description provided."}
+            />
+            <Separator />
+            <DetailRow
+              label="Source Type"
+              value={source.sourceType}
+              capitalize
+            />
+            <Separator />
+            <DetailRow label="Short Code" value={source.shortCode} mono />
+            <Separator />
+            <DetailRow
+              label="Total Uploads"
+              value={String(source.totalUploads)}
+            />
+            <Separator />
+            <DetailRow
+              label="Registered"
+              value={format(new Date(source.createdAt), "MMM d, yyyy")}
+            />
+          </CardContent>
+        </Card>
 
-        {/* Upload History */}
-        <div className="xl:col-span-3">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle>Dataset Upload History</CardTitle>
-                  <CardDescription>
-                    History of files provided by this institution
-                  </CardDescription>
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search history..."
-                    className="pl-9 h-9"
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setPage(1);
-                    }}
-                  />
-                </div>
+        {/* Upload History table */}
+        <Card className="col-span-2">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Layers className="h-5 w-5 text-primary" />
+                Dataset Upload History
+                {uploads && (
+                  <Badge variant="secondary" className="ml-2">
+                    {uploads.total}
+                  </Badge>
+                )}
+              </CardTitle>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search history..."
+                  className="pl-9 h-9"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                />
               </div>
-            </CardHeader>
-            <CardContent>
-              <TrainingUploadTable
-                data={uploads}
-                isLoading={isLoadingUploads}
-                isError={isErrorUploads}
-                page={page}
-                onPageChange={setPage}
-              />
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TrainingUploadTable
+              data={uploads}
+              isLoading={isLoadingUploads}
+              isError={isErrorUploads}
+              page={page}
+              onPageChange={setPage}
+            />
+          </CardContent>
+        </Card>
       </div>
+    </div>
+  );
+}
+
+// ---- Helper component (matches organization detail pattern) ----
+
+function DetailRow({
+  label,
+  value,
+  capitalize,
+  mono,
+}: {
+  label: string;
+  value: string | null;
+  capitalize?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span
+        className={`text-sm font-medium ${capitalize ? "capitalize" : ""} ${mono ? "font-mono text-xs" : ""}`}
+      >
+        {value || "—"}
+      </span>
     </div>
   );
 }

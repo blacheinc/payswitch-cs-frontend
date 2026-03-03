@@ -213,7 +213,7 @@ export default function OrganizationDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="h-5 w-5" />
+              <Building2 className="h-5 w-5 text-primary" />
               Organization Info
             </CardTitle>
           </CardHeader>
@@ -268,7 +268,7 @@ export default function OrganizationDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5" />
+              <User className="h-5 w-5 text-primary" />
               Primary Contact
             </CardTitle>
           </CardHeader>
@@ -304,7 +304,7 @@ export default function OrganizationDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Users className="h-5 w-5" />
+            <Users className="h-5 w-5 text-primary" />
             Organization Users
             {usersData && (
               <Badge variant="secondary" className="ml-2">

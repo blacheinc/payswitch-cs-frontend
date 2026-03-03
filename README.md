@@ -5,6 +5,7 @@ An AI-powered credit scoring and risk assessment platform for financial institut
 ## 🚀 Key Features
 
 ### Organization Portal
+
 - **Dashboard**: Real-time overview of scoring requests and risk distribution.
 - **Score Requests**: Single and Bulk (CSV/Excel) upload capabilities.
 - **Reports**: Interactive analytics with exportable data (CSV/PDF).
@@ -12,6 +13,7 @@ An AI-powered credit scoring and risk assessment platform for financial institut
 - **Team**: Role-based access control and user management.
 
 ### Admin Portal
+
 - **System Overview**: Platform-wide health and usage metrics.
 - **Organization Management**: Onboard and manage financial institutions.
 - **Model Registry**: Champion/Challenger model comparison and fairness reports.
@@ -30,33 +32,38 @@ An AI-powered credit scoring and risk assessment platform for financial institut
 ## 🏁 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
 
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/payswitch/credit-scoring-frontend.git
    cd credit-scoring-frontend
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Configure Environment:
    Create a `.env.local` file in the root directory:
+
    ```env
    # Backend API URL (default to localhost for dev)
    NEXT_PUBLIC_API_URL=http://localhost:3000/api
-   
+
    # Enable Mock Authentication (set to 'true' for standalone frontend dev)
    NEXT_PUBLIC_MOCK_AUTH=true
    ```
 
 4. Run the development server:
+
    ```bash
    npm run dev
    ```
@@ -65,7 +72,7 @@ An AI-powered credit scoring and risk assessment platform for financial institut
 
 ## 🔐 Authentication (Dev Mode)
 
-By default, the application runs in **Mock Auth Mode** (`NEXT_PUBLIC_MOCK_AUTH=true`). 
+By default, the application runs in **Mock Auth Mode** (`NEXT_PUBLIC_MOCK_AUTH=true`).
 This allows you to verify the UI without a running backend.
 
 - **Admin Portal**: Login with any email containing "admin" (e.g., `admin@payswitch.com`).
@@ -76,20 +83,6 @@ This allows you to verify the UI without a running backend.
 To disable this and connect to a real backend, set `NEXT_PUBLIC_MOCK_AUTH=false`.
 
 ## 📦 Deployment
-
-### Docker
-
-The application includes a `Dockerfile` for containerized deployment.
-
-1. Build the image:
-   ```bash
-   docker build -t payswitch-credit-scoring .
-   ```
-
-2. Run the container:
-   ```bash
-   docker run -p 3000:3000 payswitch-credit-scoring
-   ```
 
 ### Production Build
 
