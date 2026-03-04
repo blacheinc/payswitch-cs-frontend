@@ -79,7 +79,10 @@ export const API_ENDPOINTS = {
     SUSPEND_USER: (userId: string) => `/org/users/${userId}/suspend`,
     ACTIVATE_USER: (userId: string) => `/org/users/${userId}/activate`,
     API_KEYS: "/org/api-keys",
+    API_KEY_BY_ID: (keyId: string) => `/org/api-keys/${keyId}`,
     WEBHOOKS: "/org/webhooks",
+    WEBHOOK_EVENTS: "/org/webhooks/events",
+    WEBHOOK_BY_ID: (webhookId: string) => `/org/webhooks/${webhookId}`,
     LOGS: "/org/api-logs",
   },
 };
