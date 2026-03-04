@@ -23,7 +23,7 @@ export const ROUTES = {
     DASHBOARD: "/dashboard",
     SCORE_REQUESTS: "/score-requests",
     DEVELOPERS: "/developers",
-    TEAM: "/team",
+    USER_MANAGEMENT: "/user-management",
     REPORTS: "/reports",
     SETTINGS: "/settings",
   },
@@ -75,6 +75,9 @@ export const API_ENDPOINTS = {
   ORG: {
     PROFILE: "/org/profile",
     USERS: "/org/users",
+    USER_BY_ID: (userId: string) => `/org/users/${userId}`,
+    SUSPEND_USER: (userId: string) => `/org/users/${userId}/suspend`,
+    ACTIVATE_USER: (userId: string) => `/org/users/${userId}/activate`,
     API_KEYS: "/org/api-keys",
     WEBHOOKS: "/org/webhooks",
     LOGS: "/org/api-logs",
@@ -101,5 +104,28 @@ export const INDUSTRY_TYPE_ENUM = {
   OTHER: {
     value: "other",
     label: "Other",
+  },
+};
+
+export const ROLE_LABELS_ENUM = {
+  ADMIN: {
+    value: "admin",
+    label: "Admin",
+    description: "Full access to all resources",
+  },
+  CREDIT_OFFICER: {
+    value: "credit_officer",
+    label: "Credit Officer",
+    description: "Can view and create score requests",
+  },
+  DEVELOPER: {
+    value: "developer",
+    label: "Developer",
+    description: "API key and webhook management",
+  },
+  VIEWER: {
+    value: "viewer",
+    label: "Viewer",
+    description: "Read-only access to reports",
   },
 };

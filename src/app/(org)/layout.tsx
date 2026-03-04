@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", href: ROUTES.ORG.DASHBOARD, icon: LayoutDashboard },
   { title: "Score Requests", href: ROUTES.ORG.SCORE_REQUESTS, icon: FileText },
   { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Terminal },
-  { title: "Team", href: ROUTES.ORG.TEAM, icon: Users },
+  { title: "User Management", href: ROUTES.ORG.USER_MANAGEMENT, icon: Users },
   { title: "Reports", href: ROUTES.ORG.REPORTS, icon: BarChart3 },
   { title: "Settings", href: ROUTES.ORG.SETTINGS, icon: Settings },
 ];
@@ -187,8 +187,8 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
               <p className="text-sm font-medium truncate">
                 {user?.name || "User"}
               </p>
-              <p className="text-xs text-muted-foreground truncate capitalize">
-                {user?.roleLabel?.replace("_", " ") || "Member"}
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
               </p>
             </div>
           )}

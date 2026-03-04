@@ -83,9 +83,6 @@ export default function ForgotPasswordPage() {
         <CardContent>
           {isSubmitted ? (
             <div className="text-center space-y-4">
-              <div className="p-4 bg-green-50 text-green-700 rounded-md text-sm">
-                {forgotPasswordMutation.data?.message}
-              </div>
               <p className="text-sm text-muted-foreground">
                 Please check your email inbox and spam folder.
               </p>

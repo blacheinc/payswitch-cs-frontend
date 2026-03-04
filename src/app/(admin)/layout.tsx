@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", href: ROUTES.ADMIN.DASHBOARD, icon: LayoutDashboard },
   { title: "Organizations", href: ROUTES.ADMIN.ORGANIZATIONS, icon: Building2 },
   { title: "Training", href: ROUTES.ADMIN.TRAINING, icon: Database },
-  { title: "AI Monitor", href: ROUTES.ADMIN.AI_MONITOR, icon: Activity },
+  // { title: "AI Monitor", href: ROUTES.ADMIN.AI_MONITOR, icon: Activity },
   { title: "Compliance", href: ROUTES.ADMIN.COMPLIANCE, icon: Shield },
   { title: "Reports", href: ROUTES.ADMIN.REPORTS, icon: FileBarChart },
   { title: "Settings", href: ROUTES.ADMIN.SETTINGS, icon: Settings },
@@ -248,12 +248,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href={ROUTES.ADMIN.SETTINGS}>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
+
                 <DropdownMenuItem asChild>
                   <Link href={ROUTES.ADMIN.SETTINGS}>
                     <Settings className="mr-2 h-4 w-4" />

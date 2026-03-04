@@ -83,17 +83,17 @@ const mockAgents: AIAgent[] = [
     autonomousActionsCount: 856,
     healthMetrics: { cpu: 45, memory: 1200, latency: 45 },
   },
-  {
-    id: "agent_rs_003",
-    name: "Risk Scorer Core",
-    role: "risk_scoring",
-    status: "idle",
-    lastAction: "Applied lgbm_v2.3.1 to request SCR-FID-001",
-    lastActionAt: "12 mins ago",
-    successRate24h: 100,
-    autonomousActionsCount: 342,
-    healthMetrics: { cpu: 8, memory: 800, latency: 120 },
-  },
+  // {
+  //   id: "agent_rs_003",
+  //   name: "Risk Scorer Core",
+  //   role: "risk_scoring",
+  //   status: "idle",
+  //   lastAction: "Applied lgbm_v2.3.1 to request SCR-FID-001",
+  //   lastActionAt: "12 mins ago",
+  //   successRate24h: 100,
+  //   autonomousActionsCount: 342,
+  //   healthMetrics: { cpu: 8, memory: 800, latency: 120 },
+  // },
   {
     id: "agent_rt_004",
     name: "Retraining Guardian",
@@ -105,17 +105,17 @@ const mockAgents: AIAgent[] = [
     autonomousActionsCount: 12,
     healthMetrics: { cpu: 78, memory: 2400, latency: 850 },
   },
-  {
-    id: "agent_cm_005",
-    name: "Compliance Watcher",
-    role: "compliance_checker",
-    status: "running",
-    lastAction: "Verified PII redaction in logs",
-    lastActionAt: "45 mins ago",
-    successRate24h: 100,
-    autonomousActionsCount: 5412,
-    healthMetrics: { cpu: 5, memory: 320, latency: 5 },
-  },
+  // {
+  //   id: "agent_cm_005",
+  //   name: "Compliance Watcher",
+  //   role: "compliance_checker",
+  //   status: "running",
+  //   lastAction: "Verified PII redaction in logs",
+  //   lastActionAt: "45 mins ago",
+  //   successRate24h: 100,
+  //   autonomousActionsCount: 5412,
+  //   healthMetrics: { cpu: 5, memory: 320, latency: 5 },
+  // },
 ];
 
 const actionLogs: AgentActionLog[] = [
@@ -401,7 +401,7 @@ export default function AIMonitorPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Autonomous Efficiency
@@ -431,9 +431,9 @@ export default function AIMonitorPage() {
               Actions taken without human intervention
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
 
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Active AI Agents
@@ -447,7 +447,7 @@ export default function AIMonitorPage() {
               All systems operational
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -466,7 +466,7 @@ export default function AIMonitorPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-7">
+      {/* <div className="grid gap-4 md:grid-cols-7">
         <Card className="md:col-span-4">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -586,7 +586,7 @@ export default function AIMonitorPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       <Tabs defaultValue="agents" className="space-y-4">
         <TabsList>

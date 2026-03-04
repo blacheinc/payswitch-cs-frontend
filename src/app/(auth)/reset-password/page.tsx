@@ -80,9 +80,9 @@ export default function ResetPasswordPage() {
       toast.success("Password reset successfully");
       setIsSuccess(true);
       // Auto redirect after 3 seconds
-      setTimeout(() => {
-        router.push(ROUTES.AUTH.LOGIN);
-      }, 3000);
+      // setTimeout(() => {
+      //   router.push(ROUTES.AUTH.LOGIN);
+      // }, 3000);
     },
     onError: (error) => {
       toast.error(

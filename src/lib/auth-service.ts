@@ -50,6 +50,7 @@ interface ApiLoginResponse {
   expires_in: number;
   user_type: string;
   requires_2fa?: boolean;
+  email?: string | null;
 }
 
 interface Api2FAResponse {
@@ -94,6 +95,11 @@ export const authService = {
     }
 
     const user = parseJwt(data.access_token);
+
+    // Prefer the email from the API response over whatever was in the JWT
+    if (data.email) {
+      user.email = data.email;
+    }
 
     return {
       requires2FA: false,

@@ -71,3 +71,17 @@ export interface OrgUserResponse {
   lastLoginAt: string | null;
   createdAt: string;
 }
+
+/** POST /org/users — invite a new user to the organization */
+export interface InviteUserRequest {
+  email: string;
+  name: string;
+  roleLabel?: string; // "admin" | "credit_officer" | "developer" | "viewer", default: "viewer"
+  callbackUrl?: string | null;
+}
+
+/** PATCH /org/users/{user_id} — update a user's name or role */
+export interface UpdateUserRequest {
+  name?: string | null;
+  roleLabel?: string | null;
+}

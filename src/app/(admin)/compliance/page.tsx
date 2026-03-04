@@ -126,7 +126,7 @@ export default function CompliancePage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -167,19 +167,19 @@ export default function CompliancePage() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       <Tabs defaultValue="logs" className="space-y-4">
         <TabsList>
           <TabsTrigger value="logs">
             <Search className="mr-2 h-4 w-4" /> Audit Logs
           </TabsTrigger>
-          <TabsTrigger value="retention">
+          {/* <TabsTrigger value="retention">
             <Calendar className="mr-2 h-4 w-4" /> Data Retention
           </TabsTrigger>
           <TabsTrigger value="reports">
             <FileText className="mr-2 h-4 w-4" /> Compliance Reports
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="logs" className="space-y-4">

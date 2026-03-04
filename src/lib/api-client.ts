@@ -133,11 +133,38 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // ---- Network-level errors (no server response) ----
+    if (!error.response) {
+      let userMessage = "Something went wrong. Please try again.";
+
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        userMessage =
+          "The server is taking too long to respond. Please try again later.";
+      } else if (
+        error.code === "ERR_NETWORK" ||
+        error.message === "Network Error"
+      ) {
+        userMessage =
+          "Unable to connect. Please check your internet connection.";
+      } else if (error.code === "ECONNREFUSED") {
+        userMessage = "Unable to reach the server. Please try again later.";
+      }
+
+      const networkError: ApiError = {
+        code: error.code || "NETWORK_ERROR",
+        message: userMessage,
+        statusCode: 0,
+      };
+      return Promise.reject(networkError);
+    }
+
+    // ---- Server responded with an error status ----
+
     // The API uses two error shapes:
     // 1) Business-logic: { code, message, details? } (flat)
     //    or wrapped:     { error: { code, message, details? } }
     // 2) FastAPI 422:    { detail: [{ loc, msg, type }] }
-    const body = error.response?.data;
+    const body = error.response.data;
 
     // Handle FastAPI 422 validation errors
     const detail = (body as unknown as Record<string, unknown>)?.detail;
@@ -147,7 +174,7 @@ apiClient.interceptors.response.use(
         code: "VALIDATION_ERROR",
         message: first.msg || "Validation error",
         details: { validationErrors: detail },
-        statusCode: error.response?.status || 422,
+        statusCode: error.response.status || 422,
       };
       return Promise.reject(apiError);
     }
@@ -157,15 +184,27 @@ apiClient.interceptors.response.use(
       | Record<string, unknown>
       | undefined;
 
+    // Map common HTTP status codes to user-friendly fallback messages
+    const httpFallback: Record<number, string> = {
+      400: "Invalid request. Please check your input and try again.",
+      403: "You don't have permission to perform this action.",
+      404: "The requested resource was not found.",
+      409: "A conflict occurred. The resource may have been modified.",
+      429: "Too many requests. Please wait a moment and try again.",
+      500: "An internal server error occurred. Please try again later.",
+      502: "The server is temporarily unavailable. Please try again later.",
+      503: "The service is currently unavailable. Please try again later.",
+    };
+
     const apiError: ApiError = {
       code: (nested?.code as string) || body?.code || "UNKNOWN_ERROR",
       message:
         (nested?.message as string) ||
         body?.message ||
-        error.message ||
-        "An unexpected error occurred",
+        httpFallback[error.response.status] ||
+        "An unexpected error occurred. Please try again.",
       details: (nested?.details as Record<string, unknown>) || body?.details,
-      statusCode: error.response?.status || 500,
+      statusCode: error.response.status || 500,
     };
 
     return Promise.reject(apiError);

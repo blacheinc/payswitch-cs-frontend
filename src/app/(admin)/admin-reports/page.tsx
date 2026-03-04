@@ -82,7 +82,7 @@ export default function AdminReportsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -93,7 +93,7 @@ export default function AdminReportsPage() {
               +32% from last month
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -122,7 +122,7 @@ export default function AdminReportsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Growth Trends</CardTitle>
@@ -221,7 +221,7 @@ export default function AdminReportsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
     </div>
   );
 }

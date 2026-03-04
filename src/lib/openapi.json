@@ -1913,6 +1913,117 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": ["Org Portal – Users"],
+        "summary": "Update User",
+        "description": "Update an organization user's name or role.",
+        "operationId": "update_user_org_users__user_id__patch",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "User Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateUserRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OrgUserResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/users/{user_id}/suspend": {
+      "post": {
+        "tags": ["Org Portal – Users"],
+        "summary": "Suspend User",
+        "description": "Suspend an organization user.",
+        "operationId": "suspend_user_org_users__user_id__suspend_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "User Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/org/users/{user_id}/activate": {
+      "post": {
+        "tags": ["Org Portal – Users"],
+        "summary": "Activate User",
+        "description": "Re-activate a suspended organization user.",
+        "operationId": "activate_user_org_users__user_id__activate_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "User Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
       }
     },
     "/org/api-keys": {
@@ -2582,7 +2693,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "Training data file"
           },
@@ -3157,9 +3268,8 @@
           "email": { "type": "string", "format": "email", "title": "Email" },
           "name": { "type": "string", "maxLength": 200, "title": "Name" },
           "role_label": {
-            "type": "string",
-            "title": "Role Label",
-            "description": "admin, credit_officer, developer, viewer",
+            "$ref": "#/components/schemas/RoleLabel",
+            "description": "User role: admin, credit_officer, developer, viewer",
             "default": "viewer"
           },
           "callback_url": {
@@ -3243,7 +3353,14 @@
             "title": "Requires 2Fa",
             "default": false
           },
-          "user_type": { "type": "string", "title": "User Type" }
+          "user_type": { "type": "string", "title": "User Type" },
+          "user": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "User"
+          }
         },
         "type": "object",
         "required": [
@@ -3833,6 +3950,12 @@
         "required": ["code", "category", "description", "impact", "severity"],
         "title": "RiskFactor"
       },
+      "RoleLabel": {
+        "type": "string",
+        "enum": ["admin", "credit_officer", "developer", "viewer"],
+        "title": "RoleLabel",
+        "description": "Valid org user roles."
+      },
       "ScoreComponent": {
         "properties": {
           "score": { "type": "integer", "title": "Score" },
@@ -4363,13 +4486,11 @@
             "title": "Name"
           },
           "role_label": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Role Label"
-          },
-          "status": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Status",
-            "description": "active, pending, suspended, removed"
+            "anyOf": [
+              { "$ref": "#/components/schemas/RoleLabel" },
+              { "type": "null" }
+            ],
+            "description": "User role: admin, credit_officer, developer, viewer"
           }
         },
         "type": "object",
