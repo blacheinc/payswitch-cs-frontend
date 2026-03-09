@@ -20,6 +20,7 @@ import {
   Moon,
   Sun,
   User,
+  FileText,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -49,6 +50,11 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: "Dashboard", href: ROUTES.ADMIN.DASHBOARD, icon: LayoutDashboard },
   { title: "Organizations", href: ROUTES.ADMIN.ORGANIZATIONS, icon: Building2 },
+  {
+    title: "Score Requests",
+    href: ROUTES.ADMIN.SCORE_REQUESTS,
+    icon: FileText,
+  },
   { title: "Training", href: ROUTES.ADMIN.TRAINING, icon: Database },
   // { title: "AI Monitor", href: ROUTES.ADMIN.AI_MONITOR, icon: Activity },
   { title: "Compliance", href: ROUTES.ADMIN.COMPLIANCE, icon: Shield },

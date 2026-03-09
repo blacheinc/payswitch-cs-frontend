@@ -137,9 +137,9 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                     <SelectItem key={role.value} value={role.value}>
                       <div className="flex flex-col items-start py-1">
                         <span className="font-medium">{role.label}</span>
-                        <span className="text-xs text-muted-foreground">
+                        {/* <span className="text-xs text-muted-foreground">
                           {role.description}
-                        </span>
+                        </span> */}
                       </div>
                     </SelectItem>
                   ))}

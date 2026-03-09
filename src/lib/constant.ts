@@ -16,7 +16,8 @@ export const ROUTES = {
     TRAINING: "/training",
     AI_MONITOR: "/ai-monitor",
     COMPLIANCE: "/compliance",
-    REPORTS: "/admin-reports",
+    // REPORTS: "/admin-reports",
+    SCORE_REQUESTS: "/admin-score-requests",
     SETTINGS: "/admin-settings",
   },
   ORG: {
