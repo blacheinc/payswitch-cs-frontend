@@ -63,6 +63,8 @@ export const API_ENDPOINTS = {
     SUSPEND: (id: string) => `/admin/organizations/${id}/suspend`,
     ACTIVATE: (id: string) => `/admin/organizations/${id}/activate`,
     ORG_USERS: (orgId: string) => `/admin/organizations/${orgId}/users`,
+    ORG_USER_BY_ID: (orgId: string, userId: string) =>
+      `/admin/organizations/${orgId}/users/${userId}`,
     SOURCES: "/admin/sources",
     SOURCE_BY_ID: (id: string) => `/admin/sources/${id}`,
     SOURCE_UPLOADS: (id: string) => `/admin/sources/${id}/uploads`,

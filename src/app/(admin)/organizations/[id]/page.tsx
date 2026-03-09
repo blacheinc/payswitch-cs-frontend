@@ -20,8 +20,11 @@ import {
   Copy,
   Check,
   Users,
+  Eye,
+  EyeOff,
   ChevronLeft,
   ChevronRight,
+  MoreVertical,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,10 +39,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
+import type { OrgUserResponse } from "@/types/organization-type";
 
 import { EditOrganizationModal } from "@/components/organization/edit-organization-modal";
+import { AdminEditUserModal } from "@/components/admin/admin-edit-user-modal";
 import { SuspendOrganizationModal } from "@/components/organization/suspend-organization-modal";
 import { ActivateConfirmModal } from "@/components/organization/activate-confirm-modal";
 import { ProvisionOrganizationModal } from "@/components/organization/provision-organization-modal";
@@ -76,6 +88,9 @@ export default function OrganizationDetailPage() {
   const [isActivateOpen, setIsActivateOpen] = useState(false);
   const [isProvisionOpen, setIsProvisionOpen] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<OrgUserResponse | null>(null);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -239,8 +254,24 @@ export default function OrganizationDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 rounded bg-muted px-3 py-2 text-xs font-mono break-all">
-                      {org.webhookSecret}
+                      {showSecret
+                        ? org.webhookSecret
+                        : "•".repeat(
+                            Math.min(24, org.webhookSecret.length || 24),
+                          )}
                     </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={() => setShowSecret(!showSecret)}
+                    >
+                      {showSecret ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -334,6 +365,7 @@ export default function OrganizationDetailPage() {
                       <TableHead>Status</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -359,6 +391,26 @@ export default function OrganizationDetailPage() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {format(new Date(user.createdAt), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingUser(user);
+                                  setIsEditUserModalOpen(true);
+                                }}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -422,6 +474,18 @@ export default function OrganizationDetailPage() {
         onOpenChange={setIsProvisionOpen}
         organizationId={orgId}
         organizationName={org.name}
+      />
+
+      <AdminEditUserModal
+        open={isEditUserModalOpen}
+        onOpenChange={(open) => {
+          setIsEditUserModalOpen(open);
+          if (!open) {
+            setTimeout(() => setEditingUser(null), 300);
+          }
+        }}
+        orgId={orgId}
+        user={editingUser}
       />
     </div>
   );

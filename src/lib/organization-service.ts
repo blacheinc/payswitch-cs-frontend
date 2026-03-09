@@ -243,4 +243,52 @@ export const organizationService = {
       totalPages: data.total_pages,
     };
   },
+
+  /** PATCH /admin/organizations/{org_id}/users/{user_id} */
+  async updateUser(
+    orgId: string,
+    userId: string,
+    data: import("@/types/organization-type").UpdateUserRequest,
+  ): Promise<OrgUserResponse> {
+    const response = await apiClient.patch<ApiOrgUserResponse>(
+      API_ENDPOINTS.ADMIN.ORG_USER_BY_ID(orgId, userId),
+      {
+        name: data.name,
+        role_label: data.roleLabel,
+      },
+    );
+    return mapUser(response.data);
+  },
+};
+
+// ===================== ORG PROFILE SERVICE (Org Portal) =====================
+
+export const ORG_PROFILE_KEYS = {
+  all: ["org-profile"] as const,
+  detail: () => [...ORG_PROFILE_KEYS.all, "detail"] as const,
+};
+
+export const orgProfileService = {
+  /** GET /org/profile — fetch the current org's profile */
+  async get(): Promise<OrganizationResponse> {
+    const response = await apiClient.get<ApiOrganizationResponse>(
+      API_ENDPOINTS.ORG.PROFILE,
+    );
+    return mapOrg(response.data);
+  },
+
+  /** PATCH /org/profile — update the current org's profile */
+  async update(data: UpdateOrganizationRequest): Promise<OrganizationResponse> {
+    const response = await apiClient.patch<ApiOrganizationResponse>(
+      API_ENDPOINTS.ORG.PROFILE,
+      {
+        name: data.name,
+        primary_contact_name: data.primaryContactName,
+        primary_contact_email: data.primaryContactEmail,
+        primary_contact_phone: data.primaryContactPhone,
+        address: data.address,
+      },
+    );
+    return mapOrg(response.data);
+  },
 };

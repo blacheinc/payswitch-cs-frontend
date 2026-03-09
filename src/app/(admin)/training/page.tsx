@@ -86,17 +86,6 @@ export default function TrainingPage() {
             Upload and manage datasets for model training and retraining
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {activeTab === "datasets" ? (
-            <Button onClick={() => setIsUploadOpen(true)}>
-              <UploadCloud className="mr-2 h-4 w-4" /> Upload Dataset
-            </Button>
-          ) : (
-            <Button onClick={() => setIsAddSourceOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Source
-            </Button>
-          )}
-        </div>
       </div>
 
       <Tabs
@@ -186,17 +175,25 @@ export default function TrainingPage() {
                     Training data uploads from registered sources
                   </CardDescription>
                 </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search datasets..."
-                    className="pl-9"
-                    value={datasetSearch}
-                    onChange={(e) => {
-                      setDatasetSearch(e.target.value);
-                      setDatasetPage(1);
-                    }}
-                  />
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search datasets..."
+                      className="pl-9"
+                      value={datasetSearch}
+                      onChange={(e) => {
+                        setDatasetSearch(e.target.value);
+                        setDatasetPage(1);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => setIsUploadOpen(true)}
+                    className="w-full sm:w-auto"
+                  >
+                    <UploadCloud className="mr-2 h-4 w-4" /> Upload Dataset
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -223,17 +220,25 @@ export default function TrainingPage() {
                     Registered institutions and data providers
                   </CardDescription>
                 </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search sources..."
-                    className="pl-9"
-                    value={sourceSearch}
-                    onChange={(e) => {
-                      setSourceSearch(e.target.value);
-                      setSourcePage(1);
-                    }}
-                  />
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search sources..."
+                      className="pl-9"
+                      value={sourceSearch}
+                      onChange={(e) => {
+                        setSourceSearch(e.target.value);
+                        setSourcePage(1);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => setIsAddSourceOpen(true)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Source
+                  </Button>
                 </div>
               </div>
             </CardHeader>

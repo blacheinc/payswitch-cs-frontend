@@ -52,7 +52,7 @@ type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { setSession, requires2FA, setMockAuthenticated } = useAuth();
-  const [loginMode, setLoginMode] = useState<"org" | "admin">("admin");
+  const [loginMode, setLoginMode] = useState<"org_user" | "admin">("admin");
   const [showPassword, setShowPassword] = useState(false);
 
   // Login form
@@ -76,6 +76,13 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (result) => {
+      if (result.userType && result.userType !== loginMode) {
+        toast.error(
+          "Invalid credentials for this portal. Please ensure you are logging into the correct portal.",
+        );
+        return;
+      }
+
       if (result.requires2FA) {
         toast.info("Please enter your 2FA code");
       } else if (
@@ -107,6 +114,13 @@ export default function LoginPage() {
   const verify2FAMutation = useMutation({
     mutationFn: authService.verify2FA,
     onSuccess: (result) => {
+      if (result.userType && result.userType !== loginMode) {
+        toast.error(
+          "Invalid credentials for this portal. Please ensure you are logging into the correct portal.",
+        );
+        return;
+      }
+
       if (
         result.accessToken &&
         result.refreshToken &&
@@ -149,7 +163,7 @@ export default function LoginPage() {
       saveSession({
         accessToken: "mock-token",
         refreshToken: "mock-refresh-token",
-        userType: loginMode === "admin" ? "admin" : "org",
+        userType: loginMode,
         user: {
           id: loginMode === "admin" ? "mock-admin" : "mock-user",
           email: data.email,
@@ -386,7 +400,7 @@ export default function LoginPage() {
                         className="px-0 h-auto text-primary font-medium hover:no-underline hover:text-primary/80"
                         onClick={() => {
                           const nextMode =
-                            loginMode === "org" ? "admin" : "org";
+                            loginMode === "org_user" ? "admin" : "org_user";
                           setLoginMode(nextMode);
 
                           // Pre-fill mock credentials for better demo experience
@@ -412,7 +426,7 @@ export default function LoginPage() {
                           }
                         }}
                       >
-                        {loginMode === "org"
+                        {loginMode === "org_user"
                           ? "Sign in as Admin"
                           : "Sign in as Organization"}
                       </Button>

@@ -52,7 +52,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: "Dashboard", href: ROUTES.ORG.DASHBOARD, icon: LayoutDashboard },
   { title: "Score Requests", href: ROUTES.ORG.SCORE_REQUESTS, icon: FileText },
-  { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Terminal },
+  { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Key },
   { title: "User Management", href: ROUTES.ORG.USER_MANAGEMENT, icon: Users },
   { title: "Reports", href: ROUTES.ORG.REPORTS, icon: BarChart3 },
   { title: "Settings", href: ROUTES.ORG.SETTINGS, icon: Settings },

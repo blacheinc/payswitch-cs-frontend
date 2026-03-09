@@ -82,13 +82,7 @@ export default function UserManagementPage() {
             <div className="text-2xl font-bold">
               {isLoading ? <Skeleton className="h-8 w-12" /> : totalUsers}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {isLoading ? (
-                <Skeleton className="h-4 w-24 mt-1" />
-              ) : (
-                `${activeCount} active now`
-              )}
-            </p>
+            <p className="text-xs text-muted-foreground">Active now</p>
           </CardContent>
         </Card>
         <Card>

@@ -21,7 +21,7 @@ function parseJwt(token: string): User {
 
     return {
       id: decoded.sub || decoded.id || "unknown",
-      email: decoded.email || decoded.sub,
+      email: decoded.email || "",
       name:
         decoded.name || (decoded.email ? decoded.email.split("@")[0] : "User"),
       roleLabel: decoded.role || decoded.user_type || "viewer",
@@ -91,6 +91,7 @@ export const authService = {
       return {
         requires2FA: true,
         accessToken: data.access_token, // temp token for 2FA
+        userType: data.user_type,
       };
     }
 
@@ -99,6 +100,8 @@ export const authService = {
     // Prefer the email from the API response over whatever was in the JWT
     if (data.email) {
       user.email = data.email;
+    } else if (!user.email) {
+      user.email = credentials.email;
     }
 
     return {

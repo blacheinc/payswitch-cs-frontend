@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -150,7 +150,7 @@ export default function AdminDashboardPage() {
               <span className="text-red-600 font-medium">1 error</span>
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -237,7 +237,7 @@ export default function AdminDashboardPage() {
           </Card>
 
           {/* System Alerts */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Recent Alerts</CardTitle>
               <CardDescription>
@@ -272,7 +272,7 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </div>
