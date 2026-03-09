@@ -536,6 +536,7 @@ export interface PaginatedResponse<T> {
 export interface PaginationParams {
   page?: number;
   perPage?: number;
+  search?: string;
 }
 
 // ==================== API ERROR ====================

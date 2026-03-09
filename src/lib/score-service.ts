@@ -4,9 +4,16 @@ import {
   ScoreRequest,
   ScoreRequestPayload,
   ScoreResponse,
-  PaginatedResponse,
-  PaginationParams,
 } from "@/types/models";
+import type { PaginatedResponse, PaginationParams } from "@/types/api-type";
+
+interface ApiPaginatedScoreRequests {
+  items: any[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
 
 // Query key factory for React Query cache management
 export const SCORE_KEYS = {
@@ -22,11 +29,18 @@ export const scoreService = {
   async getScoreRequests(
     params?: PaginationParams,
   ): Promise<PaginatedResponse<ScoreRequest>> {
-    const response = await apiClient.get<PaginatedResponse<ScoreRequest>>(
+    const response = await apiClient.get<ApiPaginatedScoreRequests>(
       API_ENDPOINTS.SCORE_REQUESTS.BASE,
       { params },
     );
-    return response.data;
+    const data = response.data;
+    return {
+      items: data.items,
+      total: data.total,
+      page: data.page,
+      perPage: data.per_page,
+      totalPages: data.total_pages,
+    };
   },
 
   // GET: Fetch a single score request by ID
