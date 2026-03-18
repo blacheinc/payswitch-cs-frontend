@@ -137,27 +137,27 @@ interface ApiRawWebhookResponse {
 
 function mapLogEntry(raw: ApiRawLogEntry): ApiLogEntry {
   return {
-    id: raw.id,
-    method: raw.method,
-    path: raw.path,
-    statusCode: raw.status_code,
-    responseTimeMs: raw.response_time_ms,
-    apiKeyPrefix: raw.api_key_prefix,
-    ipAddress: raw.ip_address,
-    errorMessage: raw.error_message,
-    createdAt: raw.created_at,
+    id: raw?.id,
+    method: raw?.method,
+    path: raw?.path,
+    statusCode: raw?.status_code,
+    responseTimeMs: raw?.response_time_ms,
+    apiKeyPrefix: raw?.api_key_prefix,
+    ipAddress: raw?.ip_address,
+    errorMessage: raw?.error_message,
+    createdAt: raw?.created_at,
   };
 }
 
 function mapApiKey(raw: ApiRawKeyResponse): ApiKeyResponse {
   return {
-    id: raw.id,
-    keyPrefix: raw.key_prefix,
-    name: raw.name,
-    environment: raw.environment,
-    status: raw.status,
-    lastUsedAt: raw.last_used_at,
-    createdAt: raw.created_at,
+    id: raw?.id,
+    keyPrefix: raw?.key_prefix,
+    name: raw?.name,
+    environment: raw?.environment,
+    status: raw?.status,
+    lastUsedAt: raw?.last_used_at,
+    createdAt: raw?.created_at,
   };
 }
 
@@ -165,23 +165,23 @@ function mapApiKeyCreated(
   raw: ApiRawKeyCreatedResponse,
 ): ApiKeyCreatedResponse {
   return {
-    id: raw.id,
-    key: raw.key,
-    keyPrefix: raw.key_prefix,
-    name: raw.name,
-    environment: raw.environment,
-    message: raw.message,
+    id: raw?.id,
+    key: raw?.key,
+    keyPrefix: raw?.key_prefix,
+    name: raw?.name,
+    environment: raw?.environment,
+    message: raw?.message,
   };
 }
 
 function mapWebhook(raw: ApiRawWebhookResponse): WebhookResponse {
   return {
-    id: raw.id,
-    url: raw.url,
-    events: raw.events,
-    isActive: raw.is_active,
-    description: raw.description,
-    createdAt: raw.created_at,
+    id: raw?.id,
+    url: raw?.url,
+    events: raw?.events,
+    isActive: raw?.is_active,
+    description: raw?.description,
+    createdAt: raw?.created_at,
   };
 }
 
@@ -226,13 +226,13 @@ export const apiLogService = {
       },
     );
 
-    const data = response.data;
+    const data = response?.data;
     return {
-      items: data.items.map(mapLogEntry),
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items?.map(mapLogEntry) || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 };
@@ -245,7 +245,7 @@ export const apiKeyService = {
     const response = await apiClient.get<ApiRawKeyResponse[]>(
       API_ENDPOINTS.ORG.API_KEYS,
     );
-    return response.data.map(mapApiKey);
+    return response?.data?.map(mapApiKey) || [];
   },
 
   /** POST /org/api-keys — generate a new API key */
@@ -257,7 +257,7 @@ export const apiKeyService = {
         environment: data.environment,
       },
     );
-    return mapApiKeyCreated(response.data);
+    return mapApiKeyCreated(response?.data);
   },
 
   /** DELETE /org/api-keys/{key_id} — revoke an API key */
@@ -265,7 +265,7 @@ export const apiKeyService = {
     const response = await apiClient.delete<{ message: string }>(
       API_ENDPOINTS.ORG.API_KEY_BY_ID(keyId),
     );
-    return response.data;
+    return response?.data;
   },
 };
 
@@ -277,7 +277,7 @@ export const webhookService = {
     const response = await apiClient.get<WebhookEvent[]>(
       API_ENDPOINTS.ORG.WEBHOOK_EVENTS,
     );
-    return response.data;
+    return response?.data || [];
   },
 
   /** GET /org/webhooks — list all webhooks */
@@ -285,7 +285,7 @@ export const webhookService = {
     const response = await apiClient.get<ApiRawWebhookResponse[]>(
       API_ENDPOINTS.ORG.WEBHOOKS,
     );
-    return response.data.map(mapWebhook);
+    return response?.data?.map(mapWebhook) || [];
   },
 
   /** POST /org/webhooks — create a new webhook */
@@ -298,7 +298,7 @@ export const webhookService = {
         description: data.description || undefined,
       },
     );
-    return mapWebhook(response.data);
+    return mapWebhook(response?.data);
   },
 
   /** PATCH /org/webhooks/{webhook_id} — update a webhook */
@@ -315,7 +315,7 @@ export const webhookService = {
         description: data.description,
       },
     );
-    return mapWebhook(response.data);
+    return mapWebhook(response?.data);
   },
 
   /** DELETE /org/webhooks/{webhook_id} — delete a webhook */
@@ -323,6 +323,6 @@ export const webhookService = {
     const response = await apiClient.delete<{ message: string }>(
       API_ENDPOINTS.ORG.WEBHOOK_BY_ID(webhookId),
     );
-    return response.data;
+    return response?.data;
   },
 };

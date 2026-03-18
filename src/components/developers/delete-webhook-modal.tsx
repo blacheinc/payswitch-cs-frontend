@@ -39,7 +39,7 @@ export function DeleteWebhookModal({
       toast.success("Webhook deleted");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to delete webhook");
+      toast.error(error?.message || "Failed to delete webhook");
     },
   });
 

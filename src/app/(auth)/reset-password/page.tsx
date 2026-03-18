@@ -86,7 +86,7 @@ export default function ResetPasswordPage() {
     },
     onError: (error) => {
       toast.error(
-        error.message || "Failed to reset password. Link may be expired.",
+        error?.message || "Failed to reset password. Link may be expired.",
       );
     },
   });

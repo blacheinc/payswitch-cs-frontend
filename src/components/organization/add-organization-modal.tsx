@@ -66,7 +66,7 @@ export function AddOrganizationModal({
       toast.success("Organization created successfully");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to create organization");
+      toast.error(error?.message || "Failed to create organization");
     },
   });
 

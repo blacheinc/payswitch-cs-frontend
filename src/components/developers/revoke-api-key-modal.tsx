@@ -39,7 +39,7 @@ export function RevokeApiKeyModal({
       toast.success("API key revoked");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to revoke API key");
+      toast.error(error?.message || "Failed to revoke API key");
     },
   });
 

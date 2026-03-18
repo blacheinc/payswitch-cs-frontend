@@ -349,7 +349,7 @@ export default function OrganizationDetailPage() {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : !usersData?.items.length ? (
+          ) : !usersData?.items?.length ? (
             <p className="text-center text-sm text-muted-foreground py-8">
               No users found for this organization.
             </p>
@@ -369,7 +369,7 @@ export default function OrganizationDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {usersData.items.map((user) => (
+                    {usersData?.items?.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           {user.name}

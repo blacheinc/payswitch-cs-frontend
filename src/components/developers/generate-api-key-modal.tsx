@@ -62,7 +62,7 @@ export function GenerateApiKeyModal({
       toast.success("API key generated");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to generate API key");
+      toast.error(error?.message || "Failed to generate API key");
     },
   });
 
@@ -146,7 +146,7 @@ export function GenerateApiKeyModal({
             </DialogHeader>
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 flex gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              {generatedKey.message}
+              {generatedKey?.message}
             </div>
             <div className="relative">
               <Input

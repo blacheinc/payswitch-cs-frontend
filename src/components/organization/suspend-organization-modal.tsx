@@ -43,7 +43,7 @@ export function SuspendOrganizationModal({
       toast.success("Organization suspended");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to suspend organization");
+      toast.error(error?.message || "Failed to suspend organization");
     },
   });
 

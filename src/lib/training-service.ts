@@ -74,51 +74,51 @@ interface ApiUploadStatusResponse {
 
 function mapSource(raw: ApiDataSourceResponse): DataSourceResponse {
   return {
-    id: raw.id,
-    name: raw.name,
-    shortCode: raw.short_code,
-    sourceType: raw.source_type,
-    description: raw.description || "",
-    totalUploads: raw.total_uploads,
-    lastUploadAt: raw.last_upload_at,
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
+    id: raw?.id,
+    name: raw?.name,
+    shortCode: raw?.short_code,
+    sourceType: raw?.source_type,
+    description: raw?.description || "",
+    totalUploads: raw?.total_uploads,
+    lastUploadAt: raw?.last_upload_at,
+    createdAt: raw?.created_at,
+    updatedAt: raw?.updated_at,
   };
 }
 
 function mapUpload(raw: ApiTrainingUploadResponse): TrainingUploadResponse {
   return {
-    id: raw.id,
-    dataSourceId: raw.data_source_id,
-    dataSourceName: raw.data_source_name || "Unknown",
-    status: raw.status,
-    fileName: raw.file_name,
-    fileFormat: raw.file_format,
-    fileSizeBytes: raw.file_size_bytes || 0,
-    recordCount: raw.record_count || 0,
-    validRecordCount: raw.valid_record_count || 0,
-    featuresMapped: raw.features_mapped || 0,
-    targetFeaturesTotal: raw.target_features_total,
-    qualityScore: raw.quality_score || 0,
-    qualityReport: raw.quality_report || {},
-    rejectionReason: raw.rejection_reason || "",
-    errorMessage: raw.error_message || "",
-    uploadedById: raw.uploaded_by_id || "",
-    approvedById: raw.approved_by_id,
-    approvedAt: raw.approved_at,
-    completedAt: raw.completed_at,
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
+    id: raw?.id,
+    dataSourceId: raw?.data_source_id,
+    dataSourceName: raw?.data_source_name || "Unknown",
+    status: raw?.status,
+    fileName: raw?.file_name,
+    fileFormat: raw?.file_format,
+    fileSizeBytes: raw?.file_size_bytes || 0,
+    recordCount: raw?.record_count || 0,
+    validRecordCount: raw?.valid_record_count || 0,
+    featuresMapped: raw?.features_mapped || 0,
+    targetFeaturesTotal: raw?.target_features_total,
+    qualityScore: raw?.quality_score || 0,
+    qualityReport: raw?.quality_report || {},
+    rejectionReason: raw?.rejection_reason || "",
+    errorMessage: raw?.error_message || "",
+    uploadedById: raw?.uploaded_by_id || "",
+    approvedById: raw?.approved_by_id,
+    approvedAt: raw?.approved_at,
+    completedAt: raw?.completed_at,
+    createdAt: raw?.created_at,
+    updatedAt: raw?.updated_at,
   };
 }
 
 function mapUploadStatus(raw: ApiUploadStatusResponse): UploadStatusResponse {
   return {
-    uploadId: raw.upload_id,
-    status: raw.status,
-    featuresMapped: raw.features_mapped,
-    targetFeaturesTotal: raw.target_features_total,
-    errorMessage: raw.error_message,
+    uploadId: raw?.upload_id,
+    status: raw?.status,
+    featuresMapped: raw?.features_mapped,
+    targetFeaturesTotal: raw?.target_features_total,
+    errorMessage: raw?.error_message,
   };
 }
 
@@ -158,13 +158,13 @@ export const trainingService = {
       },
     );
 
-    const data = response.data;
+    const data = response?.data;
     return {
-      items: data.items.map(mapUpload),
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items?.map(mapUpload) || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 
@@ -173,7 +173,7 @@ export const trainingService = {
     const response = await apiClient.get<ApiTrainingUploadResponse>(
       API_ENDPOINTS.ADMIN.TRAINING_BY_ID(id),
     );
-    return mapUpload(response.data);
+    return mapUpload(response?.data);
   },
 
   /** POST /admin/training-data/upload */
@@ -194,7 +194,7 @@ export const trainingService = {
         },
       },
     );
-    return mapUpload(response.data);
+    return mapUpload(response?.data);
   },
 
   /** GET /admin/training-data/{upload_id}/status */
@@ -202,7 +202,7 @@ export const trainingService = {
     const response = await apiClient.get<ApiUploadStatusResponse>(
       API_ENDPOINTS.ADMIN.TRAINING_STATUS(id),
     );
-    return mapUploadStatus(response.data);
+    return mapUploadStatus(response?.data);
   },
 
   // ==================== DATA SOURCES ====================
@@ -223,13 +223,13 @@ export const trainingService = {
       },
     );
 
-    const data = response.data;
+    const data = response?.data;
     return {
-      items: data.items.map(mapSource),
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items?.map(mapSource) || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 
@@ -246,7 +246,7 @@ export const trainingService = {
         description: data.description,
       },
     );
-    return mapSource(response.data);
+    return mapSource(response?.data);
   },
 
   /** GET /admin/sources/{source_id} */
@@ -254,7 +254,7 @@ export const trainingService = {
     const response = await apiClient.get<ApiDataSourceResponse>(
       API_ENDPOINTS.ADMIN.SOURCE_BY_ID(id),
     );
-    return mapSource(response.data);
+    return mapSource(response?.data);
   },
 
   /** GET /admin/sources/{source_id}/uploads — paginated */
@@ -273,13 +273,13 @@ export const trainingService = {
       },
     );
 
-    const data = response.data;
+    const data = response?.data;
     return {
-      items: data.items.map(mapUpload),
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items?.map(mapUpload) || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 };

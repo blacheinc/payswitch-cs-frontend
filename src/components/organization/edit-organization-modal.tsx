@@ -64,7 +64,7 @@ export function EditOrganizationModal({
       toast.success("Organization updated successfully");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update organization");
+      toast.error(error?.message || "Failed to update organization");
     },
   });
 

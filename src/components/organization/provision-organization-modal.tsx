@@ -40,13 +40,13 @@ export function ProvisionOrganizationModal({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ORG_KEYS.all });
       toast.success(
-        data.message ||
+        data?.message ||
           "Organization provisioned — login details sent via email",
       );
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to provision organization");
+      toast.error(error?.message || "Failed to provision organization");
     },
   });
 

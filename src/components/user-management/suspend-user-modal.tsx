@@ -42,7 +42,7 @@ export function SuspendUserModal({
       toast.success("User suspended");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to suspend user");
+      toast.error(error?.message || "Failed to suspend user");
     },
   });
 

@@ -3,44 +3,7 @@ import type { User } from "@/types/models";
 import type { AuthResult, Setup2FAResponse } from "@/types/auth-type";
 import { API_ENDPOINTS } from "@/lib/constant";
 
-// Helper to parse JWT and extract a User object
-function parseJwt(token: string): User {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join(""),
-    );
-
-    const decoded = JSON.parse(jsonPayload);
-
-    return {
-      id: decoded.sub || decoded.id || "unknown",
-      email: decoded.email || "",
-      name:
-        decoded.name || (decoded.email ? decoded.email.split("@")[0] : "User"),
-      roleLabel: decoded.role || decoded.user_type || "viewer",
-      status: "active",
-      createdAt: new Date().toISOString(),
-    } as User;
-  } catch (e) {
-    console.error("Failed to parse JWT", e);
-    return {
-      id: "unknown",
-      email: "unknown",
-      name: "Unknown User",
-      roleLabel: "viewer",
-      status: "active",
-      createdAt: new Date().toISOString(),
-    } as User;
-  }
-}
-
+// Removed parseJwt safely as we will now fetch profiles directly using /auth/me
 // ---- Raw API response types (snake_case, matching backend) ----
 
 interface ApiLoginResponse {
@@ -58,6 +21,7 @@ interface Api2FAResponse {
   refresh_token: string;
   token_type: string;
   expires_in: number;
+  message?: string;
 }
 
 /** POST /auth/refresh → only returns a new access_token (no refresh_token rotation) */
@@ -71,6 +35,7 @@ interface ApiSetup2FAResponse {
   secret: string;
   uri: string;
   message: string;
+  temp_token: string;
 }
 
 // ---- Service ----
@@ -87,31 +52,36 @@ export const authService = {
     );
     const data = response.data;
 
-    if (data.requires_2fa) {
+    if (data?.requires_2fa) {
       return {
         requires2FA: true,
-        accessToken: data.access_token, // temp token for 2FA
-        userType: data.user_type,
+        accessToken: data?.access_token, // temp token for 2FA
+        userType: data?.user_type,
       };
     }
 
-    const user = parseJwt(data.access_token);
+    const userProfile = await authService.getMe(data?.access_token);
+    const user: User = {
+      id: userProfile?.id,
+      email: data?.email || userProfile?.email || credentials?.email,
+      name: userProfile?.name,
+      roleLabel: userProfile?.role as any,
+      status: userProfile?.status as any,
+      createdAt: userProfile?.created_at || new Date().toISOString(),
+    };
 
-    // Prefer the email from the API response over whatever was in the JWT
-    if (data.email) {
-      user.email = data.email;
-    } else if (!user.email) {
-      user.email = credentials.email;
+    if (userProfile?.organization_id) {
+      user.organizationId = userProfile?.organization_id;
     }
 
     return {
       requires2FA: false,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      tokenType: data.token_type,
-      expiresIn: data.expires_in,
+      accessToken: data?.access_token,
+      refreshToken: data?.refresh_token,
+      tokenType: data?.token_type,
+      expiresIn: data?.expires_in,
       user,
-      userType: data.user_type,
+      userType: data?.user_type,
     };
   },
 
@@ -130,17 +100,46 @@ export const authService = {
       payload,
     );
 
-    const user = parseJwt(response.data.access_token);
-    const userType = user.roleLabel || "viewer";
+    const userProfile = await authService.getMe(response?.data?.access_token);
+    const user: User = {
+      id: userProfile?.id,
+      email: userProfile?.email,
+      name: userProfile?.name,
+      roleLabel: userProfile?.role as any,
+      status: userProfile?.status as any,
+      createdAt: userProfile?.created_at || new Date().toISOString(),
+    };
+
+    if (userProfile?.organization_id) {
+      user.organizationId = userProfile?.organization_id;
+    }
+
+    const userType =
+      userProfile?.user_type ||
+      (userProfile?.organization_id ? "org_user" : "admin");
 
     return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      tokenType: response.data.token_type,
-      expiresIn: response.data.expires_in,
+      accessToken: response?.data?.access_token,
+      refreshToken: response?.data?.refresh_token,
+      tokenType: response?.data?.token_type,
+      expiresIn: response?.data?.expires_in,
+      message: response?.data?.message,
       user,
       userType,
     };
+  },
+
+  // GET /auth/me → UserProfileResponse (authenticated)
+  async getMe(
+    accessToken?: string,
+  ): Promise<import("@/types/auth-type").UserProfileResponse> {
+    const headers = accessToken
+      ? { Authorization: `Bearer ${accessToken}` }
+      : undefined;
+    const response = await apiClient.get<
+      import("@/types/auth-type").UserProfileResponse
+    >(API_ENDPOINTS.AUTH.ME, { headers });
+    return response?.data;
   },
 
   // POST /auth/logout → SuccessResponse
@@ -148,7 +147,7 @@ export const authService = {
     const response = await apiClient.post<{ message: string }>(
       API_ENDPOINTS.AUTH.LOGOUT,
     );
-    return response.data;
+    return response?.data;
   },
 
   // POST /auth/refresh → TokenResponse (no refresh_token rotation)
@@ -161,8 +160,8 @@ export const authService = {
     );
 
     return {
-      accessToken: response.data.access_token,
-      expiresIn: response.data.expires_in,
+      accessToken: response?.data?.access_token,
+      expiresIn: response?.data?.expires_in,
     };
   },
 
@@ -178,7 +177,7 @@ export const authService = {
         callback_url: callbackUrl,
       },
     );
-    return response.data;
+    return response?.data;
   },
 
   // POST /auth/reset-password → SuccessResponse
@@ -193,7 +192,7 @@ export const authService = {
         new_password: password,
       },
     );
-    return response.data;
+    return response?.data;
   },
 
   // POST /auth/verify-email → SuccessResponse
@@ -202,7 +201,7 @@ export const authService = {
       API_ENDPOINTS.AUTH.VERIFY_EMAIL,
       { token },
     );
-    return response.data;
+    return response?.data;
   },
 
   // POST /auth/change-password → SuccessResponse (authenticated)
@@ -217,7 +216,7 @@ export const authService = {
         new_password: newPassword,
       },
     );
-    return response.data;
+    return response?.data;
   },
 
   // POST /auth/2fa/setup → Setup2FAResponse (authenticated)
@@ -226,9 +225,21 @@ export const authService = {
       API_ENDPOINTS.AUTH.SETUP_2FA,
     );
     return {
-      secret: response.data.secret,
-      uri: response.data.uri,
-      message: response.data.message,
+      secret: response?.data?.secret,
+      uri: response?.data?.uri,
+      message: response?.data?.message,
+      tempToken: response?.data?.temp_token,
     };
+  },
+
+  // POST /auth/2fa/remove → SuccessResponse (authenticated)
+  async remove2FA(
+    data: import("@/types/auth-type").Remove2FARequest,
+  ): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.REMOVE_2FA,
+      data,
+    );
+    return response?.data;
   },
 };

@@ -1,12 +1,26 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle, Download, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from "react";
+import {
+  UploadCloud,
+  FileSpreadsheet,
+  AlertCircle,
+  CheckCircle,
+  Download,
+  X,
+  ArrowLeft,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -14,20 +28,42 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { ROUTES } from "@/lib/constant";
 
 export default function BulkUploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'processing' | 'completed' | 'error'>('idle');
-  
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "uploading" | "processing" | "completed" | "error"
+  >("idle");
+
   // Mock history data
   const [history, setHistory] = useState([
-    { id: 'job_123', name: 'loans_sept_2025.csv', date: '2025-02-03 14:20', records: 450, status: 'completed' },
-    { id: 'job_122', name: 'batch_upload_v2.xlsx', date: '2025-02-01 09:15', records: 120, status: 'completed' },
-    { id: 'job_121', name: 'failed_import.csv', date: '2025-01-28 16:45', records: 0, status: 'failed' },
+    {
+      id: "job_123",
+      name: "loans_sept_2025.csv",
+      date: "2025-02-03 14:20",
+      records: 450,
+      status: "completed",
+    },
+    {
+      id: "job_122",
+      name: "batch_upload_v2.xlsx",
+      date: "2025-02-01 09:15",
+      records: 120,
+      status: "completed",
+    },
+    {
+      id: "job_121",
+      name: "failed_import.csv",
+      date: "2025-01-28 16:45",
+      records: 0,
+      status: "failed",
+    },
   ]);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -42,10 +78,10 @@ export default function BulkUploadPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       setFile(e.dataTransfer.files[0]);
-      setUploadStatus('idle');
+      setUploadStatus("idle");
       setUploadProgress(0);
     }
   };
@@ -53,7 +89,7 @@ export default function BulkUploadPage() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
-      setUploadStatus('idle');
+      setUploadStatus("idle");
       setUploadProgress(0);
     }
   };
@@ -61,31 +97,31 @@ export default function BulkUploadPage() {
   const handleUpload = () => {
     if (!file) return;
 
-    setUploadStatus('uploading');
-    
+    setUploadStatus("uploading");
+
     // Simulate upload progress
     const interval = setInterval(() => {
       setUploadProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
-          setUploadStatus('processing');
-          
+          setUploadStatus("processing");
+
           // Simulate processing delay
           setTimeout(() => {
-            setUploadStatus('completed');
-            toast.success('Batch processing completed successfully');
+            setUploadStatus("completed");
+            toast.success("Batch processing completed successfully");
             setHistory([
-              { 
-                id: `job_${Date.now()}`, 
-                name: file.name, 
-                date: new Date().toISOString().slice(0, 16).replace('T', ' '), 
-                records: Math.floor(Math.random() * 500) + 50, 
-                status: 'completed' 
+              {
+                id: `job_${Date.now()}`,
+                name: file.name,
+                date: new Date().toISOString().slice(0, 16).replace("T", " "),
+                records: Math.floor(Math.random() * 500) + 50,
+                status: "completed",
               },
-              ...history
+              ...history,
             ]);
           }, 2000);
-          
+
           return 100;
         }
         return prev + 10;
@@ -95,11 +131,19 @@ export default function BulkUploadPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Bulk Score Requests</h1>
-        <p className="text-muted-foreground">
-          Upload CSV or Excel files to process multiple credit score requests at once.
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href={ROUTES.ORG.SCORE_REQUESTS}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Bulk Score Requests</h1>
+          <p className="text-muted-foreground">
+            Upload CSV or Excel files to process multiple credit score requests
+            at once.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -114,7 +158,9 @@ export default function BulkUploadPage() {
           <CardContent className="space-y-6">
             <div
               className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors ${
-                isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/25 hover:border-primary/50"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -129,7 +175,10 @@ export default function BulkUploadPage() {
                     Drag & drop your file here or click to browse
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Ensure your file matches the <span className="text-primary cursor-pointer hover:underline">template format</span>
+                    Ensure your file matches the{" "}
+                    <span className="text-primary cursor-pointer hover:underline">
+                      template format
+                    </span>
                   </p>
                 </div>
                 <input
@@ -139,7 +188,12 @@ export default function BulkUploadPage() {
                   accept=".csv,.xlsx,.xls"
                   onChange={handleFileSelect}
                 />
-                <Button variant="outline" onClick={() => document.getElementById('file-upload')?.click()}>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    document.getElementById("file-upload")?.click()
+                  }
+                >
                   Select File
                 </Button>
               </div>
@@ -157,36 +211,43 @@ export default function BulkUploadPage() {
                       </p>
                     </div>
                   </div>
-                  {uploadStatus === 'idle' && (
-                    <Button variant="ghost" size="icon" onClick={() => setFile(null)}>
+                  {uploadStatus === "idle" && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setFile(null)}
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   )}
-                  {uploadStatus === 'completed' && (
+                  {uploadStatus === "completed" && (
                     <CheckCircle className="h-5 w-5 text-green-600" />
                   )}
                 </div>
 
-                {uploadStatus !== 'idle' && (
+                {uploadStatus !== "idle" && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
-                       <span>
-                        {uploadStatus === 'uploading' && 'Uploading...'}
-                        {uploadStatus === 'processing' && 'Processing records...'}
-                        {uploadStatus === 'completed' && 'Completed'}
-                       </span>
-                       <span>{uploadProgress}%</span>
+                      <span>
+                        {uploadStatus === "uploading" && "Uploading..."}
+                        {uploadStatus === "processing" &&
+                          "Processing records..."}
+                        {uploadStatus === "completed" && "Completed"}
+                      </span>
+                      <span>{uploadProgress}%</span>
                     </div>
                     <Progress value={uploadProgress} className="h-2" />
                   </div>
                 )}
 
-                <Button 
-                  className="w-full" 
-                  onClick={handleUpload} 
-                  disabled={uploadStatus !== 'idle'}
+                <Button
+                  className="w-full"
+                  onClick={handleUpload}
+                  disabled={uploadStatus !== "idle"}
                 >
-                  {uploadStatus === 'idle' ? 'Start Processing' : 'Processing...'}
+                  {uploadStatus === "idle"
+                    ? "Start Processing"
+                    : "Processing..."}
                 </Button>
               </div>
             )}
@@ -197,7 +258,9 @@ export default function BulkUploadPage() {
         <Card>
           <CardHeader>
             <CardTitle>Guidelines</CardTitle>
-            <CardDescription>Follow these rules to ensure successful processing</CardDescription>
+            <CardDescription>
+              Follow these rules to ensure successful processing
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-4">
@@ -206,7 +269,8 @@ export default function BulkUploadPage() {
                 <div>
                   <p className="font-medium text-sm">Required Columns</p>
                   <p className="text-xs text-muted-foreground">
-                    First Name, Last Name, Date of Birth, ID Number, ID Type, Phone Number
+                    First Name, Last Name, Date of Birth, ID Number, ID Type,
+                    Phone Number
                   </p>
                 </div>
               </div>
@@ -224,16 +288,17 @@ export default function BulkUploadPage() {
                 <div>
                   <p className="font-medium text-sm">Record Limit</p>
                   <p className="text-xs text-muted-foreground">
-                    Maximum 1,000 records per batch. For larger datasets, please split into multiple files.
+                    Maximum 1,000 records per batch. For larger datasets, please
+                    split into multiple files.
                   </p>
                 </div>
               </div>
-              
+
               <div className="pt-4 border-t">
-                 <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full">
                   <Download className="mr-2 h-4 w-4" />
                   Download Template
-                 </Button>
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -269,8 +334,11 @@ export default function BulkUploadPage() {
                   <TableCell>{job.date}</TableCell>
                   <TableCell>{job.records}</TableCell>
                   <TableCell>
-                    {job.status === 'completed' ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    {job.status === "completed" ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-green-50 text-green-700 border-green-200"
+                      >
                         Completed
                       </Badge>
                     ) : (
@@ -279,7 +347,7 @@ export default function BulkUploadPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm">
-                       Download Results
+                      Download Results
                     </Button>
                   </TableCell>
                 </TableRow>

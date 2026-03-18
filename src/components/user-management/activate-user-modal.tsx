@@ -42,7 +42,7 @@ export function ActivateUserModal({
       toast.success("User activated");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to activate user");
+      toast.error(error?.message || "Failed to activate user");
     },
   });
 

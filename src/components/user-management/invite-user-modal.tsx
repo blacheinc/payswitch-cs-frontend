@@ -58,7 +58,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       toast.success(`Invitation sent to ${email}`);
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to send invitation");
+      toast.error(error?.message || "Failed to send invitation");
     },
   });
 

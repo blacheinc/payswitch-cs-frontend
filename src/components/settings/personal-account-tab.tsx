@@ -1,5 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { authService } from "@/lib/auth-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,9 +15,38 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/auth-context";
+import { ChangePasswordDialog } from "@/components/settings/change-password-dialog";
+import { TwoFactorSetupDialog } from "@/components/settings/two-factor-setup-dialog";
+import { RemoveTwoFactorDialog } from "@/components/settings/remove-two-factor-dialog";
 
 export function PersonalAccountTab() {
   const { user } = useAuth();
+
+  const { data: userProfile } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => authService.getMe(),
+  });
+
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false);
+  const [removeTwoFactorOpen, setRemoveTwoFactorOpen] = useState(false);
+
+  useEffect(() => {
+    if (userProfile !== undefined) {
+      setTwoFactorEnabled(userProfile.totp_enabled);
+    }
+  }, [userProfile]);
+
+  const handleTwoFactorToggle = (checked: boolean) => {
+    if (checked) {
+      // Open setup dialog to enable 2FA
+      setTwoFactorSetupOpen(true);
+    } else {
+      // Open remove dialog to disable 2FA
+      setRemoveTwoFactorOpen(true);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -60,7 +92,12 @@ export function PersonalAccountTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button variant="outline">Change Password</Button>
+          <Button
+            variant="outline"
+            onClick={() => setChangePasswordOpen(true)}
+          >
+            Change Password
+          </Button>
           <div className="flex items-center justify-between pt-4">
             <div className="space-y-0.5">
               <Label>Two-Factor Authentication</Label>
@@ -68,10 +105,31 @@ export function PersonalAccountTab() {
                 Add an extra layer of security to your account
               </p>
             </div>
-            <Switch checked={true} />
+            <Switch
+              checked={twoFactorEnabled}
+              onCheckedChange={handleTwoFactorToggle}
+            />
           </div>
         </CardContent>
       </Card>
+
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+      />
+
+      <TwoFactorSetupDialog
+        open={twoFactorSetupOpen}
+        onOpenChange={setTwoFactorSetupOpen}
+        onEnabled={() => setTwoFactorEnabled(true)}
+      />
+
+      <RemoveTwoFactorDialog
+        open={removeTwoFactorOpen}
+        onOpenChange={setRemoveTwoFactorOpen}
+        onDisabled={() => setTwoFactorEnabled(false)}
+      />
     </div>
   );
 }
+

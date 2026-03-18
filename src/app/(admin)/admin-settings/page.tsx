@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Save, Shield, Globe, Bell, Mail } from "lucide-react";
+import { Save, Globe, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,21 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { ChangePasswordDialog } from "@/components/settings/change-password-dialog";
+import { TwoFactorSetupDialog } from "@/components/settings/two-factor-setup-dialog";
 
 export default function AdminSettingsPage() {
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [publicSignup, setPublicSignup] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false);
+
+  const handleTwoFactorToggle = (checked: boolean) => {
+    if (checked) {
+      setTwoFactorSetupOpen(true);
+    } else {
+      setTwoFactorEnabled(false);
+    }
+  };
 
   const handleSave = () => {
     toast.success("System settings updated successfully");
@@ -35,37 +46,41 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="grid gap-6">
+        {/* Personal Security */}
         {/* <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-               <Shield className="h-5 w-5 text-primary" />
-               <CardTitle>System Controls</CardTitle>
+              <Shield className="h-5 w-5 text-primary" />
+              <CardTitle>Personal Security</CardTitle>
             </div>
-            <CardDescription>Critical platform-wide switches</CardDescription>
+            <CardDescription>
+              Manage your password and authentication settings
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-             <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                   <Label className="text-base">Maintenance Mode</Label>
-                   <p className="text-sm text-muted-foreground">
-                     Disable access for all non-admin users. Useful during upgrades.
-                   </p>
-                </div>
-                <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
-             </div>
-             <Separator />
-             <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                   <Label className="text-base">Public Organization Signup</Label>
-                   <p className="text-sm text-muted-foreground">
-                     Allow new organizations to self-register via the landing page.
-                   </p>
-                </div>
-                <Switch checked={publicSignup} onCheckedChange={setPublicSignup} />
-             </div>
+          <CardContent className="space-y-4">
+            <Button
+              variant="outline"
+              onClick={() => setChangePasswordOpen(true)}
+            >
+              Change Password
+            </Button>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Two-Factor Authentication</Label>
+                <p className="text-sm text-muted-foreground">
+                  Add an extra layer of security to your account
+                </p>
+              </div>
+              <Switch
+                checked={twoFactorEnabled}
+                onCheckedChange={handleTwoFactorToggle}
+              />
+            </div>
           </CardContent>
         </Card> */}
 
+        {/* General Configuration */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -96,6 +111,17 @@ export default function AdminSettingsPage() {
           </Button>
         </div>
       </div>
+
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+      />
+
+      <TwoFactorSetupDialog
+        open={twoFactorSetupOpen}
+        onOpenChange={setTwoFactorSetupOpen}
+        onEnabled={() => setTwoFactorEnabled(true)}
+      />
     </div>
   );
 }

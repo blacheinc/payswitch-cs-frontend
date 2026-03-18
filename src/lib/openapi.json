@@ -42,6 +42,25 @@
         }
       }
     },
+    "/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get Me",
+        "description": "Get the currently authenticated user's profile.",
+        "operationId": "get_me_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserProfileResponse" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
     "/auth/login": {
       "post": {
         "tags": ["Authentication"],
@@ -234,7 +253,7 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Setup 2Fa",
-        "description": "Generate TOTP secret for 2FA setup.",
+        "description": "Generate TOTP secret for 2FA setup (admin or org user).",
         "operationId": "setup_2fa_auth_2fa_setup_post",
         "responses": {
           "200": {
@@ -281,6 +300,41 @@
             }
           }
         }
+      }
+    },
+    "/auth/2fa/remove": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Remove 2Fa",
+        "description": "Disable 2FA. Requires password and a valid TOTP code.",
+        "operationId": "remove_2fa_auth_2fa_remove_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Remove2FARequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
       }
     },
     "/auth/change-password": {
@@ -1863,9 +1917,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_OrgUserResponse_"
-                }
+                "schema": { "$ref": "#/components/schemas/OrgUserListResponse" }
               }
             }
           },
@@ -3538,6 +3590,34 @@
         "type": "object",
         "title": "ModelInfo"
       },
+      "OrgUserListResponse": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/OrgUserResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" },
+          "total_members": { "type": "integer", "title": "Total Members" },
+          "pending_invites": { "type": "integer", "title": "Pending Invites" },
+          "admin_users": { "type": "integer", "title": "Admin Users" }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "per_page",
+          "total_pages",
+          "total_members",
+          "pending_invites",
+          "admin_users"
+        ],
+        "title": "OrgUserListResponse"
+      },
       "OrgUserResponse": {
         "properties": {
           "id": { "type": "string", "format": "uuid", "title": "Id" },
@@ -3894,6 +3974,25 @@
         "required": ["reason"],
         "title": "RejectUploadRequest"
       },
+      "Remove2FARequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": ["password", "code"],
+        "title": "Remove2FARequest"
+      },
       "RequestMetadata": {
         "properties": {
           "channel": {
@@ -4223,14 +4322,15 @@
         "properties": {
           "secret": { "type": "string", "title": "Secret" },
           "uri": { "type": "string", "title": "Uri" },
+          "temp_token": { "type": "string", "title": "Temp Token" },
           "message": {
             "type": "string",
             "title": "Message",
-            "default": "Scan the QR code with your authenticator app"
+            "default": "Scan the QR code with your authenticator app, then verify with a code"
           }
         },
         "type": "object",
-        "required": ["secret", "uri"],
+        "required": ["secret", "uri", "temp_token"],
         "title": "Setup2FAResponse"
       },
       "SocialSignals": {
@@ -4551,6 +4651,40 @@
         "title": "UploadStatusResponse",
         "description": "Lightweight status poll response."
       },
+      "UserProfileResponse": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "email": { "type": "string", "title": "Email" },
+          "name": { "type": "string", "title": "Name" },
+          "user_type": { "type": "string", "title": "User Type" },
+          "role": { "type": "string", "title": "Role" },
+          "status": { "type": "string", "title": "Status" },
+          "totp_enabled": { "type": "boolean", "title": "Totp Enabled" },
+          "organization_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Organization Id"
+          },
+          "last_login_at": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Last Login At"
+          },
+          "created_at": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "user_type",
+          "role",
+          "status",
+          "totp_enabled"
+        ],
+        "title": "UserProfileResponse"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4590,7 +4724,12 @@
             "title": "Token Type",
             "default": "bearer"
           },
-          "expires_in": { "type": "integer", "title": "Expires In" }
+          "expires_in": { "type": "integer", "title": "Expires In" },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "2FA verification successful"
+          }
         },
         "type": "object",
         "required": ["access_token", "refresh_token", "expires_in"],

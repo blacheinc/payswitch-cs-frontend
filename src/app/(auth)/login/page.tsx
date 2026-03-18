@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -16,7 +16,7 @@ import {
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { authService } from "@/lib/auth-service";
 import { useAuth } from "@/contexts/auth-context";
@@ -26,6 +26,12 @@ import { saveSession } from "@/lib/session-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 import {
   Card,
   CardContent,
@@ -51,9 +57,12 @@ type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setSession, requires2FA, setMockAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const { setSession, setMockAuthenticated } = useAuth();
   const [loginMode, setLoginMode] = useState<"org_user" | "admin">("admin");
   const [showPassword, setShowPassword] = useState(false);
+  const [is2FAStep, setIs2FAStep] = useState(false);
+  const [tempToken, setTempToken] = useState("");
 
   // Login form
   const loginForm = useForm<LoginFormData>({
@@ -76,27 +85,43 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (result) => {
-      if (result.userType && result.userType !== loginMode) {
+      const isLoginAdmin =
+        result?.userType === "admin" || result?.user?.roleLabel === "admin";
+      const expectedAdmin = loginMode === "admin";
+
+      if (result?.userType && isLoginAdmin !== expectedAdmin) {
         toast.error(
-          "Invalid credentials for this portal. Please ensure you are logging into the correct portal.",
+          "Invalid credentials for this portal. Please ensure you are sucessfully logging into the correct portal.",
         );
         return;
       }
 
-      if (result.requires2FA) {
+      if (result?.requires2FA) {
+        setTempToken(result?.accessToken || "");
+        setIs2FAStep(true);
         toast.info("Please enter your 2FA code");
-      } else if (
-        result.accessToken &&
-        result.refreshToken &&
-        result.user &&
-        result.userType
+        return;
+      }
+
+      if (
+        result?.accessToken &&
+        result?.refreshToken &&
+        result?.user &&
+        result?.userType
       ) {
         setSession(
-          result.accessToken,
-          result.refreshToken,
-          result.userType,
-          result.user,
+          result?.accessToken,
+          result?.refreshToken,
+          result?.userType,
+          result?.user,
         );
+
+        // Pre-fetch auth profile into React Query background cache
+        queryClient.prefetchQuery({
+          queryKey: ["auth-me"],
+          queryFn: () => authService.getMe(),
+        });
+
         toast.success("Welcome back!");
 
         if (result?.userType === "admin") {
@@ -107,32 +132,32 @@ export default function LoginPage() {
       }
     },
     onError: (error) => {
-      toast.error(error.message || "Login failed. Please try again.");
+      toast.error(error?.message || "Login failed. Please try again.");
     },
   });
 
   const verify2FAMutation = useMutation({
     mutationFn: authService.verify2FA,
     onSuccess: (result) => {
-      if (result.userType && result.userType !== loginMode) {
-        toast.error(
-          "Invalid credentials for this portal. Please ensure you are logging into the correct portal.",
-        );
-        return;
-      }
-
       if (
-        result.accessToken &&
-        result.refreshToken &&
-        result.user &&
-        result.userType
+        result?.accessToken &&
+        result?.refreshToken &&
+        result?.user &&
+        result?.userType
       ) {
         setSession(
-          result.accessToken,
-          result.refreshToken,
-          result.userType,
-          result.user,
+          result?.accessToken,
+          result?.refreshToken,
+          result?.userType,
+          result?.user,
         );
+
+        // Pre-fetch auth profile into React Query background cache
+        queryClient.prefetchQuery({
+          queryKey: ["auth-me"],
+          queryFn: () => authService.getMe(),
+        });
+
         toast.success("Welcome back!");
 
         if (loginMode === "admin") {
@@ -143,7 +168,7 @@ export default function LoginPage() {
       }
     },
     onError: (error) => {
-      toast.error(error.message || "Invalid code. Please try again.");
+      toast.error(error?.message || "Invalid code. Please try again.");
     },
   });
 
@@ -194,7 +219,7 @@ export default function LoginPage() {
   const handle2FASubmit = (data: TwoFactorFormData) => {
     verify2FAMutation.mutate({
       code: data.code,
-      tempToken: loginMutation.data?.accessToken || "",
+      tempToken,
     });
   };
 
@@ -324,14 +349,14 @@ export default function LoginPage() {
                 )}
               </CardTitle>
               <CardDescription>
-                {requires2FA
+                {is2FAStep
                   ? "Enter the 6-digit code from your authenticator app"
                   : `Sign in as ${loginMode === "admin" ? "a platform administrator" : "an institution user"}`}
               </CardDescription>
             </CardHeader>
 
             <CardContent>
-              {!requires2FA ? (
+              {!is2FAStep ? (
                 // Login form
                 <form
                   onSubmit={loginForm.handleSubmit(handleLoginSubmit)}
@@ -459,17 +484,49 @@ export default function LoginPage() {
                 >
                   <div className="space-y-2">
                     <Label htmlFor="code">Verification Code</Label>
-                    <Input
-                      id="code"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      placeholder="000000"
-                      autoComplete="one-time-code"
-                      disabled={isLoading}
-                      className="text-center text-2xl tracking-widest"
-                      {...twoFactorForm.register("code")}
+                    <Controller
+                      control={twoFactorForm.control}
+                      name="code"
+                      render={({ field }) => (
+                        <div className="pt-2 pb-2">
+                          <InputOTP
+                            maxLength={6}
+                            value={field.value}
+                            onChange={field.onChange}
+                            disabled={isLoading}
+                          >
+                            <InputOTPGroup>
+                              <InputOTPSlot
+                                index={0}
+                                className="w-12 h-12 text-lg"
+                              />
+                              <InputOTPSlot
+                                index={1}
+                                className="w-12 h-12 text-lg"
+                              />
+                              <InputOTPSlot
+                                index={2}
+                                className="w-12 h-12 text-lg"
+                              />
+                            </InputOTPGroup>
+                            <InputOTPSeparator />
+                            <InputOTPGroup>
+                              <InputOTPSlot
+                                index={3}
+                                className="w-12 h-12 text-lg"
+                              />
+                              <InputOTPSlot
+                                index={4}
+                                className="w-12 h-12 text-lg"
+                              />
+                              <InputOTPSlot
+                                index={5}
+                                className="w-12 h-12 text-lg"
+                              />
+                            </InputOTPGroup>
+                          </InputOTP>
+                        </div>
+                      )}
                     />
                     {twoFactorForm.formState.errors.code && (
                       <p className="text-sm text-destructive">
@@ -478,19 +535,38 @@ export default function LoginPage() {
                     )}
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      <>
-                        Verify
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          Verify
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => {
+                        setIs2FAStep(false);
+                        setTempToken("");
+                        twoFactorForm.reset({ code: "" });
+                      }}
+                      disabled={isLoading}
+                    >
+                      Back to login
+                    </Button>
+                  </div>
                 </form>
               )}
             </CardContent>

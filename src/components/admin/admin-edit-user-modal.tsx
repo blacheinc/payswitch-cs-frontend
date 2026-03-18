@@ -74,7 +74,7 @@ export function AdminEditUserModal({
       toast.success("User updated successfully");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update user");
+      toast.error(error?.message || "Failed to update user");
     },
   });
 

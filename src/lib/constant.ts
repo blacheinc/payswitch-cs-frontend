@@ -39,6 +39,7 @@ export const API_ENDPOINTS = {
     ME: "/auth/me",
     VERIFY_2FA: "/auth/2fa/verify",
     SETUP_2FA: "/auth/2fa/setup",
+    REMOVE_2FA: "/auth/2fa/remove",
     CHANGE_PASSWORD: "/auth/change-password",
     VERIFY_EMAIL: "/auth/verify-email",
     FORGOT_PASSWORD: "/auth/forgot-password",

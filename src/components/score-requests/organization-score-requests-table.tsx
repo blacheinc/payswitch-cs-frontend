@@ -1,0 +1,322 @@
+"use client";
+
+import Link from "next/link";
+import {
+  MoreHorizontal,
+  Eye,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ROUTES } from "@/lib/constant";
+
+// Defining a common interface for the score request data to handle both real and mock data gracefully
+export interface OrganizationScoreRequest {
+  id: string;
+  referenceId?: string | null;
+  applicantName: string;
+  status: string;
+  score?: number | null;
+  scoreValue?: number | null; // Support different property names from different sources
+  riskCategory?: string | null;
+  decision?: string | null;
+  createdAt: string;
+}
+
+interface OrganizationScoreRequestsTableProps {
+  requests: OrganizationScoreRequest[];
+  isLoading?: boolean;
+  isError?: boolean;
+  // Pagination props
+  page?: number;
+  totalPages?: number;
+  total?: number;
+  onPageChange?: (page: number) => void;
+  // Selection props
+  selectedRows?: string[];
+  onSelectRow?: (id: string) => void;
+  onSelectAll?: () => void;
+  // View mode
+  isCompact?: boolean; // For dashboard view
+}
+
+export function OrganizationScoreRequestsTable({
+  requests,
+  isLoading,
+  isError,
+  page = 1,
+  totalPages = 1,
+  total = 0,
+  onPageChange,
+  selectedRows = [],
+  onSelectRow,
+  onSelectAll,
+  isCompact = false,
+}: OrganizationScoreRequestsTableProps) {
+  const getStatusBadge = (status: string) => {
+    const variants: Record<
+      string,
+      {
+        variant: "default" | "secondary" | "destructive" | "outline";
+        icon: React.ReactNode;
+      }
+    > = {
+      completed: {
+        variant: "default",
+        icon: <CheckCircle className="w-3 h-3 mr-1" />,
+      },
+      processing: {
+        variant: "secondary",
+        icon: <Clock className="w-3 h-3 mr-1 animate-spin" />,
+      },
+      pending: { variant: "outline", icon: <Clock className="w-3 h-3 mr-1" /> },
+      failed: {
+        variant: "destructive",
+        icon: <XCircle className="w-3 h-3 mr-1" />,
+      },
+    };
+    const config = variants[status] || variants.pending;
+    return (
+      <Badge variant={config.variant} className="capitalize">
+        {config.icon}
+        {status}
+      </Badge>
+    );
+  };
+
+  const getRiskBadge = (risk?: string | null) => {
+    if (!risk) return <span className="text-muted-foreground">—</span>;
+
+    const colors: Record<string, string> = {
+      very_low: "bg-green-500/10 text-green-600 border-green-200",
+      low: "bg-lime-500/10 text-lime-600 border-lime-200",
+      medium: "bg-yellow-500/10 text-yellow-600 border-yellow-200",
+      high: "bg-orange-500/10 text-orange-600 border-orange-200",
+      very_high: "bg-red-500/10 text-red-600 border-red-200",
+    };
+
+    const label = risk
+      .replace("_", " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+    return (
+      <Badge variant="outline" className={colors[risk]}>
+        {label}
+      </Badge>
+    );
+  };
+
+  const getDecisionBadge = (decision?: string | null) => {
+    if (!decision) return <span className="text-muted-foreground">—</span>;
+
+    const styles: Record<string, string> = {
+      approved: "text-green-600",
+      declined: "text-red-600",
+      referred: "text-yellow-600",
+      pending: "text-muted-foreground",
+    };
+
+    return (
+      <span
+        className={`font-medium capitalize ${styles[decision] || styles.pending}`}
+      >
+        {decision}
+      </span>
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        Failed to load score requests. Please try again.
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {!isCompact && onSelectAll && (
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={
+                      selectedRows.length === requests.length &&
+                      requests.length > 0
+                    }
+                    onCheckedChange={onSelectAll}
+                  />
+                </TableHead>
+              )}
+              <TableHead>Request ID</TableHead>
+              <TableHead>Applicant</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-center">Score</TableHead>
+              <TableHead>Risk</TableHead>
+              <TableHead>Decision</TableHead>
+              {!isCompact && <TableHead>Date</TableHead>}
+              <TableHead className="w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {requests.length === 0 ? (
+              <TableEmpty
+                colSpan={isCompact ? 7 : 9}
+                title="No score requests found"
+                description="There are no score requests to display."
+              />
+            ) : (
+              requests.map((request) => (
+                <TableRow key={request.id}>
+                  {!isCompact && onSelectRow && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedRows.includes(request.id)}
+                        onCheckedChange={() => onSelectRow(request.id)}
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <Link
+                      href={`${ROUTES.ORG.SCORE_REQUESTS}/${request.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {request.id}
+                    </Link>
+                    {request.referenceId && (
+                      <p className="text-xs text-muted-foreground">
+                        {request.referenceId}
+                      </p>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {request.applicantName}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(request.status)}</TableCell>
+                  <TableCell className="text-center">
+                    {(request.score ?? request.scoreValue) ? (
+                      <span className="font-semibold">
+                        {request.score ?? request.scoreValue}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{getRiskBadge(request.riskCategory)}</TableCell>
+                  <TableCell>{getDecisionBadge(request.decision)}</TableCell>
+                  {!isCompact && (
+                    <TableCell className="text-sm text-muted-foreground text-nowrap">
+                      {formatDate(request.createdAt)}
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link
+                            href={`${ROUTES.ORG.SCORE_REQUESTS}/${request.id}`}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Download PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {!isCompact && totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} ({total} total)
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(Math.max(1, page - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

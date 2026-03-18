@@ -86,7 +86,7 @@ export function AddWebhookModal({ open, onOpenChange }: AddWebhookModalProps) {
       toast.success("Webhook endpoint registered");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to register webhook");
+      toast.error(error?.message || "Failed to register webhook");
     },
   });
 

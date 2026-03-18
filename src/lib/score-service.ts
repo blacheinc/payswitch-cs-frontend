@@ -35,11 +35,11 @@ export const scoreService = {
     );
     const data = response.data;
     return {
-      items: data.items,
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 

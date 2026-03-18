@@ -158,8 +158,8 @@ export default function TrainingPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
                   {datasets?.items &&
-                  datasets?.items.some((u) => u.qualityScore > 0)
-                    ? `${Math.round(datasets.items.filter((u) => u.qualityScore > 0).reduce((a, b) => a + b.qualityScore, 0) / datasets.items.filter((u) => u.qualityScore > 0).length)}%`
+                  datasets?.items?.some((u) => u.qualityScore > 0)
+                    ? `${Math.round(datasets?.items?.filter((u) => u.qualityScore > 0).reduce((a, b) => a + (b.qualityScore || 0), 0) / (datasets?.items?.filter((u) => u.qualityScore > 0).length || 1))}%`
                     : "—"}
                 </div>
               </CardContent>

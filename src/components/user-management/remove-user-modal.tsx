@@ -42,7 +42,7 @@ export function RemoveUserModal({
       toast.success("User removed from organization");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to remove user");
+      toast.error(error?.message || "Failed to remove user");
     },
   });
 

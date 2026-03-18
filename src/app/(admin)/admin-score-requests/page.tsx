@@ -62,12 +62,12 @@ export default function AdminScoreRequestsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data?.items && data.items.some((r) => r.scoreValue)
+              {data?.items && data?.items?.some((r) => r.scoreValue)
                 ? Math.round(
-                    data.items.reduce(
+                    data?.items?.reduce(
                       (acc, r) => acc + (r.scoreValue || 0),
                       0,
-                    ) / data.items.filter((r) => r.scoreValue).length,
+                    ) / data?.items?.filter((r) => r.scoreValue).length,
                   )
                 : "—"}
             </div>
@@ -81,7 +81,7 @@ export default function AdminScoreRequestsPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {data?.items
-                ? data.items.filter((r) => r.status === "completed").length
+                ? data?.items?.filter((r) => r.status === "completed").length
                 : "—"}
             </div>
           </CardContent>

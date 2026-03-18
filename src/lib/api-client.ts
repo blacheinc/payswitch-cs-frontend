@@ -106,7 +106,7 @@ apiClient.interceptors.response.use(
               },
             );
 
-            const { access_token } = response.data;
+            const { access_token } = response?.data || {};
 
             // Update only the access token — API does not rotate refresh tokens
             updateTokens(access_token);
@@ -142,7 +142,7 @@ apiClient.interceptors.response.use(
           "The server is taking too long to respond. Please try again later.";
       } else if (
         error.code === "ERR_NETWORK" ||
-        error.message === "Network Error"
+        error?.message === "Network Error"
       ) {
         userMessage =
           "Unable to connect. Please check your internet connection.";
@@ -164,7 +164,7 @@ apiClient.interceptors.response.use(
     // 1) Business-logic: { code, message, details? } (flat)
     //    or wrapped:     { error: { code, message, details? } }
     // 2) FastAPI 422:    { detail: [{ loc, msg, type }] }
-    const body = error.response.data;
+    const body = error.response?.data;
 
     // Handle FastAPI 422 validation errors
     const detail = (body as unknown as Record<string, unknown>)?.detail;
@@ -174,7 +174,7 @@ apiClient.interceptors.response.use(
         code: "VALIDATION_ERROR",
         message: first.msg || "Validation error",
         details: { validationErrors: detail },
-        statusCode: error.response.status || 422,
+        statusCode: error.response?.status || 422,
       };
       return Promise.reject(apiError);
     }
@@ -201,10 +201,10 @@ apiClient.interceptors.response.use(
       message:
         (nested?.message as string) ||
         body?.message ||
-        httpFallback[error.response.status] ||
+        httpFallback[error.response?.status || 0] ||
         "An unexpected error occurred. Please try again.",
       details: (nested?.details as Record<string, unknown>) || body?.details,
-      statusCode: error.response.status || 500,
+      statusCode: error.response?.status || 500,
     };
 
     return Promise.reject(apiError);

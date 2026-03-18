@@ -31,13 +31,13 @@ interface ApiPaginatedUsers {
 
 function mapUser(raw: ApiOrgUserResponse): OrgUserResponse {
   return {
-    id: raw.id,
-    email: raw.email,
-    name: raw.name,
-    roleLabel: raw.role_label,
-    status: raw.status,
-    lastLoginAt: raw.last_login_at,
-    createdAt: raw.created_at,
+    id: raw?.id,
+    email: raw?.email,
+    name: raw?.name,
+    roleLabel: raw?.role_label,
+    status: raw?.status,
+    lastLoginAt: raw?.last_login_at,
+    createdAt: raw?.created_at,
   };
 }
 
@@ -66,13 +66,13 @@ export const userManagementService = {
       },
     );
 
-    const data = response.data;
+    const data = response?.data;
     return {
-      items: data.items.map(mapUser),
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items?.map(mapUser) || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 
@@ -87,7 +87,7 @@ export const userManagementService = {
         callback_url: data.callbackUrl || undefined,
       },
     );
-    return mapUser(response.data);
+    return mapUser(response?.data);
   },
 
   /** PATCH /org/users/{user_id} — update a user's name or role */
@@ -102,7 +102,7 @@ export const userManagementService = {
         role_label: data.roleLabel,
       },
     );
-    return mapUser(response.data);
+    return mapUser(response?.data);
   },
 
   /** POST /org/users/{user_id}/suspend — suspend a user */
@@ -110,7 +110,7 @@ export const userManagementService = {
     const response = await apiClient.post<{ message: string }>(
       API_ENDPOINTS.ORG.SUSPEND_USER(userId),
     );
-    return response.data;
+    return response?.data;
   },
 
   /** POST /org/users/{user_id}/activate — re-activate a suspended user */
@@ -118,7 +118,7 @@ export const userManagementService = {
     const response = await apiClient.post<{ message: string }>(
       API_ENDPOINTS.ORG.ACTIVATE_USER(userId),
     );
-    return response.data;
+    return response?.data;
   },
 
   /** DELETE /org/users/{user_id} — remove a user from the organization */
@@ -126,6 +126,6 @@ export const userManagementService = {
     const response = await apiClient.delete<{ message: string }>(
       API_ENDPOINTS.ORG.USER_BY_ID(userId),
     );
-    return response.data;
+    return response?.data;
   },
 };

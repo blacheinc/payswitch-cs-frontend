@@ -47,11 +47,11 @@ export default function ForgotPasswordPage() {
       authService.forgotPassword(data.email, data.callbackUrl),
     onSuccess: (data) => {
       setIsSubmitted(true);
-      toast.success(data.message);
+      toast.success(data?.message);
     },
     onError: (error) => {
       toast.error(
-        error.message || "Failed to send reset link. Please try again.",
+        error?.message || "Failed to send reset link. Please try again.",
       );
     },
   });

@@ -21,11 +21,15 @@ import {
   User,
   Building2,
   Terminal,
+  PanelLeftClose,
+  PanelRightClose,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/constant";
 import { useAuth } from "@/contexts/auth-context";
+import { useQuery } from "@tanstack/react-query";
+import { authService } from "@/lib/auth-service";
 import { useTheme } from "@/contexts/theme-context";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -64,7 +68,13 @@ interface OrgLayoutProps {
 
 export default function OrgLayout({ children }: OrgLayoutProps) {
   const pathname = usePathname();
-  const { user, organization, logout } = useAuth();
+  const { organization, logout } = useAuth();
+
+  const { data: userProfile } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => authService.getMe(),
+  });
+
   const { resolvedTheme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -148,26 +158,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         })}
       </nav>
 
-      {/* Collapse button (desktop only) */}
-      {!isMobile && (
-        <div className="px-2 py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-center"
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            <ChevronLeft
-              className={cn(
-                "w-4 h-4 transition-transform",
-                collapsed && "rotate-180",
-              )}
-            />
-          </Button>
-        </div>
-      )}
-
-      <Separator />
+      {/* No inline collapse button anymore */}
 
       {/* User section */}
       <div className={cn("p-4", collapsed && !isMobile && "px-2")}>
@@ -179,16 +170,16 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         >
           <Avatar className="h-9 w-9">
             <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {user?.name ? getInitials(user.name) : "U"}
+              {userProfile?.name ? getInitials(userProfile.name) : "U"}
             </AvatarFallback>
           </Avatar>
           {(!collapsed || isMobile) && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">
-                {user?.name || "User"}
+                {userProfile?.name || "User"}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {user?.email}
+                {userProfile?.email}
               </p>
             </div>
           )}
@@ -207,6 +198,18 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         )}
       >
         <SidebarContent />
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute -right-3 top-11 z-50 size-8 rounded-full shadow-sm bg-background border"
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? (
+            <PanelRightClose className="h-3.5 w-3.5" />
+          ) : (
+            <PanelLeftClose className="h-3.5 w-3.5" />
+          )}
+        </Button>
       </aside>
 
       {/* Main content area */}
@@ -255,7 +258,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {user?.name ? getInitials(user.name) : "U"}
+                      {userProfile?.name ? getInitials(userProfile.name) : "U"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -264,10 +267,10 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium">
-                      {user?.name || "User"}
+                      {userProfile?.name || "User"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {user?.email}
+                      {userProfile?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>

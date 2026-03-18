@@ -20,6 +20,11 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
+export interface Remove2FARequest {
+  password: string;
+  code: string;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
   callbackUrl?: string;
@@ -57,6 +62,21 @@ export interface Verify2FAResponse {
   refreshToken: string;
   tokenType: string;
   expiresIn: number;
+  message?: string;
+}
+
+/** GET /auth/me — returns current authenticated user profile. */
+export interface UserProfileResponse {
+  id: string;
+  email: string;
+  name: string;
+  user_type: string;
+  role: string;
+  status: string;
+  totp_enabled: boolean;
+  organization_id?: string | null;
+  last_login_at?: string | null;
+  created_at?: string | null;
 }
 
 /**
@@ -73,6 +93,7 @@ export interface Setup2FAResponse {
   secret: string;
   uri: string;
   message: string;
+  tempToken: string;
 }
 
 /**
@@ -97,4 +118,5 @@ export interface AuthResult {
   userType?: string;
   expiresIn?: number;
   tokenType?: string;
+  message?: string;
 }

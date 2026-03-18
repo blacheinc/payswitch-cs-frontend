@@ -39,7 +39,7 @@ export function ActivateConfirmModal({
       toast.success("Organization activated");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to activate organization");
+      toast.error(error?.message || "Failed to activate organization");
     },
   });
 

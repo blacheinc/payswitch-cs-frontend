@@ -39,11 +39,11 @@ export function OrgProfileTab() {
 
   useEffect(() => {
     if (profile) {
-      setOrgName(profile.name ?? "");
-      setContactName(profile.primaryContactName ?? "");
-      setContactEmail(profile.primaryContactEmail ?? "");
-      setContactPhone(profile.primaryContactPhone ?? "");
-      setAddress(profile.address ?? "");
+      setOrgName(profile?.name ?? "");
+      setContactName(profile?.primaryContactName ?? "");
+      setContactEmail(profile?.primaryContactEmail ?? "");
+      setContactPhone(profile?.primaryContactPhone ?? "");
+      setAddress(profile?.address ?? "");
     }
   }, [profile]);
 
@@ -54,7 +54,7 @@ export function OrgProfileTab() {
       toast.success("Organization profile updated");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update profile");
+      toast.error(error?.message || "Failed to update profile");
     },
   });
 

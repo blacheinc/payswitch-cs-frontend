@@ -110,7 +110,7 @@ export function UploadDatasetModal({
                 />
               </SelectTrigger>
               <SelectContent>
-                {sourcesData?.items.map((source) => (
+                {sourcesData?.items?.map((source) => (
                   <SelectItem key={source.id} value={source.id}>
                     {source.name}
                   </SelectItem>

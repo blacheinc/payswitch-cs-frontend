@@ -67,31 +67,31 @@ interface ApiPaginatedUsers {
 
 function mapOrg(raw: ApiOrganizationResponse): OrganizationResponse {
   return {
-    id: raw.id,
-    name: raw.name,
-    shortName: raw.short_name,
-    industryType: raw.industry_type,
-    primaryContactName: raw.primary_contact_name,
-    primaryContactEmail: raw.primary_contact_email,
-    primaryContactPhone: raw.primary_contact_phone,
-    address: raw.address,
-    status: raw.status,
-    suspensionReason: raw.suspension_reason,
-    webhookSecret: raw.webhook_secret,
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
+    id: raw?.id,
+    name: raw?.name,
+    shortName: raw?.short_name,
+    industryType: raw?.industry_type,
+    primaryContactName: raw?.primary_contact_name,
+    primaryContactEmail: raw?.primary_contact_email,
+    primaryContactPhone: raw?.primary_contact_phone,
+    address: raw?.address,
+    status: raw?.status,
+    suspensionReason: raw?.suspension_reason,
+    webhookSecret: raw?.webhook_secret,
+    createdAt: raw?.created_at,
+    updatedAt: raw?.updated_at,
   };
 }
 
 function mapUser(raw: ApiOrgUserResponse): OrgUserResponse {
   return {
-    id: raw.id,
-    email: raw.email,
-    name: raw.name,
-    roleLabel: raw.role_label,
-    status: raw.status,
-    lastLoginAt: raw.last_login_at,
-    createdAt: raw.created_at,
+    id: raw?.id,
+    email: raw?.email,
+    name: raw?.name,
+    roleLabel: raw?.role_label,
+    status: raw?.status,
+    lastLoginAt: raw?.last_login_at,
+    createdAt: raw?.created_at,
   };
 }
 
@@ -125,13 +125,13 @@ export const organizationService = {
       },
     );
 
-    const data = response.data;
+    const data = response?.data;
     return {
-      items: data.items.map(mapOrg),
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items?.map(mapOrg) || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 
@@ -140,7 +140,7 @@ export const organizationService = {
     const response = await apiClient.get<ApiOrganizationResponse>(
       `${API_ENDPOINTS.ADMIN.ORGANIZATIONS}/${id}`,
     );
-    return mapOrg(response.data);
+    return mapOrg(response?.data);
   },
 
   /** POST /admin/organizations */
@@ -157,7 +157,7 @@ export const organizationService = {
         address: data.address,
       },
     );
-    return mapOrg(response.data);
+    return mapOrg(response?.data);
   },
 
   /** PATCH /admin/organizations/{org_id} */
@@ -175,7 +175,7 @@ export const organizationService = {
         address: data.address,
       },
     );
-    return mapOrg(response.data);
+    return mapOrg(response?.data);
   },
 
   /** POST /admin/organizations/{org_id}/provision */
@@ -188,13 +188,13 @@ export const organizationService = {
       data ? { callback_url: data.callbackUrl } : undefined,
     );
 
-    const raw = response.data;
+    const raw = response?.data;
     return {
-      organization: mapOrg(raw.organization),
-      adminEmail: raw.admin_email,
-      sandboxApiKey: raw.sandbox_api_key,
-      productionApiKey: raw.production_api_key,
-      message: raw.message,
+      organization: mapOrg(raw?.organization),
+      adminEmail: raw?.admin_email,
+      sandboxApiKey: raw?.sandbox_api_key,
+      productionApiKey: raw?.production_api_key,
+      message: raw?.message,
     };
   },
 
@@ -207,7 +207,7 @@ export const organizationService = {
       API_ENDPOINTS.ADMIN.SUSPEND(id),
       { reason: data.reason },
     );
-    return response.data;
+    return response?.data;
   },
 
   /** POST /admin/organizations/{org_id}/activate */
@@ -215,7 +215,7 @@ export const organizationService = {
     const response = await apiClient.post<{ message: string }>(
       API_ENDPOINTS.ADMIN.ACTIVATE(id),
     );
-    return response.data;
+    return response?.data;
   },
 
   /** GET /admin/organizations/{org_id}/users — paginated list */
@@ -234,13 +234,13 @@ export const organizationService = {
       },
     );
 
-    const data = response.data;
+    const data = response?.data;
     return {
-      items: data.items.map(mapUser),
-      total: data.total,
-      page: data.page,
-      perPage: data.per_page,
-      totalPages: data.total_pages,
+      items: data?.items?.map(mapUser) || [],
+      total: data?.total,
+      page: data?.page,
+      perPage: data?.per_page,
+      totalPages: data?.total_pages,
     };
   },
 
@@ -257,7 +257,7 @@ export const organizationService = {
         role_label: data.roleLabel,
       },
     );
-    return mapUser(response.data);
+    return mapUser(response?.data);
   },
 };
 
@@ -274,7 +274,7 @@ export const orgProfileService = {
     const response = await apiClient.get<ApiOrganizationResponse>(
       API_ENDPOINTS.ORG.PROFILE,
     );
-    return mapOrg(response.data);
+    return mapOrg(response?.data);
   },
 
   /** PATCH /org/profile — update the current org's profile */
@@ -289,6 +289,6 @@ export const orgProfileService = {
         address: data.address,
       },
     );
-    return mapOrg(response.data);
+    return mapOrg(response?.data);
   },
 };

@@ -17,28 +17,27 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs defaultValue="account" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="profile">
-            <Building2 className="w-4 h-4 mr-2" />
-            Organization Profile
-          </TabsTrigger>
+          {" "}
           <TabsTrigger value="account">
             <User className="w-4 h-4 mr-2" />
             Personal Account
+          </TabsTrigger>
+          <TabsTrigger value="profile">
+            <Building2 className="w-4 h-4 mr-2" />
+            Organization Profile
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Bell className="w-4 h-4 mr-2" />
             Notifications
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="profile" className="space-y-6">
-          <OrgProfileTab />
-        </TabsContent>
-
         <TabsContent value="account" className="space-y-6">
           <PersonalAccountTab />
+        </TabsContent>
+        <TabsContent value="profile" className="space-y-6">
+          <OrgProfileTab />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">

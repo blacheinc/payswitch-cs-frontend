@@ -187,7 +187,7 @@ export default function NewScoreRequestPage() {
       router.push(ROUTES.ORG.SCORE_REQUESTS);
     } catch (error) {
       toast.error(
-        (error as Error).message ||
+        (error as any)?.message ||
           "Failed to submit score request. Please try again.",
       );
     } finally {

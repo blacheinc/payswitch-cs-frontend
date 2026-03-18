@@ -123,23 +123,7 @@ const recentRequests = [
   },
 ];
 
-const getRiskColor = (risk: string) => {
-  const colors: Record<string, string> = {
-    very_low:
-      "bg-[var(--risk-very-low)]/10 text-[var(--risk-very-low)] border-[var(--risk-very-low)]/20",
-    low: "bg-[var(--risk-low)]/10 text-[var(--risk-low)] border-[var(--risk-low)]/20",
-    medium:
-      "bg-[var(--risk-medium)]/10 text-[var(--risk-medium)] border-[var(--risk-medium)]/20",
-    high: "bg-[var(--risk-high)]/10 text-[var(--risk-high)] border-[var(--risk-high)]/20",
-    very_high:
-      "bg-[var(--risk-very-high)]/10 text-[var(--risk-very-high)] border-[var(--risk-very-high)]/20",
-  };
-  return colors[risk] || colors.medium;
-};
-
-const getRiskLabel = (risk: string) => {
-  return risk.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
-};
+import { OrganizationScoreRequestsTable } from "@/components/score-requests/organization-score-requests-table";
 
 export default function DashboardPage() {
   return (
@@ -161,7 +145,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -173,7 +157,7 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">
               {stats.totalRequests.toLocaleString()}
             </div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <div className="flex flex-wrap items-center text-xs text-muted-foreground mt-1">
               <span className="flex items-center text-green-600">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
                 {stats.requestsChange}%
@@ -192,7 +176,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.averageScore}</div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <div className="flex flex-wrap items-center text-xs text-muted-foreground mt-1">
               <span className="flex items-center text-green-600">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
                 {stats.scoreChange}%
@@ -211,7 +195,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.avgResponseTime}ms</div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <div className="flex flex-wrap items-center text-xs text-muted-foreground mt-1">
               <span className="flex items-center text-green-600">
                 <ArrowDownRight className="h-3 w-3 mr-1" />
                 {Math.abs(stats.responseTimeChange)}%
@@ -230,7 +214,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pendingRequests}</div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="flex flex-wrap text-xs text-muted-foreground mt-1">
               Awaiting decision
             </div>
           </CardContent>
@@ -357,45 +341,16 @@ export default function DashboardPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentRequests.map((request) => (
-              <div
-                key={request.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="hidden sm:flex w-10 h-10 rounded-full bg-primary/10 items-center justify-center">
-                    <span className="text-sm font-semibold text-primary">
-                      {request.applicant
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium">{request.applicant}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {request.id}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right hidden sm:block">
-                    <p className="font-semibold">{request.score}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {request.time}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={getRiskColor(request.risk)}
-                  >
-                    {getRiskLabel(request.risk)}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+          <OrganizationScoreRequestsTable 
+            requests={recentRequests.map(r => ({
+              ...r,
+              applicantName: r.applicant,
+              status: "completed",
+              riskCategory: r.risk,
+              createdAt: new Date().toISOString(),
+            }))}
+            isCompact
+          />
         </CardContent>
       </Card>
     </div>
