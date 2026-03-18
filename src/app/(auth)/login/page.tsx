@@ -85,14 +85,12 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (result) => {
-      const isLoginAdmin =
-        result?.userType === "admin" || result?.user?.roleLabel === "admin";
+      console.log("result from login", result);
+      const isLoginAdmin = result?.userType === "admin";
       const expectedAdmin = loginMode === "admin";
 
       if (result?.userType && isLoginAdmin !== expectedAdmin) {
-        toast.error(
-          "Invalid credentials for this portal. Please ensure you are sucessfully logging into the correct portal.",
-        );
+        toast.error("Please ensure you are logging into the correct portal.");
         return;
       }
 

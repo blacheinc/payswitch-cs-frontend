@@ -7,12 +7,52 @@ import {
 } from "@/types/models";
 import type { PaginatedResponse, PaginationParams } from "@/types/api-type";
 
+interface ApiScoreRequest {
+  request_id: string;
+  tracking_id: string;
+  organization_id: string;
+  reference_id?: string | null;
+  status: any;
+  request_source: any;
+  applicant_name?: string; // Might not be in all summaries but handled if present
+  score_value?: number | null;
+  risk_category?: any;
+  model_version?: string;
+  processing_time_ms?: number;
+  api_key_id?: string;
+  created_by_user_id?: string;
+  created_at: string;
+  scored_at?: string | null;
+  valid_until?: string | null;
+}
+
 interface ApiPaginatedScoreRequests {
-  items: any[];
+  items: ApiScoreRequest[];
   total: number;
   page: number;
   per_page: number;
   total_pages: number;
+}
+
+function mapScoreRequest(raw: ApiScoreRequest): ScoreRequest {
+  return {
+    id: raw.request_id || (raw as any).id,
+    trackingId: raw.tracking_id,
+    organizationId: raw.organization_id,
+    referenceId: raw.reference_id || undefined,
+    status: raw.status,
+    requestSource: raw.request_source,
+    applicantName: raw.applicant_name || "Unknown",
+    scoreValue: raw.score_value || undefined,
+    riskCategory: raw.risk_category || undefined,
+    modelVersion: raw.model_version,
+    processingTimeMs: raw.processing_time_ms,
+    apiKeyId: raw.api_key_id,
+    createdByUserId: raw.created_by_user_id,
+    createdAt: raw.created_at,
+    scoredAt: raw.scored_at || undefined,
+    validUntil: raw.valid_until || undefined,
+  };
 }
 
 // Query key factory for React Query cache management
@@ -35,7 +75,7 @@ export const scoreService = {
     );
     const data = response.data;
     return {
-      items: data?.items || [],
+      items: data?.items?.map(mapScoreRequest) || [],
       total: data?.total,
       page: data?.page,
       perPage: data?.per_page,

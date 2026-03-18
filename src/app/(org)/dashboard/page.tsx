@@ -10,7 +10,9 @@ import {
   ArrowDownRight,
   Plus,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart,
   Bar,
@@ -35,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/lib/constant";
+import { scoreService, SCORE_KEYS } from "@/lib/score-service";
 
 // Mock data - would be fetched from API
 const stats = {
@@ -85,47 +88,18 @@ const riskBreakdown = [
   { name: "Very High", value: 4, color: "var(--risk-very-high)" },
 ];
 
-const recentRequests = [
-  {
-    id: "SCR-FID-20250204-001",
-    applicant: "Kwame Asante",
-    score: 720,
-    risk: "low",
-    time: "5 mins ago",
-  },
-  {
-    id: "SCR-FID-20250204-002",
-    applicant: "Ama Serwaa",
-    score: 645,
-    risk: "medium",
-    time: "12 mins ago",
-  },
-  {
-    id: "SCR-FID-20250204-003",
-    applicant: "Kofi Mensah",
-    score: 780,
-    risk: "very_low",
-    time: "25 mins ago",
-  },
-  {
-    id: "SCR-FID-20250204-004",
-    applicant: "Akua Boateng",
-    score: 520,
-    risk: "high",
-    time: "1 hour ago",
-  },
-  {
-    id: "SCR-FID-20250204-005",
-    applicant: "Yaw Owusu",
-    score: 695,
-    risk: "low",
-    time: "2 hours ago",
-  },
-];
+// Recent requests mock removed - now fetched from API
 
 import { OrganizationScoreRequestsTable } from "@/components/score-requests/organization-score-requests-table";
 
 export default function DashboardPage() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: SCORE_KEYS.list({ page: 1, perPage: 5 }),
+    queryFn: () => scoreService.getScoreRequests({ page: 1, perPage: 5 }),
+  });
+
+  const recentRequests = data?.items || [];
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -344,11 +318,10 @@ export default function DashboardPage() {
           <OrganizationScoreRequestsTable 
             requests={recentRequests.map(r => ({
               ...r,
-              applicantName: r.applicant,
-              status: "completed",
-              riskCategory: r.risk,
-              createdAt: new Date().toISOString(),
+              applicantName: r.applicantName, // Ensure mapping correctly
             }))}
+            isLoading={isLoading}
+            isError={isError}
             isCompact
           />
         </CardContent>

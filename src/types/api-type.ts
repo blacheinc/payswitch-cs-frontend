@@ -23,4 +23,5 @@ export interface PaginationParams {
   perPage?: number;
   search?: string;
   status?: string;
+  risk?: string;
 }

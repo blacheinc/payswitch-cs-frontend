@@ -16,7 +16,9 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constant";
@@ -53,118 +55,46 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { scoreService, SCORE_KEYS } from "@/lib/score-service";
+import { useDebounce } from "@/hooks/use-debounce";
 
-// Mock data
-const scoreRequests = [
-  {
-    id: "SCR-FID-20250204-001",
-    referenceId: "LOAN-2025-00456",
-    applicantName: "Kwame Asante",
-    status: "completed",
-    score: 720,
-    riskCategory: "low",
-    decision: "approved",
-    createdAt: "2025-02-04T14:32:00Z",
-  },
-  {
-    id: "SCR-FID-20250204-002",
-    referenceId: "LOAN-2025-00457",
-    applicantName: "Ama Serwaa",
-    status: "completed",
-    score: 645,
-    riskCategory: "medium",
-    decision: "pending",
-    createdAt: "2025-02-04T13:15:00Z",
-  },
-  {
-    id: "SCR-FID-20250204-003",
-    referenceId: "LOAN-2025-00458",
-    applicantName: "Kofi Mensah",
-    status: "completed",
-    score: 780,
-    riskCategory: "very_low",
-    decision: "approved",
-    createdAt: "2025-02-04T11:45:00Z",
-  },
-  {
-    id: "SCR-FID-20250204-004",
-    referenceId: "LOAN-2025-00459",
-    applicantName: "Akua Boateng",
-    status: "completed",
-    score: 520,
-    riskCategory: "high",
-    decision: "declined",
-    createdAt: "2025-02-04T10:30:00Z",
-  },
-  {
-    id: "SCR-FID-20250204-005",
-    referenceId: "LOAN-2025-00460",
-    applicantName: "Yaw Owusu",
-    status: "processing",
-    score: null,
-    riskCategory: null,
-    decision: null,
-    createdAt: "2025-02-04T09:20:00Z",
-  },
-  {
-    id: "SCR-FID-20250203-001",
-    referenceId: "LOAN-2025-00455",
-    applicantName: "Abena Darko",
-    status: "completed",
-    score: 695,
-    riskCategory: "low",
-    decision: "approved",
-    createdAt: "2025-02-03T16:45:00Z",
-  },
-  {
-    id: "SCR-FID-20250203-002",
-    referenceId: "LOAN-2025-00454",
-    applicantName: "Kwesi Appiah",
-    status: "failed",
-    score: null,
-    riskCategory: null,
-    decision: null,
-    createdAt: "2025-02-03T15:30:00Z",
-  },
-  {
-    id: "SCR-FID-20250203-003",
-    referenceId: "LOAN-2025-00453",
-    applicantName: "Efua Mensah",
-    status: "completed",
-    score: 710,
-    riskCategory: "low",
-    decision: "pending",
-    createdAt: "2025-02-03T14:15:00Z",
-  },
-];
+// Mock data removed - now fetched from API
 
 import { OrganizationScoreRequestsTable } from "@/components/score-requests/organization-score-requests-table";
 
 export default function ScoreRequestsPage() {
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [riskFilter, setRiskFilter] = useState<string>("all");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const filteredRequests = scoreRequests.filter((request) => {
-    const matchesSearch =
-      request.applicantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.referenceId.toLowerCase().includes(searchQuery.toLowerCase());
+  const debouncedSearch = useDebounce(searchQuery, 400);
 
-    const matchesStatus =
-      statusFilter === "all" || request.status === statusFilter;
-    const matchesRisk =
-      riskFilter === "all" || request.riskCategory === riskFilter;
-
-    return matchesSearch && matchesStatus && matchesRisk;
+  const { data, isLoading, isError } = useQuery({
+    queryKey: SCORE_KEYS.list({ 
+      page, 
+      perPage, 
+      search: debouncedSearch,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      risk: riskFilter !== "all" ? riskFilter : undefined,
+    }),
+    queryFn: () => scoreService.getScoreRequests({ 
+      page, 
+      perPage, 
+      search: debouncedSearch,
+      // Note: we might need to update scoreService to support status/risk if not already
+    }),
   });
 
+  const scoreRequests = data?.items || [];
+
   const toggleSelectAll = () => {
-    if (selectedRows.length === filteredRequests.length) {
+    if (selectedRows.length === scoreRequests.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(filteredRequests.map((r) => r.id));
+      setSelectedRows(scoreRequests.map((r) => r.id));
     }
   };
 
@@ -255,8 +185,8 @@ export default function ScoreRequestsPage() {
             <div>
               <CardTitle className="text-lg">Results</CardTitle>
               <CardDescription>
-                {filteredRequests.length} request
-                {filteredRequests.length !== 1 ? "s" : ""} found
+                {data?.total ?? 0} request
+                {(data?.total ?? 0) !== 1 ? "s" : ""} found
               </CardDescription>
             </div>
             {selectedRows.length > 0 && (
@@ -273,8 +203,13 @@ export default function ScoreRequestsPage() {
         </CardHeader>
         <CardContent>
           <OrganizationScoreRequestsTable 
-            requests={filteredRequests}
-            total={filteredRequests.length}
+            requests={scoreRequests}
+            total={data?.total}
+            page={page}
+            totalPages={data?.totalPages}
+            onPageChange={setPage}
+            isLoading={isLoading}
+            isError={isError}
             selectedRows={selectedRows}
             onSelectRow={toggleSelectRow}
             onSelectAll={toggleSelectAll}
