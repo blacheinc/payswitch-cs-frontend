@@ -370,6 +370,7 @@ export interface ScoreRequest {
   createdAt: string;
   scoredAt?: string;
   validUntil?: string;
+  decision?: string;
 }
 
 export interface ScoreRequestWithDetails extends ScoreRequest {

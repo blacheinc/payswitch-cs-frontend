@@ -142,9 +142,7 @@ const FEATURE_LABELS: Record<string, string> = {
 function getFeatureLabel(key: string): string {
   return (
     FEATURE_LABELS[key] ||
-    key
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase())
+    key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
   );
 }
 
@@ -492,7 +490,10 @@ export default function NewScoreRequestPage() {
                     size="icon"
                     className="shrink-0"
                     onClick={() =>
-                      applicantForm.setValue("referenceId", generateReferenceId())
+                      applicantForm.setValue(
+                        "referenceId",
+                        generateReferenceId(),
+                      )
                     }
                     title="Regenerate reference ID"
                   >
@@ -575,13 +576,6 @@ export default function NewScoreRequestPage() {
                 </Select>
               </div>
             </div>
-
-            {bureauLookupMutation.isPending && (
-              <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Fetching bureau data for the applicant...</span>
-              </div>
-            )}
           </div>
         );
 
@@ -742,8 +736,7 @@ export default function NewScoreRequestPage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
                   <span className="font-medium">
-                    GHS{" "}
-                    {Number(loan.amount || 0).toLocaleString("en-GH")}
+                    GHS {Number(loan.amount || 0).toLocaleString("en-GH")}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -804,10 +797,7 @@ export default function NewScoreRequestPage() {
                       const original = (bureauResult?.features as any)?.[key];
                       const isEdited = original !== value;
                       return (
-                        <div
-                          key={key}
-                          className="flex justify-between gap-2"
-                        >
+                        <div key={key} className="flex justify-between gap-2">
                           <span className="text-muted-foreground text-xs truncate">
                             {getFeatureLabel(key)}
                           </span>
@@ -854,8 +844,7 @@ export default function NewScoreRequestPage() {
         <div>
           <h1 className="text-2xl font-bold">New Score Request</h1>
           <p className="text-muted-foreground">
-            {STEPS[currentStep - 1].name} — Step {currentStep} of{" "}
-            {STEPS.length}
+            {STEPS[currentStep - 1].name} — Step {currentStep} of {STEPS.length}
           </p>
         </div>
       </div>

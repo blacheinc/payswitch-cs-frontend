@@ -14,14 +14,14 @@ import {
 } from "@/lib/user-management-service";
 import type { OrgUserResponse } from "@/types/organization-type";
 
-import { UserManagementTable } from "@/components/user-management/user-management-table";
-import { InviteUserModal } from "@/components/user-management/invite-user-modal";
-import { EditUserModal } from "@/components/user-management/edit-user-modal";
-import { SuspendUserModal } from "@/components/user-management/suspend-user-modal";
-import { ActivateUserModal } from "@/components/user-management/activate-user-modal";
-import { RemoveUserModal } from "@/components/user-management/remove-user-modal";
+import { UserManagementTable } from "@/components/teams/user-management-table";
+import { InviteUserModal } from "@/components/teams/invite-user-modal";
+import { EditUserModal } from "@/components/teams/edit-user-modal";
+import { SuspendUserModal } from "@/components/teams/suspend-user-modal";
+import { ActivateUserModal } from "@/components/teams/activate-user-modal";
+import { RemoveUserModal } from "@/components/teams/remove-user-modal";
 
-export default function UserManagementPage() {
+export default function TeamsPage() {
   // ---- Pagination ----
   const [page, setPage] = useState(1);
 
@@ -60,7 +60,7 @@ export default function UserManagementPage() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">User Management</h1>
+          <h1 className="text-2xl font-bold">Teams</h1>
           <p className="text-muted-foreground">
             Manage your organization members and their access levels
           </p>

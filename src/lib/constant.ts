@@ -24,7 +24,7 @@ export const ROUTES = {
     DASHBOARD: "/dashboard",
     SCORE_REQUESTS: "/score-requests",
     DEVELOPERS: "/developers",
-    USER_MANAGEMENT: "/user-management",
+    TEAMS: "/teams",
     REPORTS: "/reports",
     SETTINGS: "/settings",
   },

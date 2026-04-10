@@ -29,6 +29,9 @@ import {
   CreditCard,
   Ban,
   ShieldOff,
+  AlertOctagon,
+  RefreshCw,
+  FileQuestion,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -290,6 +293,8 @@ export default function ScoreRequestDetailPage() {
     data: scoreRequest,
     isLoading,
     isError,
+    isRefetching,
+    refetch,
   } = useQuery({
     queryKey: SCORE_KEYS.detail(requestId),
     queryFn: () => scoreService.getScoreRequestById(requestId),
@@ -487,6 +492,7 @@ export default function ScoreRequestDetailPage() {
   const conditionsApplied: string[] = result?.condition_applied || [];
   const declineReasons: string[] = result?.decline_reasons || [];
   const triggeredRules: string[] = result?.triggered_rules || [];
+  const errors: string[] = result?.errors || [];
   const shapContributions: any[] = creditRisk?.shap_contributions || [];
   const reasonCodes: string[] = creditRisk?.decision_reason_codes || [];
 
@@ -501,6 +507,14 @@ export default function ScoreRequestDetailPage() {
   const recommendations: any[] = sr.recommendations || [];
   const affordability = sr.affordability;
   const modelInfo = sr.model_info;
+
+  const hasMainContent =
+    !!creditRisk ||
+    !!fraudDetection ||
+    !!score ||
+    !!scoreComponents ||
+    riskFactors.length > 0 ||
+    recommendations.length > 0;
 
   // Derive score gauge values
   const creditScore = scoringMeta?.credit_score ?? score?.value;
@@ -537,8 +551,23 @@ export default function ScoreRequestDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Refresh Data */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+          >
+            {isRefetching ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Refresh
+          </Button>
+
           {/* Override Decision */}
-          <Dialog
+          {/* <Dialog
             open={overrideDialogOpen}
             onOpenChange={(v) => {
               setOverrideDialogOpen(v);
@@ -646,10 +675,10 @@ export default function ScoreRequestDetailPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+          </Dialog> */}
 
           {/* Record Outcome */}
-          <Dialog
+          {/* <Dialog
             open={outcomeDialogOpen}
             onOpenChange={(v) => {
               setOutcomeDialogOpen(v);
@@ -760,10 +789,10 @@ export default function ScoreRequestDetailPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+          </Dialog> */}
 
           {/* Record Performance */}
-          <Dialog
+          {/* <Dialog
             open={performanceDialogOpen}
             onOpenChange={(v) => {
               setPerformanceDialogOpen(v);
@@ -864,7 +893,7 @@ export default function ScoreRequestDetailPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+          </Dialog> */}
         </div>
       </div>
 
@@ -958,10 +987,36 @@ export default function ScoreRequestDetailPage() {
       )}
 
       {/* ═════════════════════════════════════════════════════════════════ */}
-      {/* Decline Reasons & Triggered Rules */}
+      {/* Errors, Decline Reasons & Triggered Rules */}
       {/* ═════════════════════════════════════════════════════════════════ */}
-      {(declineReasons.length > 0 || triggeredRules.length > 0) && (
-        <div className="grid gap-4 md:grid-cols-2">
+      {(declineReasons.length > 0 ||
+        triggeredRules.length > 0 ||
+        errors.length > 0) && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {errors.length > 0 && (
+            <Card className="border-red-300 dark:border-red-800 bg-red-100/50 dark:bg-red-900/20 lg:col-span-full">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <AlertOctagon className="h-5 w-5 text-red-600" />
+                  System Errors
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {errors.map((errorText: string, i: number) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 text-sm text-red-800 dark:text-red-200 font-medium"
+                    >
+                      <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>{errorText}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
           {declineReasons.length > 0 && (
             <Card className="border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10">
               <CardHeader>
@@ -1279,7 +1334,10 @@ export default function ScoreRequestDetailPage() {
                         Tier Label
                       </p>
                       <Badge variant="outline" className="text-sm mt-1">
-                        {incomeVerification.income_tier_label.replace(/_/g, " ")}
+                        {incomeVerification.income_tier_label.replace(
+                          /_/g,
+                          " ",
+                        )}
                       </Badge>
                     </div>
                   )}
@@ -1433,6 +1491,23 @@ export default function ScoreRequestDetailPage() {
                   </div>
                 ))}
               </CardContent>
+            </Card>
+          )}
+
+          {/* ─── Empty State ───────────────────────────────────────────── */}
+          {!hasMainContent && (
+            <Card className="flex flex-col items-center justify-center py-16 px-4 text-center border-dashed border-2 bg-muted/20">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <FileQuestion className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">
+                No Model Data Available
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Detailed assessment models were not generated for this request.
+                This typically happens if the request failed, was declined
+                before scoring, or encountered a data error.
+              </p>
             </Card>
           )}
         </div>
@@ -1733,7 +1808,9 @@ export default function ScoreRequestDetailPage() {
                 )}
                 {loanAmount?.model_version && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Loan Amount Model</span>
+                    <span className="text-muted-foreground">
+                      Loan Amount Model
+                    </span>
                     <span className="font-mono text-xs">
                       v{loanAmount.model_version}
                     </span>

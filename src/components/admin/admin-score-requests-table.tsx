@@ -99,19 +99,23 @@ export function AdminScoreRequestsTable({
   const getDecisionBadge = (decision?: string | null) => {
     if (!decision) return <span className="text-muted-foreground">—</span>;
 
-    const styles: Record<string, string> = {
-      approved: "text-green-600",
-      declined: "text-red-600",
-      referred: "text-yellow-600",
-      pending: "text-muted-foreground",
+    const styles: Record<string, { color: string; label: string }> = {
+      APPROVE: { color: "bg-green-100 text-green-700 border-green-200", label: "Approved" },
+      CONDITIONAL_APPROVE: { color: "bg-lime-100 text-lime-700 border-lime-200", label: "Conditional" },
+      DECLINE: { color: "bg-red-100 text-red-700 border-red-200", label: "Declined" },
+      FRAUD_HOLD: { color: "bg-red-100 text-red-700 border-red-200", label: "Fraud Hold" },
+      REFER: { color: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Referred" },
+      approved: { color: "bg-green-100 text-green-700 border-green-200", label: "Approved" },
+      declined: { color: "bg-red-100 text-red-700 border-red-200", label: "Declined" },
+      referred: { color: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Referred" },
     };
 
+    const config = styles[decision] || { color: "bg-muted text-muted-foreground", label: decision };
+
     return (
-      <span
-        className={`font-medium capitalize ${styles[decision] || styles.pending}`}
-      >
-        {decision}
-      </span>
+      <Badge variant="outline" className={config.color}>
+        {config.label}
+      </Badge>
     );
   };
 
@@ -191,9 +195,7 @@ export function AdminScoreRequestsTable({
                 </TableCell>
                 <TableCell>{getRiskBadge(request.riskCategory)}</TableCell>
                 <TableCell>
-                  {/* For Admin View, decision might be nested under `decision.decision` but this model seems partial without it so we map manually from any known object if it existed.
-                      As ScoreRequest schema doesn't have `decision`, we only show `-` or adapt later. */}
-                  <span className="text-muted-foreground">—</span>
+                  {getDecisionBadge(request.decision)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDate(request.createdAt)}

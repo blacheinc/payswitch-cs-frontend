@@ -26,6 +26,13 @@ interface ApiRawScoreRequest {
   created_at: string;
   scored_at?: string | null;
   valid_until?: string | null;
+  // The list endpoint now includes the inline scoring_result
+  scoring_result?: {
+    decision?: string | null;
+    [key: string]: unknown;
+  } | null;
+  loan_amount?: number | null;
+  loan_purpose?: string | null;
 }
 
 interface ApiPaginatedScoreRequests {
@@ -116,6 +123,9 @@ export interface ScoreRequestItem {
   createdAt: string;
   scoredAt?: string;
   validUntil?: string;
+  decision?: string;
+  loanAmount?: number;
+  loanPurpose?: string;
 }
 
 export interface BureauPersonalDetails {
@@ -270,6 +280,9 @@ function mapScoreRequest(raw: ApiRawScoreRequest): ScoreRequestItem {
     createdAt: raw.created_at,
     scoredAt: raw.scored_at || undefined,
     validUntil: raw.valid_until || undefined,
+    decision: raw.scoring_result?.decision || undefined,
+    loanAmount: raw.loan_amount || undefined,
+    loanPurpose: raw.loan_purpose || undefined,
   };
 }
 
