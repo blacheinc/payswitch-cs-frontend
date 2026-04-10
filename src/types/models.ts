@@ -112,189 +112,152 @@ export interface ApiKeyWithSecret extends ApiKey {
 // ==================== CREDIT SCORE REQUEST ====================
 
 export interface ApplicantInfo {
-  fullName: string;
-  dateOfBirth: string;
-  nationalIdType:
-    | "ghana_card"
-    | "voter_id"
-    | "passport"
-    | "drivers_license"
-    | "nhis";
-  nationalIdNumber: string;
-  gender?: "male" | "female" | "other";
-  maritalStatus?: "single" | "married" | "divorced" | "widowed" | "separated";
-  phone: string;
-  email?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    region?: string;
-    digitalAddress?: string;
-  };
-  dependents?: number;
-  educationLevel?:
-    | "none"
-    | "primary"
-    | "jhs"
-    | "shs"
-    | "vocational"
-    | "diploma"
-    | "bachelors"
-    | "masters"
-    | "doctorate";
-}
-
-export interface EmploymentInfo {
-  status: "employed" | "self_employed" | "unemployed" | "retired" | "student";
-  employerName?: string;
-  employerIndustry?: string;
-  jobTitle?: string;
-  durationMonths?: number;
-  totalWorkExperienceMonths?: number;
-  monthlyIncome: number;
-  incomeCurrency?: string;
-  incomeVerificationType?:
-    | "payslip"
-    | "bank_statement"
-    | "tax_return"
-    | "employer_letter"
-    | "none";
-  otherIncome?: number;
-  otherIncomeSource?: string;
+  full_name: string;
+  date_of_birth: string; // ISO date
+  national_id_number?: string | null;
+  phone?: string | null;
+  account_number?: string | null;
 }
 
 export interface LoanRequestInfo {
   amount: number;
-  currency?: string;
-  purpose:
-    | "personal"
-    | "business"
-    | "education"
-    | "housing"
-    | "vehicle"
-    | "medical"
-    | "agriculture"
-    | "debt_consolidation"
-    | "other";
-  purposeDescription?: string;
-  tenureMonths: number;
-  collateralType?:
-    | "none"
-    | "vehicle"
-    | "property"
-    | "equipment"
-    | "inventory"
-    | "cash_deposit"
-    | "guarantor"
-    | "other";
-  collateralValue?: number;
+  tenure_months: number;
+  purpose?: string | null;
 }
 
-export interface ExistingLoan {
-  lenderName?: string;
-  loanType?:
-    | "personal"
-    | "mortgage"
-    | "auto"
-    | "business"
-    | "credit_card"
-    | "other";
-  originalAmount?: number;
-  outstandingBalance?: number;
-  monthlyPayment?: number;
-  status?: "current" | "past_due" | "default" | "paid_off";
-  daysPastDue?: number;
+// ==================== BUREAU TYPES ====================
+
+export interface BureauLookupRequest {
+  full_name?: string | null;
+  date_of_birth: string; // ISO date, required
+  identification?: string | null;
+  phone_number?: string | null;
+  account_number?: string | null;
+  enquiry_reason?: string;
 }
 
-export interface BankAccount {
-  bankName?: string;
-  accountType?: "savings" | "current" | "fixed_deposit";
-  averageBalance3m?: number;
-  accountAgeMonths?: number;
+export interface BureauPersonalDetails {
+  consumer_id?: string | null;
+  first_name?: string | null;
+  surname?: string | null;
+  other_names?: string | null;
+  birth_date?: string | null;
+  gender?: string | null;
+  national_id?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  employer?: string | null;
+  address?: string | null;
+  marital_status?: string | null;
+  dependants?: string | null;
 }
 
-export interface MobileMoneyInfo {
-  active: boolean;
-  providers?: ("mtn_momo" | "vodafone_cash" | "airteltigo_money")[];
-  avgMonthlyInflow?: number;
-  avgMonthlyOutflow?: number;
-  accountAgeMonths?: number;
+export interface BureauCreditSummary {
+  total_accounts?: number | null;
+  total_monthly_instalment_ghs?: number | null;
+  total_outstanding_debt_ghs?: number | null;
+  total_accounts_in_arrear?: number | null;
+  total_arrear_amount_ghs?: number | null;
+  total_accounts_good_standing?: number | null;
+  total_judgements?: number | null;
+  total_judgement_amount_ghs?: number | null;
+  total_dishonoured_cheques?: number | null;
+  delinquency_rating?: string | null;
 }
 
-export interface FinancialProfile {
-  existingLoans?: ExistingLoan[];
-  hasBankAccount?: boolean;
-  bankAccounts?: BankAccount[];
-  mobileMoney?: MobileMoneyInfo;
-  hasCreditCard?: boolean;
-  creditCardUtilization?: number;
-  monthlyExpenses?: number;
-  assets?: {
-    ownsProperty?: boolean;
-    propertyValue?: number;
-    ownsVehicle?: boolean;
-    vehicleValue?: number;
-    savingsInvestments?: number;
-  };
+export interface BureauCreditAccount {
+  subscriber_name?: string | null;
+  account_no?: string | null;
+  date_opened?: string | null;
+  facility_type?: string | null;
+  currency?: string | null;
+  credit_limit?: number | null;
+  current_balance?: number | null;
+  instalment_amount?: number | null;
+  arrear_amount?: number | null;
+  months_in_arrears?: number | null;
+  status_code?: string | null;
+  payment_history_24m?: string[] | null;
 }
 
-export interface ConsentInfo {
-  bureauCheckAuthorized: boolean;
-  consentDate: string;
-  consentReference?: string;
-  dataSharingAuthorized?: boolean;
+export interface BureauFeatures {
+  highest_delinquency_rating?: number | null;
+  months_on_time_24m?: number | null;
+  worst_arrears_24m?: number | null;
+  current_streak_on_time?: number | null;
+  has_active_arrears?: number | null;
+  total_arrear_amount_ghs?: number | null;
+  total_outstanding_debt_ghs?: number | null;
+  utilisation_ratio?: number | null;
+  num_active_accounts?: number | null;
+  total_monthly_instalment_ghs?: number | null;
+  credit_age_months?: number | null;
+  num_accounts_total?: number | null;
+  num_closed_accounts_good?: number | null;
+  product_diversity_score?: number | null;
+  mobile_loan_history_count?: number | null;
+  mobile_max_loan_ghs?: number | null;
+  has_judgement?: number | null;
+  has_written_off?: number | null;
+  has_charged_off?: number | null;
+  has_legal_handover?: number | null;
+  num_bounced_cheques?: number | null;
+  has_adverse_default?: number | null;
+  num_enquiries_3m?: number | null;
+  num_enquiries_12m?: number | null;
+  enquiry_reason_flags?: number | null;
+  applicant_age?: number | null;
+  identity_verified?: number | null;
+  num_dependants?: number | null;
+  has_employer_detail?: number | null;
+  address_stability?: number | null;
 }
 
+export interface BureauMetadata {
+  credit_score?: number | null;
+  score_grade?: string | null; // A-F
+  decision_label?: string | null; // APPROVE / CONDITIONAL_APPROVE / REFER / DECLINE
+  data_quality_score?: number | null;
+  bureau_hit_status?: string;
+  product_source?: string | null;
+  applicant_age_at_application?: number | null;
+  credit_age_months_at_application?: number | null;
+}
+
+export interface BureauLookupResponse {
+  bureau_hit_status: string; // HIT, NO_RECORD, MULTIPLE_MATCH
+  match_count?: number;
+  personal_details?: BureauPersonalDetails | null;
+  credit_summary?: BureauCreditSummary | null;
+  credit_accounts?: BureauCreditAccount[] | null;
+  features?: BureauFeatures | null;
+  metadata?: BureauMetadata | null;
+  enquiry_id?: string | null;
+  consumer_id?: string | null;
+}
+
+/** Bureau data forwarded into the score request (from the bureau-lookup step). */
+export interface BureauData {
+  consumer_id: string;
+  bureau_hit_status?: string | null;
+  product_source?: string | null;
+  credit_summary?: BureauCreditSummary | null;
+  credit_accounts?: BureauCreditAccount[] | null;
+  features?: BureauFeatures | null;
+}
+
+export interface RequestMetadata {
+  channel?: string | null;
+  callback_url?: string | null;
+}
+
+/** Payload for POST /v1/score-requests — matches CreateScoreRequestInput in the OpenAPI spec. */
 export interface ScoreRequestPayload {
-  referenceId?: string;
+  reference_id?: string | null;
   applicant: ApplicantInfo;
-  employment?: EmploymentInfo;
-  loanRequest: LoanRequestInfo;
-  financialProfile?: FinancialProfile;
-  alternativeData?: AlternativeData;
-  consent: ConsentInfo;
-  metadata?: {
-    channel?: "branch" | "online" | "mobile_app" | "agent" | "call_center";
-    productType?: string;
-    branchCode?: string;
-    officerId?: string;
-    callbackUrl?: string;
-  };
-}
-
-// ==================== ALTERNATIVE DATA ====================
-
-export interface UtilityPaymentInfo {
-  history: "excellent" | "good" | "fair" | "poor" | "no_data";
-  lastPaymentDate?: string;
-  avgMonthlyBill?: number;
-}
-
-export interface RentPaymentInfo {
-  history: "excellent" | "good" | "fair" | "poor" | "no_data";
-  monthlyRent?: number;
-  tenureMonths?: number;
-}
-
-export interface TelcoDataInfo {
-  accountAgeMonths?: number;
-  avgMonthlySpend?: number;
-  paymentRegularity:
-    | "always_on_time"
-    | "mostly_on_time"
-    | "sometimes_late"
-    | "often_late";
-  momoUsageFrequency: "high" | "medium" | "low" | "none";
-}
-
-export interface AlternativeData {
-  utilityPaymentHistory?: UtilityPaymentInfo;
-  rentPaymentHistory?: RentPaymentInfo;
-  telcoData?: TelcoDataInfo;
-  socialSignals?: {
-    platform: "linkedin" | "professional_association";
-    verificationStatus: "verified" | "unverified";
-  }[];
+  loan_request: LoanRequestInfo;
+  bureau_data: BureauData;
+  metadata?: RequestMetadata | null;
 }
 
 // ==================== SCORE RESPONSE ====================

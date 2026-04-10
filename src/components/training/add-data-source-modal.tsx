@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
 import type { CreateDataSourceRequest } from "@/types/training-type";
-import { INDUSTRY_TYPE_ENUM } from "@/lib/constant";
+import { SOURCE_TYPE_ENUM } from "@/lib/constant";
 
 interface AddDataSourceModalProps {
   isOpen: boolean;
@@ -147,7 +147,7 @@ export function AddDataSourceModal({
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(INDUSTRY_TYPE_ENUM).map((industry) => (
+                  {Object.values(SOURCE_TYPE_ENUM).map((industry) => (
                     <SelectItem key={industry.value} value={industry.value}>
                       {industry.label}
                     </SelectItem>

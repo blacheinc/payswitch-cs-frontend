@@ -1,30 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   User,
-  Briefcase,
   CreditCard,
-  Wallet,
-  FileCheck,
-  Send,
+  Database,
+  Sparkles,
   Loader2,
-  Zap,
+  Search,
+  Shield,
+  AlertTriangle,
+  Building2,
+  ChevronDown,
+  ChevronUp,
+  CalendarIcon,
+  RefreshCw,
+  Pencil,
 } from "lucide-react";
+import { format, parse, isValid, parseISO } from "date-fns";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -32,7 +39,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -41,162 +47,344 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/constant";
+import {
+  scoreService,
+  SCORE_KEYS,
+  type BureauLookupResult,
+  type BureauLookupPayload,
+  type CreateScoreRequestPayload,
+} from "@/lib/score-service";
 
-// Form schema
-const scoreRequestSchema = z.object({
-  // Personal Information
+// =============================================================================
+// Date helpers — bureau API may return dates in various formats
+// =============================================================================
+
+function safeParseDateStr(value: string): Date | undefined {
+  if (!value) return undefined;
+  const d1 = parse(value, "yyyy-MM-dd", new Date());
+  if (isValid(d1)) return d1;
+  const d2 = parse(value, "dd/MM/yyyy", new Date());
+  if (isValid(d2)) return d2;
+  const d3 = parseISO(value);
+  if (isValid(d3)) return d3;
+  const d4 = new Date(value);
+  if (isValid(d4)) return d4;
+  return undefined;
+}
+
+function safeFormatDate(value: string, displayFormat = "PPP"): string {
+  const d = safeParseDateStr(value);
+  return d ? format(d, displayFormat) : value;
+}
+
+function safeNormalizeDateStr(value: string): string {
+  const d = safeParseDateStr(value);
+  return d ? format(d, "yyyy-MM-dd") : value;
+}
+
+// =============================================================================
+// Auto-generate reference ID
+// =============================================================================
+
+function generateReferenceId(): string {
+  const now = new Date();
+  const datePart = format(now, "yyyyMMdd");
+  const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return `REF-${datePart}-${randomPart}`;
+}
+
+// =============================================================================
+// Feature labels — human-readable names for the bureau feature keys
+// =============================================================================
+
+const FEATURE_LABELS: Record<string, string> = {
+  highest_delinquency_rating: "Highest Delinquency Rating",
+  months_on_time_24m: "Months On-Time (24m)",
+  worst_arrears_24m: "Worst Arrears (24m)",
+  current_streak_on_time: "Current On-Time Streak",
+  has_active_arrears: "Has Active Arrears",
+  total_arrear_amount_ghs: "Total Arrear Amount (GHS)",
+  total_outstanding_debt_ghs: "Total Outstanding Debt (GHS)",
+  utilisation_ratio: "Utilisation Ratio",
+  num_active_accounts: "Active Accounts",
+  total_monthly_instalment_ghs: "Monthly Instalment (GHS)",
+  credit_age_months: "Credit Age (Months)",
+  num_accounts_total: "Total Accounts",
+  num_closed_accounts_good: "Closed Accounts (Good)",
+  product_diversity_score: "Product Diversity Score",
+  mobile_loan_history_count: "Mobile Loan History Count",
+  mobile_max_loan_ghs: "Mobile Max Loan (GHS)",
+  has_judgement: "Has Judgement",
+  has_written_off: "Has Write-Off",
+  has_charged_off: "Has Charge-Off",
+  has_legal_handover: "Has Legal Handover",
+  num_bounced_cheques: "Bounced Cheques",
+  has_adverse_default: "Has Adverse Default",
+  num_enquiries_3m: "Enquiries (3m)",
+  num_enquiries_12m: "Enquiries (12m)",
+  enquiry_reason_flags: "Enquiry Reason Flags",
+  applicant_age: "Applicant Age",
+  identity_verified: "Identity Verified",
+  num_dependants: "Dependants",
+  has_employer_detail: "Has Employer Detail",
+  address_stability: "Address Stability",
+};
+
+function getFeatureLabel(key: string): string {
+  return (
+    FEATURE_LABELS[key] ||
+    key
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+// =============================================================================
+// Schemas
+// =============================================================================
+
+/** Step 1 — Applicant Info */
+const applicantSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
-  nationalIdType: z.enum([
-    "ghana_card",
-    "voter_id",
-    "passport",
-    "drivers_license",
-  ]),
-  nationalIdNumber: z.string().min(1, "ID number is required"),
-  gender: z.enum(["male", "female", "other"]).optional(),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  email: z.string().email().optional().or(z.literal("")),
-  address: z.string().optional(),
-
-  // Employment
-  employmentStatus: z.enum([
-    "employed",
-    "self_employed",
-    "unemployed",
-    "retired",
-    "student",
-  ]),
-  employerName: z.string().optional(),
-  jobTitle: z.string().optional(),
-  employmentDuration: z.string().optional(),
-  monthlyIncome: z.string().min(1, "Monthly income is required"),
-  otherIncome: z.string().optional(),
-
-  // Loan Details
-  loanAmount: z.string().min(1, "Loan amount is required"),
-  loanPurpose: z.enum([
-    "personal",
-    "business",
-    "education",
-    "housing",
-    "vehicle",
-    "medical",
-    "agriculture",
-    "other",
-  ]),
-  loanTenure: z.string().min(1, "Loan tenure is required"),
-  collateralType: z
-    .enum(["none", "vehicle", "property", "equipment", "guarantor", "other"])
-    .optional(),
-
-  // Financial Profile
-  hasExistingLoans: z.boolean().default(false),
-  existingLoanBalance: z.string().optional(),
-  existingLoanPayment: z.string().optional(),
-  hasBankAccount: z.boolean().default(false),
-  hasMobileMoney: z.boolean().default(false),
-
-  // Alternative Data
-  utilityHistory: z
-    .enum(["excellent", "good", "fair", "poor", "no_data"])
-    .default("no_data"),
-  rentHistory: z
-    .enum(["excellent", "good", "fair", "poor", "no_data"])
-    .default("no_data"),
-  telcoAccountAge: z.string().optional(),
-  telcoAvgSpend: z.string().optional(),
-  telcoPaymentRegularity: z
-    .enum(["always_on_time", "mostly_on_time", "sometimes_late", "often_late"])
-    .default("always_on_time"),
-
-  // Consent
-  bureauConsent: z
-    .boolean()
-    .refine((val) => val === true, "Bureau consent is required"),
-  dataSharingConsent: z.boolean().default(false),
-
-  // Reference
-  referenceId: z.string().optional(),
+  nationalIdNumber: z.string().optional(),
+  phone: z.string().optional(),
+  accountNumber: z.string().optional(),
+  referenceId: z.string().min(1, "Reference ID is required"),
 });
 
-type FormData = z.infer<typeof scoreRequestSchema>;
+/** Step 2 — Loan Details */
+const loanSchema = z.object({
+  amount: z
+    .string()
+    .min(1, "Loan amount is required")
+    .refine(
+      (v) => !isNaN(Number(v)) && Number(v) > 0,
+      "Must be a positive number",
+    ),
+  tenureMonths: z
+    .string()
+    .min(1, "Tenure is required")
+    .refine(
+      (v) => !isNaN(Number(v)) && Number(v) >= 1 && Number(v) <= 360,
+      "Must be between 1 and 360 months",
+    ),
+  purpose: z.string().optional(),
+});
 
-const steps = [
-  { id: 1, name: "Personal Info", icon: User },
-  { id: 2, name: "Employment", icon: Briefcase },
-  { id: 3, name: "Loan Details", icon: CreditCard },
-  { id: 4, name: "Financial", icon: Wallet },
-  { id: 5, name: "Alt Data", icon: Zap },
-  { id: 6, name: "Consent", icon: FileCheck },
-  { id: 7, name: "Review", icon: Send },
+type ApplicantFormData = z.infer<typeof applicantSchema>;
+type LoanFormData = z.infer<typeof loanSchema>;
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const STEPS = [
+  { id: 1, name: "Applicant Info", icon: User },
+  { id: 2, name: "Loan Details", icon: CreditCard },
+  { id: 3, name: "Bureau Data", icon: Database },
+  { id: 4, name: "Generate Score", icon: Sparkles },
 ];
+
+// =============================================================================
+// Page Component
+// =============================================================================
 
 export default function NewScoreRequestPage() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
-  const form = useForm<FormData>({
+  // ── Flow state ──
+  const [currentStep, setCurrentStep] = useState(1);
+  const [bureauResult, setBureauResult] = useState<BureauLookupResult | null>(
+    null,
+  );
+  // Editable features — initialized from bureau response, user can modify
+  const [editableFeatures, setEditableFeatures] = useState<
+    Record<string, number | null>
+  >({});
+
+  // ── Bureau details expand/collapse in review ──
+  const [showBureauDetails, setShowBureauDetails] = useState(false);
+
+  // ── Step 1: Applicant form ──
+  const applicantForm = useForm<ApplicantFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(scoreRequestSchema) as any,
+    resolver: zodResolver(applicantSchema) as any,
     defaultValues: {
-      nationalIdType: "ghana_card",
-      employmentStatus: "employed",
-      loanPurpose: "personal",
-      hasExistingLoans: false,
-      hasBankAccount: false,
-      hasMobileMoney: false,
-      utilityHistory: "no_data",
-      rentHistory: "no_data",
-      telcoPaymentRegularity: "always_on_time",
-      bureauConsent: false,
-      dataSharingConsent: false,
+      fullName: "",
+      dateOfBirth: "",
+      nationalIdNumber: "",
+      phone: "",
+      accountNumber: "",
+      referenceId: generateReferenceId(),
     },
   });
 
-  const {
-    register,
-    watch,
-    setValue,
-    formState: { errors },
-  } = form;
-  const watchedValues = watch();
+  // ── Step 2: Loan form ──
+  const loanForm = useForm<LoanFormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(loanSchema) as any,
+    defaultValues: {
+      amount: "",
+      tenureMonths: "",
+      purpose: "",
+    },
+  });
 
-  const nextStep = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
-    }
+  const applicantData = applicantForm.watch();
+  const loanData = loanForm.watch();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Mutations
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Bureau lookup — triggered when moving from Step 2 → Step 3 */
+  const bureauLookupMutation = useMutation({
+    mutationFn: (payload: BureauLookupPayload) =>
+      scoreService.bureauLookup(payload),
+    onSuccess: (result) => {
+      setBureauResult(result);
+
+      // Initialize editable features from the bureau response
+      const features = result.features || {};
+      setEditableFeatures({ ...features });
+
+      if (result.bureauHitStatus === "NO_RECORD") {
+        toast.warning(
+          "No bureau record found. Default feature values will be used.",
+        );
+      } else if (result.bureauHitStatus === "MULTIPLE_MATCH") {
+        toast.warning(
+          "Multiple matches found. Please verify the feature values.",
+        );
+      } else {
+        toast.success("Bureau data retrieved successfully!");
+      }
+
+      setCurrentStep(3);
+    },
+    onError: (error) => {
+      toast.error(
+        (error as any)?.message || "Bureau lookup failed. Please try again.",
+      );
+    },
+  });
+
+  /** Score request creation — triggered from Step 4 */
+  const createScoreRequestMutation = useMutation({
+    mutationFn: (payload: CreateScoreRequestPayload) =>
+      scoreService.createScoreRequest(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SCORE_KEYS.all });
+      toast.success("Credit score generated successfully!");
+      router.push(ROUTES.ORG.SCORE_REQUESTS);
+    },
+    onError: (error) => {
+      toast.error(
+        (error as any)?.message ||
+          "Failed to generate credit score. Please try again.",
+      );
+    },
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Handlers
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Step 1 → Step 2: Validate applicant info */
+  const handleApplicantNext = async () => {
+    const valid = await applicantForm.trigger();
+    if (valid) setCurrentStep(2);
+  };
+
+  /** Step 2 → Step 3: Validate loan details, then trigger bureau lookup */
+  const handleLoanNext = async () => {
+    const valid = await loanForm.trigger();
+    if (!valid) return;
+
+    const applicant = applicantForm.getValues();
+
+    bureauLookupMutation.mutate({
+      fullName: applicant.fullName || undefined,
+      dateOfBirth: applicant.dateOfBirth,
+      identification: applicant.nationalIdNumber || undefined,
+      phoneNumber: applicant.phone || undefined,
+      accountNumber: applicant.accountNumber || undefined,
+    });
+  };
+
+  /** Step 3 → Step 4: Move to review (features are already stored in state) */
+  const handleBureauNext = () => {
+    setCurrentStep(4);
+  };
+
+  /** Step 4: Generate credit score */
+  const handleGenerateScore = () => {
+    if (!bureauResult) return;
+
+    const applicant = applicantForm.getValues();
+    const loan = loanForm.getValues();
+
+    createScoreRequestMutation.mutate({
+      referenceId: applicant.referenceId || undefined,
+      applicant: {
+        fullName: applicant.fullName,
+        dateOfBirth: applicant.dateOfBirth,
+        nationalIdNumber: applicant.nationalIdNumber || undefined,
+        phone: applicant.phone || undefined,
+        accountNumber: applicant.accountNumber || undefined,
+      },
+      loanRequest: {
+        amount: Number(loan.amount),
+        tenureMonths: Number(loan.tenureMonths),
+        purpose: loan.purpose || undefined,
+      },
+      bureauData: {
+        consumerId: bureauResult.consumerId || "",
+        bureauHitStatus: bureauResult.bureauHitStatus,
+        productSource: bureauResult.metadata?.productSource || null,
+        creditSummary: null,
+        creditAccounts: null,
+        features: editableFeatures,
+      },
+      channel: "web_portal",
+    });
+  };
+
+  /** Update a single feature value */
+  const updateFeature = (key: string, value: string) => {
+    setEditableFeatures((prev) => ({
+      ...prev,
+      [key]: value === "" ? null : Number(value),
+    }));
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Render helpers
+  // ═══════════════════════════════════════════════════════════════════════════
 
-      toast.success("Score request submitted successfully!");
-      router.push(ROUTES.ORG.SCORE_REQUESTS);
-    } catch (error) {
-      toast.error(
-        (error as any)?.message ||
-          "Failed to submit score request. Please try again.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const fmtGHS = (value: number | null | undefined) =>
+    value != null
+      ? `GHS ${value.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`
+      : "—";
 
   const renderStepContent = () => {
     switch (currentStep) {
+      // ─── Step 1: Applicant Info ────────────────────────────────────────
       case 1:
         return (
           <div className="space-y-4">
@@ -206,24 +394,54 @@ export default function NewScoreRequestPage() {
                 <Input
                   id="fullName"
                   placeholder="Kwame Asante"
-                  {...register("fullName")}
+                  {...applicantForm.register("fullName")}
                 />
-                {errors.fullName && (
+                {applicantForm.formState.errors.fullName && (
                   <p className="text-sm text-destructive">
-                    {errors.fullName.message}
+                    {applicantForm.formState.errors.fullName.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  {...register("dateOfBirth")}
-                />
-                {errors.dateOfBirth && (
+                <Label>Date of Birth *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="dateOfBirth"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal h-9",
+                        !applicantData.dateOfBirth && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {applicantData.dateOfBirth
+                        ? safeFormatDate(applicantData.dateOfBirth)
+                        : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={safeParseDateStr(
+                        applicantData.dateOfBirth || "",
+                      )}
+                      onSelect={(date) =>
+                        applicantForm.setValue(
+                          "dateOfBirth",
+                          date ? format(date, "yyyy-MM-dd") : "",
+                        )
+                      }
+                      captionLayout="dropdown"
+                      fromYear={1940}
+                      toYear={new Date().getFullYear()}
+                      disabled={(date) => date > new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {applicantForm.formState.errors.dateOfBirth && (
                   <p className="text-sm text-destructive">
-                    {errors.dateOfBirth.message}
+                    {applicantForm.formState.errors.dateOfBirth.message}
                   </p>
                 )}
               </div>
@@ -231,215 +449,101 @@ export default function NewScoreRequestPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nationalIdType">ID Type *</Label>
-                <Select
-                  value={watchedValues.nationalIdType}
-                  onValueChange={(value) =>
-                    setValue(
-                      "nationalIdType",
-                      value as FormData["nationalIdType"],
-                    )
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select ID type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ghana_card">Ghana Card</SelectItem>
-                    <SelectItem value="voter_id">Voter ID</SelectItem>
-                    <SelectItem value="passport">Passport</SelectItem>
-                    <SelectItem value="drivers_license">
-                      Driver&apos;s License
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nationalIdNumber">ID Number *</Label>
+                <Label htmlFor="nationalIdNumber">
+                  National ID / Ghana Card
+                </Label>
                 <Input
                   id="nationalIdNumber"
                   placeholder="GHA-123456789-0"
-                  {...register("nationalIdNumber")}
+                  {...applicantForm.register("nationalIdNumber")}
                 />
-                {errors.nationalIdNumber && (
-                  <p className="text-sm text-destructive">
-                    {errors.nationalIdNumber.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="gender">Gender</Label>
-                <Select
-                  value={watchedValues.gender || ""}
-                  onValueChange={(value) =>
-                    setValue("gender", value as FormData["gender"])
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
                   placeholder="+233 20 123 4567"
-                  {...register("phone")}
+                  {...applicantForm.register("phone")}
                 />
-                {errors.phone && (
-                  <p className="text-sm text-destructive">
-                    {errors.phone.message}
-                  </p>
-                )}
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="email">Email (Optional)</Label>
+                <Label htmlFor="accountNumber">Account Number</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="kwame@example.com"
-                  {...register("email")}
+                  id="accountNumber"
+                  placeholder="Bank account number (optional)"
+                  {...applicantForm.register("accountNumber")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address">Residential Address</Label>
-                <Input
-                  id="address"
-                  placeholder="123 Independence Ave, Accra"
-                  {...register("address")}
-                />
+                <Label htmlFor="referenceId">Reference ID *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="referenceId"
+                    placeholder="REF-20260408-A1B2C"
+                    {...applicantForm.register("referenceId")}
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() =>
+                      applicantForm.setValue("referenceId", generateReferenceId())
+                    }
+                    title="Regenerate reference ID"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Auto-generated. Edit or regenerate as needed.
+                </p>
+                {applicantForm.formState.errors.referenceId && (
+                  <p className="text-sm text-destructive">
+                    {applicantForm.formState.errors.referenceId.message}
+                  </p>
+                )}
               </div>
             </div>
           </div>
         );
 
+      // ─── Step 2: Loan Details ──────────────────────────────────────────
       case 2:
         return (
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="employmentStatus">Employment Status *</Label>
-                <Select
-                  value={watchedValues.employmentStatus}
-                  onValueChange={(value) =>
-                    setValue(
-                      "employmentStatus",
-                      value as FormData["employmentStatus"],
-                    )
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employed">Employed</SelectItem>
-                    <SelectItem value="self_employed">Self-Employed</SelectItem>
-                    <SelectItem value="unemployed">Unemployed</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="employerName">Employer Name</Label>
+                <Label htmlFor="amount">Loan Amount (GHS) *</Label>
                 <Input
-                  id="employerName"
-                  placeholder="Company name"
-                  {...register("employerName")}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="jobTitle">Job Title</Label>
-                <Input
-                  id="jobTitle"
-                  placeholder="Sales Manager"
-                  {...register("jobTitle")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="employmentDuration">Employment Duration</Label>
-                <Input
-                  id="employmentDuration"
-                  placeholder="e.g., 3 years"
-                  {...register("employmentDuration")}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="monthlyIncome">Monthly Income (GHS) *</Label>
-                <Input
-                  id="monthlyIncome"
-                  type="number"
-                  placeholder="5000"
-                  {...register("monthlyIncome")}
-                />
-                {errors.monthlyIncome && (
-                  <p className="text-sm text-destructive">
-                    {errors.monthlyIncome.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="otherIncome">Other Income (GHS)</Label>
-                <Input
-                  id="otherIncome"
-                  type="number"
-                  placeholder="0"
-                  {...register("otherIncome")}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="loanAmount">Loan Amount (GHS) *</Label>
-                <Input
-                  id="loanAmount"
+                  id="amount"
                   type="number"
                   placeholder="50000"
-                  {...register("loanAmount")}
+                  {...loanForm.register("amount")}
                 />
-                {errors.loanAmount && (
+                {loanForm.formState.errors.amount && (
                   <p className="text-sm text-destructive">
-                    {errors.loanAmount.message}
+                    {loanForm.formState.errors.amount.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="loanTenure">Loan Tenure (months) *</Label>
+                <Label htmlFor="tenureMonths">Tenure (months) *</Label>
                 <Input
-                  id="loanTenure"
+                  id="tenureMonths"
                   type="number"
+                  min={1}
+                  max={360}
                   placeholder="24"
-                  {...register("loanTenure")}
+                  {...loanForm.register("tenureMonths")}
                 />
-                {errors.loanTenure && (
+                {loanForm.formState.errors.tenureMonths && (
                   <p className="text-sm text-destructive">
-                    {errors.loanTenure.message}
+                    {loanForm.formState.errors.tenureMonths.message}
                   </p>
                 )}
               </div>
@@ -447,15 +551,13 @@ export default function NewScoreRequestPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="loanPurpose">Loan Purpose *</Label>
+                <Label htmlFor="purpose">Loan Purpose</Label>
                 <Select
-                  value={watchedValues.loanPurpose}
-                  onValueChange={(value) =>
-                    setValue("loanPurpose", value as FormData["loanPurpose"])
-                  }
+                  value={loanData.purpose || ""}
+                  onValueChange={(value) => loanForm.setValue("purpose", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select purpose" />
+                    <SelectValue placeholder="Select purpose (optional)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="personal">Personal</SelectItem>
@@ -465,413 +567,280 @@ export default function NewScoreRequestPage() {
                     <SelectItem value="vehicle">Vehicle</SelectItem>
                     <SelectItem value="medical">Medical</SelectItem>
                     <SelectItem value="agriculture">Agriculture</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="collateralType">Collateral Type</Label>
-                <Select
-                  value={watchedValues.collateralType || "none"}
-                  onValueChange={(value) =>
-                    setValue(
-                      "collateralType",
-                      value as FormData["collateralType"],
-                    )
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select collateral" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="vehicle">Vehicle</SelectItem>
-                    <SelectItem value="property">Property</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
-                    <SelectItem value="guarantor">Guarantor</SelectItem>
+                    <SelectItem value="debt_consolidation">
+                      Debt Consolidation
+                    </SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="referenceId">Your Reference ID (Optional)</Label>
-              <Input
-                id="referenceId"
-                placeholder="LOAN-2025-001"
-                {...register("referenceId")}
-              />
-              <p className="text-xs text-muted-foreground">
-                Your internal reference for tracking this application
-              </p>
-            </div>
+            {bureauLookupMutation.isPending && (
+              <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Fetching bureau data for the applicant...</span>
+              </div>
+            )}
           </div>
         );
 
-      case 4:
+      // ─── Step 3: Bureau Data (Editable Features) ───────────────────────
+      case 3:
         return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasExistingLoans"
-                  checked={watchedValues.hasExistingLoans}
-                  onCheckedChange={(checked) =>
-                    setValue("hasExistingLoans", checked as boolean)
-                  }
-                />
-                <Label htmlFor="hasExistingLoans">
-                  Applicant has existing loans
-                </Label>
-              </div>
-
-              {watchedValues.hasExistingLoans && (
-                <div className="grid gap-4 md:grid-cols-2 pl-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="existingLoanBalance">
-                      Outstanding Balance (GHS)
-                    </Label>
-                    <Input
-                      id="existingLoanBalance"
-                      type="number"
-                      placeholder="0"
-                      {...register("existingLoanBalance")}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="existingLoanPayment">
-                      Monthly Payment (GHS)
-                    </Label>
-                    <Input
-                      id="existingLoanPayment"
-                      type="number"
-                      placeholder="0"
-                      {...register("existingLoanPayment")}
-                    />
-                  </div>
-                </div>
-              )}
+          <div className="space-y-4">
+            {/* Info banner */}
+            <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
+              <Pencil className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                These values were retrieved from the credit bureau. You may edit
+                any value before generating the credit score.
+              </span>
             </div>
 
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasBankAccount"
-                  checked={watchedValues.hasBankAccount}
-                  onCheckedChange={(checked) =>
-                    setValue("hasBankAccount", checked as boolean)
-                  }
-                />
-                <Label htmlFor="hasBankAccount">
-                  Applicant has a bank account
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasMobileMoney"
-                  checked={watchedValues.hasMobileMoney}
-                  onCheckedChange={(checked) =>
-                    setValue("hasMobileMoney", checked as boolean)
-                  }
-                />
-                <Label htmlFor="hasMobileMoney">
-                  Applicant uses mobile money
-                </Label>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Utility & Rent History</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Utility Payment History</Label>
-                  <Select
-                    value={watchedValues.utilityHistory}
-                    onValueChange={(val) =>
-                      setValue("utilityHistory", val as any)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="excellent">
-                        Excellent (No delays)
-                      </SelectItem>
-                      <SelectItem value="good">Good (1-2 delays)</SelectItem>
-                      <SelectItem value="fair">
-                        Fair (Frequent delays)
-                      </SelectItem>
-                      <SelectItem value="poor">Poor (Disconnected)</SelectItem>
-                      <SelectItem value="no_data">No Data</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Rent Payment History</Label>
-                  <Select
-                    value={watchedValues.rentHistory}
-                    onValueChange={(val) => setValue("rentHistory", val as any)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="fair">Fair</SelectItem>
-                      <SelectItem value="poor">Poor</SelectItem>
-                      <SelectItem value="no_data">No Data</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Telco & Mobile Money Data</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Account Age (Months)</Label>
-                  <Input
-                    type="number"
-                    placeholder="24"
-                    {...register("telcoAccountAge")}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Avg. Monthly Spend (GHS)</Label>
-                  <Input
-                    type="number"
-                    placeholder="150"
-                    {...register("telcoAvgSpend")}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Payment Regularity</Label>
-                <Select
-                  value={watchedValues.telcoPaymentRegularity}
-                  onValueChange={(val) =>
-                    setValue("telcoPaymentRegularity", val as any)
+            {/* Bureau hit status */}
+            {bureauResult && (
+              <div className="flex items-center gap-3 mb-2">
+                <Badge
+                  variant={
+                    bureauResult.bureauHitStatus === "HIT"
+                      ? "default"
+                      : "secondary"
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="always_on_time">
-                      Always on time
-                    </SelectItem>
-                    <SelectItem value="mostly_on_time">
-                      Mostly on time
-                    </SelectItem>
-                    <SelectItem value="sometimes_late">
-                      Sometimes late
-                    </SelectItem>
-                    <SelectItem value="often_late">Often late</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 6:
-        return (
-          <div className="space-y-6">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id="bureauConsent"
-                    checked={watchedValues.bureauConsent}
-                    onCheckedChange={(checked) =>
-                      setValue("bureauConsent", checked as boolean)
-                    }
-                  />
-                  <div className="space-y-1">
-                    <Label htmlFor="bureauConsent" className="font-medium">
-                      Credit Bureau Check Authorization *
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      I confirm that the applicant has provided consent for
-                      their credit information to be retrieved from credit
-                      bureaus for the purpose of this loan assessment.
-                    </p>
-                  </div>
-                </div>
-                {errors.bureauConsent && (
-                  <p className="text-sm text-destructive mt-2">
-                    {errors.bureauConsent.message}
-                  </p>
+                  {bureauResult.bureauHitStatus}
+                </Badge>
+                {bureauResult.consumerId && (
+                  <span className="text-xs text-muted-foreground font-mono">
+                    Consumer: {bureauResult.consumerId}
+                  </span>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id="dataSharingConsent"
-                    checked={watchedValues.dataSharingConsent}
-                    onCheckedChange={(checked) =>
-                      setValue("dataSharingConsent", checked as boolean)
+                {bureauResult.metadata?.creditScore != null && (
+                  <Badge variant="outline" className="text-xs font-mono">
+                    Bureau Score: {bureauResult.metadata.creditScore}
+                  </Badge>
+                )}
+                {bureauResult.metadata?.scoreGrade && (
+                  <Badge
+                    variant={
+                      bureauResult.metadata.scoreGrade <= "B"
+                        ? "default"
+                        : bureauResult.metadata.scoreGrade <= "D"
+                          ? "secondary"
+                          : "destructive"
                     }
-                  />
-                  <div className="space-y-1">
-                    <Label htmlFor="dataSharingConsent" className="font-medium">
-                      Data Sharing for Model Improvement (Optional)
+                    className="text-xs"
+                  >
+                    Grade {bureauResult.metadata.scoreGrade}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Feature fields grid */}
+            {Object.keys(editableFeatures).length === 0 ? (
+              <div className="flex items-center gap-2 rounded-lg border border-yellow-300/30 bg-yellow-50 dark:bg-yellow-900/10 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-200">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>
+                  No feature data returned from the bureau. You may still
+                  proceed — the model will use default values.
+                </span>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(editableFeatures).map(([key, value]) => (
+                  <div key={key} className="space-y-1">
+                    <Label
+                      htmlFor={`feature_${key}`}
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      {getFeatureLabel(key)}
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      I consent to anonymized loan performance data being used
-                      to improve credit scoring models for the benefit of all
-                      platform users.
-                    </p>
+                    <Input
+                      id={`feature_${key}`}
+                      type="number"
+                      step="any"
+                      value={value ?? ""}
+                      onChange={(e) => updateFeature(key, e.target.value)}
+                      className="h-8 text-sm font-mono"
+                    />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            )}
           </div>
         );
 
-      case 7:
+      // ─── Step 4: Review & Generate ─────────────────────────────────────
+      case 4: {
+        const applicant = applicantForm.getValues();
+        const loan = loanForm.getValues();
+        const featureCount = Object.keys(editableFeatures).length;
+        const editedCount = bureauResult?.features
+          ? Object.entries(editableFeatures).filter(
+              ([k, v]) => (bureauResult.features as any)?.[k] !== v,
+            ).length
+          : 0;
+
         return (
           <div className="space-y-6">
+            {/* Applicant summary */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Personal Information</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  Applicant Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Full Name</span>
                   <span className="font-medium">
-                    {watchedValues.fullName || "—"}
+                    {applicant.fullName || "—"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date of Birth</span>
                   <span className="font-medium">
-                    {watchedValues.dateOfBirth || "—"}
+                    {applicant.dateOfBirth
+                      ? safeFormatDate(applicant.dateOfBirth)
+                      : "—"}
                   </span>
                 </div>
+                {applicant.nationalIdNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">National ID</span>
+                    <span className="font-medium">
+                      {applicant.nationalIdNumber}
+                    </span>
+                  </div>
+                )}
+                {applicant.phone && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Phone</span>
+                    <span className="font-medium">{applicant.phone}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">ID Number</span>
-                  <span className="font-medium">
-                    {watchedValues.nationalIdNumber || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Phone</span>
-                  <span className="font-medium">
-                    {watchedValues.phone || "—"}
+                  <span className="text-muted-foreground">Reference ID</span>
+                  <span className="font-medium font-mono text-xs">
+                    {applicant.referenceId}
                   </span>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Loan summary */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Employment & Income</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Employment Status
-                  </span>
-                  <span className="font-medium capitalize">
-                    {watchedValues.employmentStatus?.replace("_", " ") || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Employer</span>
-                  <span className="font-medium">
-                    {watchedValues.employerName || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Monthly Income</span>
-                  <span className="font-medium">
-                    GHS {watchedValues.monthlyIncome || "0"}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Loan Request</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  Loan Request
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount</span>
                   <span className="font-medium">
-                    GHS {watchedValues.loanAmount || "0"}
+                    GHS{" "}
+                    {Number(loan.amount || 0).toLocaleString("en-GH")}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tenure</span>
                   <span className="font-medium">
-                    {watchedValues.loanTenure || "0"} months
+                    {loan.tenureMonths || "0"} months
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Purpose</span>
-                  <span className="font-medium capitalize">
-                    {watchedValues.loanPurpose || "—"}
-                  </span>
-                </div>
+                {loan.purpose && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Purpose</span>
+                    <span className="font-medium capitalize">
+                      {loan.purpose.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Alternative Data Signals
-                </CardTitle>
+            {/* Bureau data summary */}
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-primary/5">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Database className="h-4 w-4 text-muted-foreground" />
+                    Bureau Features
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {featureCount} features
+                    </Badge>
+                    {editedCount > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {editedCount} edited
+                      </Badge>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowBureauDetails(!showBureauDetails)}
+                      className="h-7 px-2"
+                    >
+                      {showBureauDetails ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="grid gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Utility History</span>
-                  <span className="font-medium capitalize">
-                    {watchedValues.utilityHistory || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rent History</span>
-                  <span className="font-medium capitalize">
-                    {watchedValues.rentHistory || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Telco Regularity
-                  </span>
-                  <span className="font-medium capitalize">
-                    {watchedValues.telcoPaymentRegularity?.replace("_", " ") ||
-                      "—"}
-                  </span>
-                </div>
-              </CardContent>
+              {showBureauDetails && (
+                <CardContent className="pt-0">
+                  <Separator className="mb-4" />
+                  <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                    {Object.entries(editableFeatures).map(([key, value]) => {
+                      const original = (bureauResult?.features as any)?.[key];
+                      const isEdited = original !== value;
+                      return (
+                        <div
+                          key={key}
+                          className="flex justify-between gap-2"
+                        >
+                          <span className="text-muted-foreground text-xs truncate">
+                            {getFeatureLabel(key)}
+                          </span>
+                          <span
+                            className={cn(
+                              "font-mono text-xs shrink-0",
+                              isEdited
+                                ? "font-semibold text-primary"
+                                : "text-foreground",
+                            )}
+                          >
+                            {value ?? "—"}
+                            {isEdited && " ✎"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           </div>
         );
+      }
 
       default:
         return null;
     }
   };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Main Render
+  // ═══════════════════════════════════════════════════════════════════════════
 
   return (
     <div className="space-y-6">
@@ -885,14 +854,15 @@ export default function NewScoreRequestPage() {
         <div>
           <h1 className="text-2xl font-bold">New Score Request</h1>
           <p className="text-muted-foreground">
-            Submit a new credit score request
+            {STEPS[currentStep - 1].name} — Step {currentStep} of{" "}
+            {STEPS.length}
           </p>
         </div>
       </div>
 
       {/* Step indicator */}
       <div className="flex items-center justify-between overflow-x-auto pb-2">
-        {steps.map((step, index) => (
+        {STEPS.map((step, index) => (
           <div key={step.id} className="flex items-center">
             <div className="flex flex-col items-center">
               <div
@@ -913,7 +883,7 @@ export default function NewScoreRequestPage() {
               </div>
               <span
                 className={cn(
-                  "text-xs mt-1 hidden sm:block",
+                  "text-xs mt-1 hidden sm:block whitespace-nowrap",
                   currentStep >= step.id
                     ? "text-foreground"
                     : "text-muted-foreground",
@@ -922,10 +892,10 @@ export default function NewScoreRequestPage() {
                 {step.name}
               </span>
             </div>
-            {index < steps.length - 1 && (
+            {index < STEPS.length - 1 && (
               <div
                 className={cn(
-                  "w-8 sm:w-16 h-0.5 mx-2",
+                  "w-6 sm:w-12 h-0.5 mx-1.5",
                   currentStep > step.id ? "bg-primary" : "bg-muted",
                 )}
               />
@@ -934,52 +904,98 @@ export default function NewScoreRequestPage() {
         ))}
       </div>
 
-      {/* Form content */}
+      {/* Card content */}
       <Card>
         <CardHeader>
-          <CardTitle>{steps[currentStep - 1].name}</CardTitle>
+          <CardTitle>{STEPS[currentStep - 1].name}</CardTitle>
           <CardDescription>
-            Step {currentStep} of {steps.length}
+            {currentStep === 1 && "Enter the applicant's personal information."}
+            {currentStep === 2 &&
+              "Provide the loan details. Bureau data will be fetched automatically."}
+            {currentStep === 3 &&
+              "Review and edit the bureau feature data used for scoring."}
+            {currentStep === 4 &&
+              "Review all information and generate the credit score."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            {renderStepContent()}
+          {renderStepContent()}
 
-            {/* Navigation buttons */}
-            <div className="flex justify-between mt-8 pt-6 border-t">
+          {/* Navigation buttons */}
+          <div className="flex justify-between mt-8 pt-6 border-t">
+            {currentStep === 1 ? (
+              <Button variant="outline" asChild>
+                <Link href={ROUTES.ORG.SCORE_REQUESTS}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Cancel
+                </Link>
+              </Button>
+            ) : (
               <Button
                 type="button"
                 variant="outline"
                 onClick={prevStep}
-                disabled={currentStep === 1}
+                disabled={
+                  bureauLookupMutation.isPending ||
+                  createScoreRequestMutation.isPending
+                }
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Previous
               </Button>
+            )}
 
-              {currentStep < steps.length ? (
-                <Button type="button" onClick={nextStep}>
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Submit Request
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </form>
+            {currentStep === 1 && (
+              <Button type="button" onClick={handleApplicantNext}>
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {currentStep === 2 && (
+              <Button
+                type="button"
+                onClick={handleLoanNext}
+                disabled={bureauLookupMutation.isPending}
+              >
+                {bureauLookupMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Fetching Bureau Data...
+                  </>
+                ) : (
+                  <>
+                    <Search className="mr-2 h-4 w-4" />
+                    Fetch Bureau Data
+                  </>
+                )}
+              </Button>
+            )}
+            {currentStep === 3 && (
+              <Button type="button" onClick={handleBureauNext}>
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {currentStep === 4 && (
+              <Button
+                type="button"
+                onClick={handleGenerateScore}
+                disabled={createScoreRequestMutation.isPending}
+              >
+                {createScoreRequestMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Score...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Credit Score
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

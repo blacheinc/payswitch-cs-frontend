@@ -48,8 +48,13 @@ export const API_ENDPOINTS = {
   SCORE_REQUESTS: {
     BASE: "/v1/score-requests",
     BY_ID: (id: string) => `/v1/score-requests/${id}`,
+    SCORING_RESULT: (id: string) => `/v1/score-requests/${id}/scoring-result`,
+    OVERRIDE: (id: string) => `/v1/score-requests/${id}/override`,
     OUTCOME: (id: string) => `/v1/score-requests/${id}/outcome`,
     PERFORMANCE: (id: string) => `/v1/score-requests/${id}/performance`,
+  },
+  BUREAU: {
+    LOOKUP: "/v1/bureau-lookup",
   },
   // Bulk requests not explicitly in OpenAPI, allowing fallback or future implementation
   BULK_REQUESTS: {
@@ -88,6 +93,33 @@ export const API_ENDPOINTS = {
     WEBHOOK_EVENTS: "/org/webhooks/events",
     WEBHOOK_BY_ID: (webhookId: string) => `/org/webhooks/${webhookId}`,
     LOGS: "/org/api-logs",
+  },
+};
+
+export const SOURCE_TYPE_ENUM = {
+  BANK: {
+    value: "bank",
+    label: "Bank",
+  },
+  BUREAU: {
+    value: "bureau",
+    label: "Bureau",
+  },
+  TELCO: {
+    value: "telco",
+    label: "Telco",
+  },
+  UTILITY: {
+    value: "utility",
+    label: "Utility",
+  },
+  MFI: {
+    value: "mfi",
+    label: "MFI",
+  },
+  OTHER: {
+    value: "other",
+    label: "Other",
   },
 };
 

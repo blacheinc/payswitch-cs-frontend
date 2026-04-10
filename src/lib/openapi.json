@@ -1515,7 +1515,7 @@
       "post": {
         "tags": ["Scoring API"],
         "summary": "Create Score Request",
-        "description": "Submit a credit score request.\n\nSupports both API key and JWT authentication.\nUse the `Idempotency-Key` header to prevent duplicate requests.",
+        "description": "Submit a credit score request.\n\n1. Validates input and checks idempotency\n2. Runs hard-stop pre-screening rules (Section 5.2)\n3. If hard-stop triggers → immediate DECLINE\n4. Otherwise → saves as PROCESSING, publishes to DE, returns async response\n\nUse the `Idempotency-Key` header to prevent duplicate requests.",
         "operationId": "create_score_request_v1_score_requests_post",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -1526,15 +1526,6 @@
             "schema": {
               "anyOf": [{ "type": "string" }, { "type": "null" }],
               "title": "Idempotency-Key"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -1554,7 +1545,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ScoreRequestResponse"
+                  "anyOf": [
+                    { "$ref": "#/components/schemas/ScoreRequestResponse" },
+                    { "$ref": "#/components/schemas/HardStopDeclineResponse" }
+                  ],
+                  "title": "Response Create Score Request V1 Score Requests Post"
                 }
               }
             }
@@ -1607,15 +1602,6 @@
               "anyOf": [{ "type": "string" }, { "type": "null" }],
               "title": "Status"
             }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -1653,15 +1639,6 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "title": "Request Id" }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -1671,6 +1648,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ScoreRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score-requests/{request_id}/scoring-result": {
+      "get": {
+        "tags": ["Scoring API"],
+        "summary": "Get Scoring Result",
+        "description": "Get the full 4-model scoring result for a score request.\n\nReturns the rich output from the AI pipeline including credit risk,\nfraud detection, loan amount, and income verification model results,\nalong with SHAP contributions and reason codes.",
+        "operationId": "get_scoring_result_v1_score_requests__request_id__scoring_result_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Request Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score-requests/{request_id}/override": {
+      "post": {
+        "tags": ["Scoring API"],
+        "summary": "Override Decision",
+        "description": "Manually override a REFER decision.\n\nOnly available when the AI pipeline returned REFER. Allows a loan officer\nto make a final decision (APPROVE, CONDITIONAL_APPROVE, or DECLINE).",
+        "operationId": "override_decision_v1_score_requests__request_id__override_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Request Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverrideDecisionResponse"
                 }
               }
             }
@@ -1699,15 +1760,6 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "title": "Request Id" }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "requestBody": {
@@ -1751,15 +1803,6 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "title": "Request Id" }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "requestBody": {
@@ -1790,6 +1833,43 @@
             }
           }
         }
+      }
+    },
+    "/v1/bureau-lookup": {
+      "post": {
+        "tags": ["Bureau Lookup"],
+        "summary": "Look up credit bureau data for a customer",
+        "description": "Step 1 of the scoring flow. Calls XDS Credit Bureau to fetch Products 45 + 49 data. Returns bureau features, credit summary, and hard-stop indicators. On NO_RECORD, returns default feature weights so the frontend can still render the form.",
+        "operationId": "bureau_lookup_v1_bureau_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BureauLookupRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BureauLookupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
       }
     },
     "/org/profile": {
@@ -2492,32 +2572,6 @@
         "type": "object",
         "title": "AffordabilityAssessment"
       },
-      "AlternativeData": {
-        "properties": {
-          "utility_payment_history": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Utility Payment History"
-          },
-          "rent_payment_history": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Rent Payment History"
-          },
-          "telco_data": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/TelcoData" },
-              { "type": "null" }
-            ]
-          },
-          "social_signals": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/SocialSignals" },
-              { "type": "null" }
-            ]
-          }
-        },
-        "type": "object",
-        "title": "AlternativeData"
-      },
       "ApiKeyCreatedResponse": {
         "properties": {
           "id": { "type": "string", "format": "uuid", "title": "Id" },
@@ -2568,28 +2622,6 @@
         ],
         "title": "ApiKeyResponse"
       },
-      "ApplicantAddress": {
-        "properties": {
-          "street": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Street"
-          },
-          "city": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "City"
-          },
-          "region": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Region"
-          },
-          "digital_address": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Digital Address"
-          }
-        },
-        "type": "object",
-        "title": "ApplicantAddress"
-      },
       "ApplicantInfo": {
         "properties": {
           "full_name": {
@@ -2603,60 +2635,27 @@
             "format": "date",
             "title": "Date Of Birth"
           },
-          "national_id_type": {
-            "type": "string",
-            "title": "National Id Type",
-            "description": "ghana_card, voter_id, passport, drivers_license, nhis"
-          },
           "national_id_number": {
-            "type": "string",
-            "maxLength": 50,
-            "title": "National Id Number"
-          },
-          "gender": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Gender",
-            "description": "male, female, other"
-          },
-          "marital_status": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Marital Status"
-          },
-          "phone": {
-            "type": "string",
-            "pattern": "^\\+?[0-9]{10,15}$",
-            "title": "Phone"
-          },
-          "email": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Email"
-          },
-          "address": {
             "anyOf": [
-              { "$ref": "#/components/schemas/ApplicantAddress" },
-              { "type": "null" }
-            ]
-          },
-          "dependents": {
-            "anyOf": [
-              { "type": "integer", "maximum": 20.0, "minimum": 0.0 },
+              { "type": "string", "maxLength": 50 },
               { "type": "null" }
             ],
-            "title": "Dependents"
+            "title": "National Id Number"
           },
-          "education_level": {
+          "phone": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Education Level"
+            "title": "Phone"
+          },
+          "account_number": {
+            "anyOf": [
+              { "type": "string", "maxLength": 50 },
+              { "type": "null" }
+            ],
+            "title": "Account Number"
           }
         },
         "type": "object",
-        "required": [
-          "full_name",
-          "date_of_birth",
-          "national_id_type",
-          "national_id_number",
-          "phone"
-        ],
+        "required": ["full_name", "date_of_birth"],
         "title": "ApplicantInfo"
       },
       "ApproveUploadRequest": {
@@ -2693,54 +2692,6 @@
         "required": ["upload_id", "status"],
         "title": "ApproveUploadResponse"
       },
-      "AssetsInfo": {
-        "properties": {
-          "owns_property": {
-            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
-            "title": "Owns Property"
-          },
-          "property_value": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Property Value"
-          },
-          "owns_vehicle": {
-            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
-            "title": "Owns Vehicle"
-          },
-          "vehicle_value": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Vehicle Value"
-          },
-          "savings_investments": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Savings Investments"
-          }
-        },
-        "type": "object",
-        "title": "AssetsInfo"
-      },
-      "BankAccount": {
-        "properties": {
-          "bank_name": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Bank Name"
-          },
-          "account_type": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Account Type"
-          },
-          "average_balance_3m": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Average Balance 3M"
-          },
-          "account_age_months": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Account Age Months"
-          }
-        },
-        "type": "object",
-        "title": "BankAccount"
-      },
       "Body_upload_training_data_admin_training_data_upload_post": {
         "properties": {
           "file": {
@@ -2759,39 +2710,585 @@
         "required": ["file", "source_id"],
         "title": "Body_upload_training_data_admin_training_data_upload_post"
       },
-      "BureauData": {
+      "BureauCreditAccount": {
         "properties": {
-          "bureau_score": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Bureau Score"
-          },
-          "bureau_provider": {
+          "subscriber_name": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Bureau Provider"
+            "title": "Subscriber Name"
           },
+          "account_no": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Account No"
+          },
+          "date_opened": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Date Opened"
+          },
+          "facility_type": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Facility Type"
+          },
+          "currency": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Currency"
+          },
+          "credit_limit": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Credit Limit"
+          },
+          "current_balance": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Current Balance"
+          },
+          "instalment_amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Instalment Amount"
+          },
+          "arrear_amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Arrear Amount"
+          },
+          "months_in_arrears": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Months In Arrears"
+          },
+          "status_code": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Status Code"
+          },
+          "payment_history_24m": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Payment History 24M"
+          }
+        },
+        "type": "object",
+        "title": "BureauCreditAccount",
+        "description": "Individual credit account from the bureau report."
+      },
+      "BureauCreditSummary": {
+        "properties": {
           "total_accounts": {
             "anyOf": [{ "type": "integer" }, { "type": "null" }],
             "title": "Total Accounts"
           },
-          "delinquent_accounts": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Delinquent Accounts"
+          "total_monthly_instalment_ghs": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Total Monthly Instalment Ghs"
           },
-          "oldest_account_months": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Oldest Account Months"
+          "total_outstanding_debt_ghs": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Total Outstanding Debt Ghs"
           },
-          "recent_inquiries_6m": {
+          "total_accounts_in_arrear": {
             "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Recent Inquiries 6M"
+            "title": "Total Accounts In Arrear"
           },
-          "public_records": {
+          "total_arrear_amount_ghs": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Total Arrear Amount Ghs"
+          },
+          "total_accounts_good_standing": {
             "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Public Records"
+            "title": "Total Accounts Good Standing"
+          },
+          "total_judgements": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Total Judgements"
+          },
+          "total_judgement_amount_ghs": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Total Judgement Amount Ghs"
+          },
+          "total_dishonoured_cheques": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Total Dishonoured Cheques"
+          },
+          "delinquency_rating": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Delinquency Rating"
           }
         },
         "type": "object",
-        "title": "BureauData"
+        "title": "BureauCreditSummary",
+        "description": "Credit account summary from XDS."
+      },
+      "BureauData": {
+        "properties": {
+          "consumer_id": { "type": "string", "title": "Consumer Id" },
+          "bureau_hit_status": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Bureau Hit Status"
+          },
+          "product_source": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Product Source"
+          },
+          "credit_summary": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BureauCreditSummary" },
+              { "type": "null" }
+            ]
+          },
+          "credit_accounts": {
+            "anyOf": [
+              {
+                "items": { "$ref": "#/components/schemas/BureauCreditAccount" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Credit Accounts"
+          },
+          "features": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BureauFeatures" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["consumer_id"],
+        "title": "BureauData",
+        "description": "Bureau data from the bureau-lookup step, forwarded in the score request."
+      },
+      "BureauFeatures": {
+        "properties": {
+          "highest_delinquency_rating": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Highest Delinquency Rating"
+          },
+          "months_on_time_24m": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Months On Time 24M"
+          },
+          "worst_arrears_24m": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Worst Arrears 24M"
+          },
+          "current_streak_on_time": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Current Streak On Time"
+          },
+          "has_active_arrears": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Has Active Arrears"
+          },
+          "total_arrear_amount_ghs": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Total Arrear Amount Ghs"
+          },
+          "total_outstanding_debt_ghs": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Total Outstanding Debt Ghs"
+          },
+          "utilisation_ratio": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Utilisation Ratio"
+          },
+          "num_active_accounts": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Num Active Accounts"
+          },
+          "total_monthly_instalment_ghs": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Total Monthly Instalment Ghs"
+          },
+          "credit_age_months": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Credit Age Months"
+          },
+          "num_accounts_total": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Num Accounts Total"
+          },
+          "num_closed_accounts_good": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Num Closed Accounts Good"
+          },
+          "product_diversity_score": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Product Diversity Score"
+          },
+          "mobile_loan_history_count": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Mobile Loan History Count"
+          },
+          "mobile_max_loan_ghs": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Mobile Max Loan Ghs"
+          },
+          "has_judgement": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Has Judgement"
+          },
+          "has_written_off": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Has Written Off"
+          },
+          "has_charged_off": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Has Charged Off"
+          },
+          "has_legal_handover": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Has Legal Handover"
+          },
+          "num_bounced_cheques": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Num Bounced Cheques"
+          },
+          "has_adverse_default": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Has Adverse Default"
+          },
+          "num_enquiries_3m": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Num Enquiries 3M"
+          },
+          "num_enquiries_12m": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Num Enquiries 12M"
+          },
+          "enquiry_reason_flags": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Enquiry Reason Flags"
+          },
+          "applicant_age": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Applicant Age"
+          },
+          "identity_verified": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Identity Verified"
+          },
+          "num_dependants": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Num Dependants"
+          },
+          "has_employer_detail": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Has Employer Detail"
+          },
+          "address_stability": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Address Stability"
+          }
+        },
+        "type": "object",
+        "title": "BureauFeatures",
+        "description": "All 30 pre-binned features (0-1 scale) as defined in the contract."
+      },
+      "BureauLookupRequest": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200, "minLength": 2 },
+              { "type": "null" }
+            ],
+            "title": "Full Name",
+            "description": "Consumer name. Optional if identification is provided."
+          },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "title": "Date Of Birth"
+          },
+          "identification": {
+            "anyOf": [
+              { "type": "string", "maxLength": 50 },
+              { "type": "null" }
+            ],
+            "title": "Identification",
+            "description": "National ID / Ghana Card number"
+          },
+          "phone_number": {
+            "anyOf": [
+              { "type": "string", "pattern": "^\\+?[0-9]{10,15}$" },
+              { "type": "null" }
+            ],
+            "title": "Phone Number",
+            "description": "For mobile match"
+          },
+          "account_number": {
+            "anyOf": [
+              { "type": "string", "maxLength": 50 },
+              { "type": "null" }
+            ],
+            "title": "Account Number"
+          },
+          "enquiry_reason": {
+            "type": "string",
+            "title": "Enquiry Reason",
+            "description": "Reason for the credit enquiry",
+            "default": "Application for credit by a borrower"
+          }
+        },
+        "type": "object",
+        "required": ["date_of_birth"],
+        "title": "BureauLookupRequest",
+        "description": "Customer identifiers to look up in XDS Credit Bureau."
+      },
+      "BureauLookupResponse": {
+        "properties": {
+          "bureau_hit_status": {
+            "type": "string",
+            "title": "Bureau Hit Status",
+            "description": "HIT, NO_RECORD, or MULTIPLE_MATCH"
+          },
+          "match_count": {
+            "type": "integer",
+            "title": "Match Count",
+            "default": 0
+          },
+          "personal_details": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BureauPersonalDetails" },
+              { "type": "null" }
+            ]
+          },
+          "credit_summary": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BureauCreditSummary" },
+              { "type": "null" }
+            ]
+          },
+          "credit_accounts": {
+            "anyOf": [
+              {
+                "items": { "$ref": "#/components/schemas/BureauCreditAccount" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Credit Accounts"
+          },
+          "features": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BureauFeatures" },
+              { "type": "null" }
+            ]
+          },
+          "metadata": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BureauMetadata" },
+              { "type": "null" }
+            ]
+          },
+          "enquiry_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Enquiry Id"
+          },
+          "consumer_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Consumer Id"
+          }
+        },
+        "type": "object",
+        "required": ["bureau_hit_status"],
+        "title": "BureauLookupResponse",
+        "description": "Full response from the bureau lookup endpoint."
+      },
+      "BureauMetadata": {
+        "properties": {
+          "credit_score": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Credit Score"
+          },
+          "score_grade": {
+            "anyOf": [
+              { "type": "string", "pattern": "^[A-F]$" },
+              { "type": "null" }
+            ],
+            "title": "Score Grade",
+            "description": "A-F grade"
+          },
+          "decision_label": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Decision Label",
+            "description": "APPROVE / CONDITIONAL_APPROVE / REFER / DECLINE"
+          },
+          "data_quality_score": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Data Quality Score"
+          },
+          "bureau_hit_status": {
+            "type": "string",
+            "title": "Bureau Hit Status",
+            "description": "HIT or NO_RECORD",
+            "default": "HIT"
+          },
+          "product_source": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Product Source",
+            "description": "45, 49, 45+49"
+          },
+          "applicant_age_at_application": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Applicant Age At Application"
+          },
+          "credit_age_months_at_application": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Credit Age Months At Application"
+          }
+        },
+        "type": "object",
+        "title": "BureauMetadata",
+        "description": "Computed metadata from the bureau report."
+      },
+      "BureauPersonalDetails": {
+        "properties": {
+          "consumer_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Consumer Id"
+          },
+          "first_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "First Name"
+          },
+          "surname": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Surname"
+          },
+          "other_names": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Other Names"
+          },
+          "birth_date": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Birth Date"
+          },
+          "gender": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Gender"
+          },
+          "national_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "National Id"
+          },
+          "phone": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Phone"
+          },
+          "email": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Email"
+          },
+          "employer": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Employer"
+          },
+          "address": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Address"
+          },
+          "marital_status": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Marital Status"
+          },
+          "dependants": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Dependants"
+          }
+        },
+        "type": "object",
+        "title": "BureauPersonalDetails",
+        "description": "Personal details from the XDS report, displayed to the user."
       },
       "ChangePasswordRequest": {
         "properties": {
@@ -2806,31 +3303,6 @@
         "type": "object",
         "required": ["current_password", "new_password"],
         "title": "ChangePasswordRequest"
-      },
-      "ConsentInfo": {
-        "properties": {
-          "bureau_check_authorized": {
-            "type": "boolean",
-            "title": "Bureau Check Authorized",
-            "default": true
-          },
-          "consent_date": {
-            "type": "string",
-            "format": "date",
-            "title": "Consent Date"
-          },
-          "consent_reference": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Consent Reference"
-          },
-          "data_sharing_authorized": {
-            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
-            "title": "Data Sharing Authorized"
-          }
-        },
-        "type": "object",
-        "required": ["consent_date"],
-        "title": "ConsentInfo"
       },
       "CreateApiKeyRequest": {
         "properties": {
@@ -2928,32 +3400,8 @@
             "title": "Reference Id"
           },
           "applicant": { "$ref": "#/components/schemas/ApplicantInfo" },
-          "employment": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/EmploymentInfo" },
-              { "type": "null" }
-            ]
-          },
           "loan_request": { "$ref": "#/components/schemas/LoanRequestInfo" },
-          "financial_profile": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/FinancialProfile" },
-              { "type": "null" }
-            ]
-          },
-          "bureau_data": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/BureauData" },
-              { "type": "null" }
-            ]
-          },
-          "alternative_data": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/AlternativeData" },
-              { "type": "null" }
-            ]
-          },
-          "consent": { "$ref": "#/components/schemas/ConsentInfo" },
+          "bureau_data": { "$ref": "#/components/schemas/BureauData" },
           "metadata": {
             "anyOf": [
               { "$ref": "#/components/schemas/RequestMetadata" },
@@ -2962,9 +3410,9 @@
           }
         },
         "type": "object",
-        "required": ["applicant", "loan_request", "consent"],
+        "required": ["applicant", "loan_request", "bureau_data"],
         "title": "CreateScoreRequestInput",
-        "description": "Full credit score request – matches PRD Section 7.1."
+        "description": "Minimal credit score request – only expects exactly what the backend needs."
       },
       "CreateWebhookRequest": {
         "properties": {
@@ -2986,6 +3434,52 @@
         "type": "object",
         "required": ["url"],
         "title": "CreateWebhookRequest"
+      },
+      "CreditRiskResult": {
+        "properties": {
+          "probability_of_default": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Probability Of Default"
+          },
+          "pd_confidence": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Pd Confidence"
+          },
+          "risk_tier": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Risk Tier"
+          },
+          "shap_contributions": {
+            "anyOf": [
+              {
+                "items": { "$ref": "#/components/schemas/ShapContribution" },
+                "type": "array"
+              },
+              { "type": "null" }
+            ],
+            "title": "Shap Contributions"
+          },
+          "decision_reason_codes": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Decision Reason Codes"
+          },
+          "model_version": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "title": "CreditRiskResult",
+        "description": "Credit risk model output from the AI pipeline."
       },
       "DataSourceDetailResponse": {
         "properties": {
@@ -3078,98 +3572,6 @@
         "required": ["id", "name", "short_code", "source_type", "created_at"],
         "title": "DataSourceResponse"
       },
-      "EmploymentInfo": {
-        "properties": {
-          "status": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Status",
-            "description": "employed, self_employed, unemployed, retired, student"
-          },
-          "employer_name": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Employer Name"
-          },
-          "employer_industry": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Employer Industry"
-          },
-          "job_title": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Job Title"
-          },
-          "duration_months": {
-            "anyOf": [
-              { "type": "integer", "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Duration Months"
-          },
-          "total_work_experience_months": {
-            "anyOf": [
-              { "type": "integer", "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Total Work Experience Months"
-          },
-          "monthly_income": {
-            "anyOf": [{ "type": "number", "minimum": 0.0 }, { "type": "null" }],
-            "title": "Monthly Income"
-          },
-          "income_currency": {
-            "type": "string",
-            "title": "Income Currency",
-            "default": "GHS"
-          },
-          "income_verification_type": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Income Verification Type"
-          },
-          "other_income": {
-            "anyOf": [{ "type": "number", "minimum": 0.0 }, { "type": "null" }],
-            "title": "Other Income"
-          },
-          "other_income_source": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Other Income Source"
-          }
-        },
-        "type": "object",
-        "title": "EmploymentInfo"
-      },
-      "ExistingLoan": {
-        "properties": {
-          "lender_name": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Lender Name"
-          },
-          "loan_type": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Loan Type"
-          },
-          "original_amount": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Original Amount"
-          },
-          "outstanding_balance": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Outstanding Balance"
-          },
-          "monthly_payment": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Monthly Payment"
-          },
-          "status": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Status"
-          },
-          "days_past_due": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Days Past Due"
-          }
-        },
-        "type": "object",
-        "title": "ExistingLoan"
-      },
       "FieldMappingItem": {
         "properties": {
           "id": {
@@ -3218,63 +3620,6 @@
         "required": ["source_field", "target_feature"],
         "title": "FieldMappingItem"
       },
-      "FinancialProfile": {
-        "properties": {
-          "existing_loans": {
-            "anyOf": [
-              {
-                "items": { "$ref": "#/components/schemas/ExistingLoan" },
-                "type": "array"
-              },
-              { "type": "null" }
-            ],
-            "title": "Existing Loans"
-          },
-          "has_bank_account": {
-            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
-            "title": "Has Bank Account"
-          },
-          "bank_accounts": {
-            "anyOf": [
-              {
-                "items": { "$ref": "#/components/schemas/BankAccount" },
-                "type": "array"
-              },
-              { "type": "null" }
-            ],
-            "title": "Bank Accounts"
-          },
-          "mobile_money": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/MobileMoneyInfo" },
-              { "type": "null" }
-            ]
-          },
-          "has_credit_card": {
-            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
-            "title": "Has Credit Card"
-          },
-          "credit_card_utilization": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Credit Card Utilization"
-          },
-          "monthly_expenses": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Monthly Expenses"
-          },
-          "assets": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/AssetsInfo" },
-              { "type": "null" }
-            ]
-          }
-        },
-        "type": "object",
-        "title": "FinancialProfile"
-      },
       "ForgotPasswordRequest": {
         "properties": {
           "email": { "type": "string", "format": "email", "title": "Email" },
@@ -3287,6 +3632,28 @@
         "required": ["email"],
         "title": "ForgotPasswordRequest"
       },
+      "FraudDetectionResult": {
+        "properties": {
+          "fraud_anomaly_score": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Fraud Anomaly Score"
+          },
+          "fraud_risk_flag": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Fraud Risk Flag"
+          },
+          "model_version": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "title": "FraudDetectionResult",
+        "description": "Fraud detection model output from the AI pipeline."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3297,6 +3664,35 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HardStopDeclineResponse": {
+        "properties": {
+          "request_id": { "type": "string", "title": "Request Id" },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "DECLINED"
+          },
+          "decision": {
+            "type": "string",
+            "title": "Decision",
+            "default": "DECLINE"
+          },
+          "decline_reasons": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Decline Reasons"
+          },
+          "triggered_rules": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Triggered Rules"
+          }
+        },
+        "type": "object",
+        "required": ["request_id", "decline_reasons", "triggered_rules"],
+        "title": "HardStopDeclineResponse",
+        "description": "Response when an applicant is immediately declined by hard-stop rules."
       },
       "HealthResponse": {
         "properties": {
@@ -3314,6 +3710,35 @@
         },
         "type": "object",
         "title": "HealthResponse"
+      },
+      "IncomeVerificationResult": {
+        "properties": {
+          "income_tier": {
+            "anyOf": [
+              { "type": "integer", "maximum": 3.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Income Tier"
+          },
+          "income_tier_label": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Income Tier Label"
+          },
+          "income_confidence": {
+            "anyOf": [
+              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
+              { "type": "null" }
+            ],
+            "title": "Income Confidence"
+          },
+          "model_version": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "title": "IncomeVerificationResult",
+        "description": "Income verification model output from the AI pipeline (Phase 2, nullable)."
       },
       "InviteUserRequest": {
         "properties": {
@@ -3333,6 +3758,25 @@
         "required": ["email", "name"],
         "title": "InviteUserRequest"
       },
+      "LoanAmountResult": {
+        "properties": {
+          "recommended_amount_ghs": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Recommended Amount Ghs"
+          },
+          "recommended_loan_tier": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Recommended Loan Tier"
+          },
+          "model_version": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "title": "LoanAmountResult",
+        "description": "Loan amount model output from the AI pipeline (Phase 2, nullable)."
+      },
       "LoanRequestInfo": {
         "properties": {
           "amount": {
@@ -3340,40 +3784,19 @@
             "exclusiveMinimum": 0.0,
             "title": "Amount"
           },
-          "currency": {
-            "type": "string",
-            "title": "Currency",
-            "default": "GHS"
-          },
-          "purpose": {
-            "type": "string",
-            "title": "Purpose",
-            "description": "personal, business, education, housing, vehicle, medical, agriculture, debt_consolidation, other"
-          },
-          "purpose_description": {
-            "anyOf": [
-              { "type": "string", "maxLength": 500 },
-              { "type": "null" }
-            ],
-            "title": "Purpose Description"
-          },
           "tenure_months": {
             "type": "integer",
             "maximum": 360.0,
             "minimum": 1.0,
             "title": "Tenure Months"
           },
-          "collateral_type": {
+          "purpose": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Collateral Type"
-          },
-          "collateral_value": {
-            "anyOf": [{ "type": "number", "minimum": 0.0 }, { "type": "null" }],
-            "title": "Collateral Value"
+            "title": "Purpose"
           }
         },
         "type": "object",
-        "required": ["amount", "purpose", "tenure_months"],
+        "required": ["amount", "tenure_months"],
         "title": "LoanRequestInfo"
       },
       "LoginRequest": {
@@ -3539,32 +3962,6 @@
         ],
         "title": "MappingTemplateResponse"
       },
-      "MobileMoneyInfo": {
-        "properties": {
-          "active": { "type": "boolean", "title": "Active", "default": false },
-          "providers": {
-            "anyOf": [
-              { "items": { "type": "string" }, "type": "array" },
-              { "type": "null" }
-            ],
-            "title": "Providers"
-          },
-          "avg_monthly_inflow": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Avg Monthly Inflow"
-          },
-          "avg_monthly_outflow": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Avg Monthly Outflow"
-          },
-          "account_age_months": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Account Age Months"
-          }
-        },
-        "type": "object",
-        "title": "MobileMoneyInfo"
-      },
       "ModelInfo": {
         "properties": {
           "model_version": {
@@ -3723,6 +4120,63 @@
         "type": "object",
         "required": ["request_id", "decision"],
         "title": "OutcomeResponse"
+      },
+      "OverrideDecisionRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "title": "Decision",
+            "description": "APPROVE, CONDITIONAL_APPROVE, or DECLINE"
+          },
+          "override_reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Override Reason"
+          },
+          "conditions": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Conditions"
+          },
+          "approved_amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Approved Amount"
+          },
+          "approved_tenure_months": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Approved Tenure Months"
+          }
+        },
+        "type": "object",
+        "required": ["decision", "override_reason"],
+        "title": "OverrideDecisionRequest",
+        "description": "Manual decision override for REFER cases."
+      },
+      "OverrideDecisionResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Decision overridden successfully"
+          },
+          "request_id": { "type": "string", "title": "Request Id" },
+          "previous_decision": {
+            "type": "string",
+            "title": "Previous Decision"
+          },
+          "new_decision": { "type": "string", "title": "New Decision" },
+          "overridden_by": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Overridden By"
+          }
+        },
+        "type": "object",
+        "required": ["request_id", "previous_decision", "new_decision"],
+        "title": "OverrideDecisionResponse",
+        "description": "Response after manual decision override."
       },
       "PaginatedResponse": {
         "properties": {
@@ -3999,18 +4453,6 @@
             "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Channel"
           },
-          "product_type": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Product Type"
-          },
-          "branch_code": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Branch Code"
-          },
-          "officer_id": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Officer Id"
-          },
           "callback_url": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Callback Url"
@@ -4189,6 +4631,13 @@
             ]
           },
           "timestamps": { "$ref": "#/components/schemas/ScoreTimestamps" },
+          "score_result": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Score Result"
+          },
           "error": {
             "anyOf": [
               { "$ref": "#/components/schemas/ScoreError" },
@@ -4230,6 +4679,13 @@
               { "type": "null" }
             ],
             "title": "Scored At"
+          },
+          "score_result": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Score Result"
           }
         },
         "type": "object",
@@ -4318,6 +4774,104 @@
         "required": ["value", "risk_category"],
         "title": "ScoreValue"
       },
+      "ScoringMetadata": {
+        "properties": {
+          "credit_score": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Credit Score"
+          },
+          "score_grade": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Score Grade"
+          },
+          "data_quality_score": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Data Quality Score"
+          },
+          "bureau_hit_status": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Bureau Hit Status"
+          },
+          "product_source": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Product Source"
+          },
+          "applicant_age_at_application": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Applicant Age At Application"
+          },
+          "credit_age_months_at_application": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Credit Age Months At Application"
+          }
+        },
+        "type": "object",
+        "title": "ScoringMetadata",
+        "description": "Metadata passed through from DE via AI pipeline."
+      },
+      "ScoringResultResponse": {
+        "properties": {
+          "request_id": { "type": "string", "title": "Request Id" },
+          "scoring_timestamp": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Scoring Timestamp"
+          },
+          "decision": { "type": "string", "title": "Decision" },
+          "condition_applied": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Condition Applied"
+          },
+          "credit_risk": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/CreditRiskResult" },
+              { "type": "null" }
+            ]
+          },
+          "fraud_detection": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/FraudDetectionResult" },
+              { "type": "null" }
+            ]
+          },
+          "loan_amount": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/LoanAmountResult" },
+              { "type": "null" }
+            ]
+          },
+          "income_verification": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/IncomeVerificationResult" },
+              { "type": "null" }
+            ]
+          },
+          "scoring_metadata": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ScoringMetadata" },
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Scoring Metadata"
+          },
+          "errors": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": ["request_id", "decision"],
+        "title": "ScoringResultResponse",
+        "description": "Full scoring result from the AI pipeline — shown to loan officers."
+      },
       "Setup2FAResponse": {
         "properties": {
           "secret": { "type": "string", "title": "Secret" },
@@ -4333,19 +4887,16 @@
         "required": ["secret", "uri", "temp_token"],
         "title": "Setup2FAResponse"
       },
-      "SocialSignals": {
+      "ShapContribution": {
         "properties": {
-          "linkedin_profile": {
-            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
-            "title": "Linkedin Profile"
-          },
-          "professional_associations": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Professional Associations"
-          }
+          "feature": { "type": "string", "title": "Feature" },
+          "value": { "type": "number", "title": "Value" },
+          "direction": { "type": "string", "title": "Direction" }
         },
         "type": "object",
-        "title": "SocialSignals"
+        "required": ["feature", "value", "direction"],
+        "title": "ShapContribution",
+        "description": "A single SHAP feature contribution from the AI pipeline."
       },
       "SuccessResponse": {
         "properties": {
@@ -4370,24 +4921,6 @@
         "type": "object",
         "required": ["reason"],
         "title": "SuspendRequest"
-      },
-      "TelcoData": {
-        "properties": {
-          "account_age_months": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
-            "title": "Account Age Months"
-          },
-          "avg_monthly_spend": {
-            "anyOf": [{ "type": "number" }, { "type": "null" }],
-            "title": "Avg Monthly Spend"
-          },
-          "payment_regularity": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Payment Regularity"
-          }
-        },
-        "type": "object",
-        "title": "TelcoData"
       },
       "TokenResponse": {
         "properties": {

@@ -82,12 +82,12 @@ export function OrganizationScoreRequestsTable({
     const variants: Record<
       string,
       {
-        variant: "default" | "secondary" | "destructive" | "outline";
+        variant: "success" | "secondary" | "destructive" | "outline";
         icon: React.ReactNode;
       }
     > = {
       completed: {
-        variant: "default",
+        variant: "success",
         icon: <CheckCircle className="w-3 h-3 mr-1" />,
       },
       processing: {
@@ -276,10 +276,10 @@ export function OrganizationScoreRequestsTable({
                             View Details
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        {/* <DropdownMenuItem>
                           <FileText className="mr-2 h-4 w-4" />
                           Download PDF
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
