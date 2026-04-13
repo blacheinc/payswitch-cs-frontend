@@ -376,7 +376,7 @@ export interface ScoreRequest {
 export interface ScoreRequestWithDetails extends ScoreRequest {
   requestPayload?: ScoreRequestPayload;
   scoreResult?: ScoreResponse;
-  decision?: ScoreDecision;
+  scoreDecision?: ScoreDecision;
 }
 
 // ==================== SCORE DECISION ====================
