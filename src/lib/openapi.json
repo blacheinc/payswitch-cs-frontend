@@ -1872,6 +1872,305 @@
         "security": [{ "HTTPBearer": [] }]
       }
     },
+    "/v1/models/current": {
+      "get": {
+        "tags": ["Models"],
+        "summary": "Get Current Champion Model",
+        "description": "Return active champion model metadata.\n\nReads from Azure Blob Storage (model-artifacts/champions/current.json).\nReturns 404 if no training run has completed yet.",
+        "operationId": "get_current_champion_model_v1_models_current_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/v1/rules/evaluate": {
+      "post": {
+        "tags": ["Rules"],
+        "summary": "Evaluate Rules",
+        "description": "Sandbox rule evaluation — proxy to orchestrator.\n\nValidates input (PD between 0-1, score_grade A-F), then forwards\nthe request to the AI orchestrator. Does NOT persist anything.",
+        "operationId": "evaluate_rules_v1_rules_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleEvaluateRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/v1/monitoring/infrastructure": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Infrastructure Dashboard",
+        "description": "Infrastructure Dashboard — API latency, error rates, request volume.\n\nQuery params:\n- period: 1h, 6h, 24h, 7d, 30d (default: 24h)\n- endpoint: filter to a specific endpoint path",
+        "operationId": "infrastructure_dashboard_v1_monitoring_infrastructure_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(1h|6h|24h|7d|30d)$",
+              "default": "24h",
+              "title": "Period"
+            }
+          },
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter to specific endpoint",
+              "title": "Endpoint"
+            },
+            "description": "Filter to specific endpoint"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/monitoring/risk": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Risk Dashboard",
+        "description": "Risk Dashboard — live approval rates, score distributions, delinquency trends.\n\nQuery params:\n- period: 24h, 7d, 30d, 90d (default: 7d)\n- segment: filter by score grade A-F",
+        "operationId": "risk_dashboard_v1_monitoring_risk_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(24h|7d|30d|90d)$",
+              "default": "7d",
+              "title": "Period"
+            }
+          },
+          {
+            "name": "segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "pattern": "^[A-F]$" },
+                { "type": "null" }
+              ],
+              "description": "Filter by score grade",
+              "title": "Segment"
+            },
+            "description": "Filter by score grade"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/monitoring/model-ops": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Model Ops Dashboard",
+        "description": "ModelOps Dashboard — champion model performance, feature drift, retraining history.\n\nQuery params:\n- model_type: credit_risk, fraud_detection, loan_amount, income_verification\n- period: 7d, 30d, 90d (default: 30d)",
+        "operationId": "model_ops_dashboard_v1_monitoring_model_ops_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "model_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(credit_risk|fraud_detection|loan_amount|income_verification)$"
+                },
+                { "type": "null" }
+              ],
+              "description": "Filter by model type",
+              "title": "Model Type"
+            },
+            "description": "Filter by model type"
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(7d|30d|90d)$",
+              "default": "30d",
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/monitoring/compliance": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Compliance Dashboard",
+        "description": "Compliance Dashboard — fairness metrics, audit log volume, data quality.\n\nQuery params:\n- period: 7d, 30d, 90d (default: 30d)",
+        "operationId": "compliance_dashboard_v1_monitoring_compliance_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(7d|30d|90d)$",
+              "default": "30d",
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/monitoring/alerts": {
+      "get": {
+        "tags": ["Monitoring"],
+        "summary": "Alerts Feed",
+        "description": "Unified alert feed — global alert banner for the frontend.\n\nQuery params:\n- status: firing, resolved, ok\n- severity: warning, critical\n- limit: max alerts (default: 50, max: 200)",
+        "operationId": "alerts_feed_v1_monitoring_alerts_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "pattern": "^(firing|resolved|ok)$" },
+                { "type": "null" }
+              ],
+              "description": "Filter by alert status",
+              "title": "Status"
+            },
+            "description": "Filter by alert status"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "pattern": "^(warning|critical)$" },
+                { "type": "null" }
+              ],
+              "description": "Filter by severity",
+              "title": "Severity"
+            },
+            "description": "Filter by severity"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Max alerts to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Max alerts to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/org/profile": {
       "get": {
         "tags": ["Org Portal – Profile"],
@@ -2658,6 +2957,33 @@
         "required": ["full_name", "date_of_birth"],
         "title": "ApplicantInfo"
       },
+      "ApplicantSummary": {
+        "properties": {
+          "full_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Full Name"
+          },
+          "date_of_birth": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Date Of Birth"
+          },
+          "national_id_number": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "National Id Number"
+          },
+          "phone": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Phone"
+          },
+          "account_number": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Account Number"
+          }
+        },
+        "type": "object",
+        "title": "ApplicantSummary",
+        "description": "Lightweight applicant info returned in score responses."
+      },
       "ApproveUploadRequest": {
         "properties": {
           "notes": {
@@ -2857,219 +3183,129 @@
       "BureauFeatures": {
         "properties": {
           "highest_delinquency_rating": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Highest Delinquency Rating"
           },
-          "months_on_time_24m": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Months On Time 24M"
-          },
-          "worst_arrears_24m": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Worst Arrears 24M"
-          },
-          "current_streak_on_time": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Current Streak On Time"
-          },
           "has_active_arrears": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Has Active Arrears"
           },
           "total_arrear_amount_ghs": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Total Arrear Amount Ghs"
           },
           "total_outstanding_debt_ghs": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Total Outstanding Debt Ghs"
           },
-          "utilisation_ratio": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Utilisation Ratio"
-          },
           "num_active_accounts": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Num Active Accounts"
           },
           "total_monthly_instalment_ghs": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Total Monthly Instalment Ghs"
           },
-          "credit_age_months": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Credit Age Months"
-          },
           "num_accounts_total": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Num Accounts Total"
           },
+          "num_bounced_cheques": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Num Bounced Cheques"
+          },
+          "mobile_max_loan_ghs": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Mobile Max Loan Ghs"
+          },
+          "worst_arrears_24m": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Worst Arrears 24M"
+          },
+          "num_dependants": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Num Dependants"
+          },
+          "identity_verified": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Identity Verified"
+          },
+          "has_employer_detail": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Has Employer Detail"
+          },
+          "applicant_age": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Applicant Age"
+          },
+          "credit_age_months": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Credit Age Months"
+          },
+          "months_on_time_24m": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Months On Time 24M"
+          },
+          "current_streak_on_time": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Current Streak On Time"
+          },
+          "utilisation_ratio": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Utilisation Ratio"
+          },
           "num_closed_accounts_good": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Num Closed Accounts Good"
           },
           "product_diversity_score": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Product Diversity Score"
           },
           "mobile_loan_history_count": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Mobile Loan History Count"
           },
-          "mobile_max_loan_ghs": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Mobile Max Loan Ghs"
-          },
           "has_judgement": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Has Judgement"
           },
           "has_written_off": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
             "title": "Has Written Off"
           },
           "has_charged_off": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
             "title": "Has Charged Off"
           },
           "has_legal_handover": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
             "title": "Has Legal Handover"
           },
-          "num_bounced_cheques": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Num Bounced Cheques"
-          },
           "has_adverse_default": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "boolean" }, { "type": "null" }],
             "title": "Has Adverse Default"
           },
           "num_enquiries_3m": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Num Enquiries 3M"
           },
           "num_enquiries_12m": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Num Enquiries 12M"
           },
           "enquiry_reason_flags": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Enquiry Reason Flags"
           },
-          "applicant_age": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Applicant Age"
-          },
-          "identity_verified": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Identity Verified"
-          },
-          "num_dependants": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Num Dependants"
-          },
-          "has_employer_detail": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
-            "title": "Has Employer Detail"
-          },
           "address_stability": {
-            "anyOf": [
-              { "type": "number", "maximum": 1.0, "minimum": 0.0 },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Address Stability"
           }
         },
         "type": "object",
         "title": "BureauFeatures",
-        "description": "All 30 pre-binned features (0-1 scale) as defined in the contract."
+        "description": "All 30 features as defined in the DE contract.\n\nTypes are matched to the XDS source data so values roundtrip cleanly\nthrough the reverse mapper:\n  • str  – direct passthrough from a single XDS field (same format)\n  • int  – computed counts, binary flags, derived values\n  • float – computed ratios\nSee docs/de_feature_mapping.md for the full XDS → feature mapping."
       },
       "BureauLookupRequest": {
         "properties": {
@@ -3219,11 +3455,11 @@
             "description": "45, 49, 45+49"
           },
           "applicant_age_at_application": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Applicant Age At Application"
           },
           "credit_age_months_at_application": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Credit Age Months At Application"
           }
         },
@@ -3678,6 +3914,18 @@
             "title": "Decision",
             "default": "DECLINE"
           },
+          "applicant": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ApplicantSummary" },
+              { "type": "null" }
+            ]
+          },
+          "loan_request": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/LoanRequestSummary" },
+              { "type": "null" }
+            ]
+          },
           "decline_reasons": {
             "items": { "type": "string" },
             "type": "array",
@@ -3798,6 +4046,25 @@
         "type": "object",
         "required": ["amount", "tenure_months"],
         "title": "LoanRequestInfo"
+      },
+      "LoanRequestSummary": {
+        "properties": {
+          "amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Amount"
+          },
+          "tenure_months": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Tenure Months"
+          },
+          "purpose": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Purpose"
+          }
+        },
+        "type": "object",
+        "title": "LoanRequestSummary",
+        "description": "Lightweight loan request info returned in score responses."
       },
       "LoginRequest": {
         "properties": {
@@ -4497,6 +4764,56 @@
         "title": "RoleLabel",
         "description": "Valid org user roles."
       },
+      "RuleEvaluateRequest": {
+        "properties": {
+          "probability_of_default": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Probability Of Default",
+            "description": "PD value between 0 and 1"
+          },
+          "score_grade": {
+            "type": "string",
+            "pattern": "^[A-F]$",
+            "title": "Score Grade",
+            "description": "Score grade A through F"
+          },
+          "data_engineer_decision_label": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Data Engineer Decision Label"
+          },
+          "fraud_risk_flag": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Fraud Risk Flag"
+          },
+          "recommended_loan_amount_ghs": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Recommended Loan Amount Ghs"
+          },
+          "features": {
+            "anyOf": [
+              {
+                "additionalProperties": { "type": "number" },
+                "type": "object"
+              },
+              { "type": "null" }
+            ],
+            "title": "Features"
+          },
+          "metadata": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": ["probability_of_default", "score_grade"],
+        "title": "RuleEvaluateRequest",
+        "description": "Request body for sandbox rule evaluation."
+      },
       "ScoreComponent": {
         "properties": {
           "score": { "type": "integer", "title": "Score" },
@@ -4586,6 +4903,18 @@
             "title": "Reference Id"
           },
           "status": { "type": "string", "title": "Status" },
+          "applicant": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ApplicantSummary" },
+              { "type": "null" }
+            ]
+          },
+          "loan_request": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/LoanRequestSummary" },
+              { "type": "null" }
+            ]
+          },
           "score": {
             "anyOf": [
               { "$ref": "#/components/schemas/ScoreValue" },
@@ -4631,12 +4960,11 @@
             ]
           },
           "timestamps": { "$ref": "#/components/schemas/ScoreTimestamps" },
-          "score_result": {
+          "scoring_result": {
             "anyOf": [
-              { "additionalProperties": true, "type": "object" },
+              { "$ref": "#/components/schemas/ScoringResultResponse" },
               { "type": "null" }
-            ],
-            "title": "Score Result"
+            ]
           },
           "error": {
             "anyOf": [
@@ -4659,6 +4987,18 @@
             "title": "Reference Id"
           },
           "status": { "type": "string", "title": "Status" },
+          "applicant_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Applicant Name"
+          },
+          "loan_amount": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Loan Amount"
+          },
+          "loan_purpose": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Loan Purpose"
+          },
           "score_value": {
             "anyOf": [{ "type": "integer" }, { "type": "null" }],
             "title": "Score Value"
@@ -4680,12 +5020,11 @@
             ],
             "title": "Scored At"
           },
-          "score_result": {
+          "scoring_result": {
             "anyOf": [
-              { "additionalProperties": true, "type": "object" },
+              { "$ref": "#/components/schemas/ScoringResultResponse" },
               { "type": "null" }
-            ],
-            "title": "Score Result"
+            ]
           }
         },
         "type": "object",
@@ -4797,17 +5136,18 @@
             "title": "Product Source"
           },
           "applicant_age_at_application": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Applicant Age At Application"
           },
           "credit_age_months_at_application": {
-            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Credit Age Months At Application"
           }
         },
+        "additionalProperties": true,
         "type": "object",
         "title": "ScoringMetadata",
-        "description": "Metadata passed through from DE via AI pipeline."
+        "description": "Metadata passed through from DE via AI pipeline.\n\n``extra = \"allow\"`` is critical: hard-stop declines store additional\nkeys (``hard_stop``, ``decline_reasons``, ``triggered_rules``) that\nmust survive Pydantic parsing so the model_validator on\nScoringResultResponse can extract them."
       },
       "ScoringResultResponse": {
         "properties": {
@@ -4826,6 +5166,20 @@
               { "type": "null" }
             ],
             "title": "Condition Applied"
+          },
+          "decline_reasons": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Decline Reasons"
+          },
+          "triggered_rules": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Triggered Rules"
           },
           "credit_risk": {
             "anyOf": [

@@ -16,8 +16,10 @@ export const ROUTES = {
     TRAINING: "/training",
     AI_MONITOR: "/ai-monitor",
     COMPLIANCE: "/compliance",
-    // REPORTS: "/admin-reports",
+    REPORTS: "/admin-reports",
     SCORE_REQUESTS: "/admin-score-requests",
+    SCORING_ENGINE: "/scoring-engine",
+    MONITORING: "/admin-monitoring",
     SETTINGS: "/admin-settings",
   },
   ORG: {
@@ -80,6 +82,19 @@ export const API_ENDPOINTS = {
     TRAINING_STATUS: (id: string) => `/admin/training-data/${id}/status`,
 
     UPLOAD_TRAINING: "/admin/training-data/upload",
+  },
+  MODELS: {
+    CURRENT: "/v1/models/current",
+  },
+  RULES: {
+    EVALUATE: "/v1/rules/evaluate",
+  },
+  MONITORING: {
+    INFRASTRUCTURE: "/v1/monitoring/infrastructure",
+    RISK: "/v1/monitoring/risk",
+    MODEL_OPS: "/v1/monitoring/model-ops",
+    COMPLIANCE: "/v1/monitoring/compliance",
+    ALERTS: "/v1/monitoring/alerts",
   },
   ORG: {
     PROFILE: "/org/profile",

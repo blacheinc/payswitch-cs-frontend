@@ -180,37 +180,42 @@ export interface BureauCreditAccount {
   payment_history_24m?: string[] | null;
 }
 
+/**
+ * All 30 DE contract features — aligned with OpenAPI `BureauFeatures`.
+ * Most values are string passthrough from XDS (same format for reverse mapping).
+ * Account-status flags are booleans from the bureau mapper.
+ */
 export interface BureauFeatures {
-  highest_delinquency_rating?: number | null;
-  months_on_time_24m?: number | null;
-  worst_arrears_24m?: number | null;
-  current_streak_on_time?: number | null;
-  has_active_arrears?: number | null;
-  total_arrear_amount_ghs?: number | null;
-  total_outstanding_debt_ghs?: number | null;
-  utilisation_ratio?: number | null;
-  num_active_accounts?: number | null;
-  total_monthly_instalment_ghs?: number | null;
-  credit_age_months?: number | null;
-  num_accounts_total?: number | null;
-  num_closed_accounts_good?: number | null;
-  product_diversity_score?: number | null;
-  mobile_loan_history_count?: number | null;
-  mobile_max_loan_ghs?: number | null;
-  has_judgement?: number | null;
-  has_written_off?: number | null;
-  has_charged_off?: number | null;
-  has_legal_handover?: number | null;
-  num_bounced_cheques?: number | null;
-  has_adverse_default?: number | null;
-  num_enquiries_3m?: number | null;
-  num_enquiries_12m?: number | null;
-  enquiry_reason_flags?: number | null;
-  applicant_age?: number | null;
-  identity_verified?: number | null;
-  num_dependants?: number | null;
-  has_employer_detail?: number | null;
-  address_stability?: number | null;
+  highest_delinquency_rating?: string | null;
+  has_active_arrears?: string | null;
+  total_arrear_amount_ghs?: string | null;
+  total_outstanding_debt_ghs?: string | null;
+  num_active_accounts?: string | null;
+  total_monthly_instalment_ghs?: string | null;
+  num_accounts_total?: string | null;
+  num_bounced_cheques?: string | null;
+  mobile_max_loan_ghs?: string | null;
+  worst_arrears_24m?: string | null;
+  num_dependants?: string | null;
+  identity_verified?: string | null;
+  has_employer_detail?: string | null;
+  applicant_age?: string | null;
+  credit_age_months?: string | null;
+  months_on_time_24m?: string | null;
+  current_streak_on_time?: string | null;
+  utilisation_ratio?: string | null;
+  num_closed_accounts_good?: string | null;
+  product_diversity_score?: string | null;
+  mobile_loan_history_count?: string | null;
+  has_judgement?: string | null;
+  has_written_off?: boolean | null;
+  has_charged_off?: boolean | null;
+  has_legal_handover?: boolean | null;
+  has_adverse_default?: boolean | null;
+  num_enquiries_3m?: string | null;
+  num_enquiries_12m?: string | null;
+  enquiry_reason_flags?: string | null;
+  address_stability?: string | null;
 }
 
 export interface BureauMetadata {
@@ -353,6 +358,70 @@ export interface ScoreResponse {
 
 // ==================== SCORE REQUEST RECORD ====================
 
+/**
+ * Inline `scoring_result` — **snake_case**, same shape as the API and as
+ * `score-requests/[id]/page.tsx` (`sr.scoring_result`, `result?.scoring_metadata?.credit_score`).
+ */
+export interface ScoreRequestShapContribution {
+  feature: string;
+  value: number;
+  direction: string;
+}
+
+export interface ScoreRequestCreditRisk {
+  probability_of_default?: number | null;
+  pd_confidence?: number | null;
+  risk_tier?: string | null;
+  shap_contributions?: ScoreRequestShapContribution[] | null;
+  decision_reason_codes?: string[] | null;
+  model_version?: string | null;
+}
+
+export interface ScoreRequestFraudDetection {
+  fraud_anomaly_score?: number | null;
+  fraud_risk_flag?: string | null;
+  model_version?: string | null;
+}
+
+export interface ScoreRequestLoanAmountModel {
+  recommended_amount_ghs?: number | null;
+  recommended_loan_tier?: string | null;
+  model_version?: string | null;
+}
+
+export interface ScoreRequestIncomeVerification {
+  income_tier?: number | null;
+  income_tier_label?: string | null;
+  income_confidence?: number | null;
+  model_version?: string | null;
+}
+
+/** `scoring_result.scoring_metadata` — snake_case. */
+export interface ScoreRequestScoringMetadata {
+  score_grade?: string | null;
+  credit_score?: number | null;
+  product_source?: string | null;
+  bureau_hit_status?: string | null;
+  data_quality_score?: number | null;
+  applicant_age_at_application?: number | null;
+  credit_age_months_at_application?: number | null;
+}
+
+export interface ScoreRequestScoringResult {
+  request_id?: string | null;
+  scoring_timestamp?: string | null;
+  decision?: string | null;
+  condition_applied?: unknown[] | null;
+  decline_reasons?: string[] | null;
+  triggered_rules?: unknown[] | null;
+  credit_risk?: ScoreRequestCreditRisk | null;
+  fraud_detection?: ScoreRequestFraudDetection | null;
+  loan_amount?: ScoreRequestLoanAmountModel | null;
+  income_verification?: ScoreRequestIncomeVerification | null;
+  scoring_metadata?: ScoreRequestScoringMetadata | null;
+  errors?: unknown | null;
+}
+
 export interface ScoreRequest {
   id: string;
   trackingId: string;
@@ -361,7 +430,10 @@ export interface ScoreRequest {
   status: ScoreRequestStatus;
   requestSource: ScoreRequestSource;
   applicantName: string;
-  scoreValue?: number;
+  /** Top-level list field `score_value` (model / internal scale) — not the bureau credit score. */
+  scoreValue?: number | null;
+  /** Inline scoring payload — snake_case, same as detail page `sr.scoring_result`. */
+  scoring_result?: ScoreRequestScoringResult | null;
   riskCategory?: RiskCategory;
   modelVersion?: string;
   processingTimeMs?: number;
@@ -371,6 +443,8 @@ export interface ScoreRequest {
   scoredAt?: string;
   validUntil?: string;
   decision?: string;
+  loanAmount?: number | null;
+  loanPurpose?: string | null;
 }
 
 export interface ScoreRequestWithDetails extends ScoreRequest {

@@ -2,6 +2,9 @@ import apiClient from "./api-client";
 import { API_ENDPOINTS, TABLE_ITEM_PER_PAGE } from "@/lib/constant";
 import type { PaginatedResponse, PaginationParams } from "@/types/api-type";
 import type {
+  BureauFeatures,
+  ScoreRequest,
+  ScoreRequestScoringResult,
   ScoreRequestStatus,
   ScoreRequestSource,
   RiskCategory,
@@ -26,11 +29,7 @@ interface ApiRawScoreRequest {
   created_at: string;
   scored_at?: string | null;
   valid_until?: string | null;
-  // The list endpoint now includes the inline scoring_result
-  scoring_result?: {
-    decision?: string | null;
-    [key: string]: unknown;
-  } | null;
+  scoring_result?: ScoreRequestScoringResult | null;
   loan_amount?: number | null;
   loan_purpose?: string | null;
 }
@@ -89,7 +88,7 @@ interface ApiRawBureauLookupResponse {
         payment_history_24m?: string[] | null;
       }[]
     | null;
-  features?: Record<string, number | null> | null;
+  features?: BureauFeatures | null;
   metadata?: {
     credit_score?: number | null;
     score_grade?: string | null;
@@ -106,27 +105,8 @@ interface ApiRawBureauLookupResponse {
 
 // ===================== PUBLIC RESPONSE TYPES (camelCase) =====================
 
-export interface ScoreRequestItem {
-  id: string;
-  trackingId: string;
-  organizationId: string;
-  referenceId?: string;
-  status: ScoreRequestStatus;
-  requestSource: ScoreRequestSource;
-  applicantName: string;
-  scoreValue?: number;
-  riskCategory?: RiskCategory;
-  modelVersion?: string;
-  processingTimeMs?: number;
-  apiKeyId?: string;
-  createdByUserId?: string;
-  createdAt: string;
-  scoredAt?: string;
-  validUntil?: string;
-  decision?: string;
-  loanAmount?: number;
-  loanPurpose?: string;
-}
+/** List row — same shape as `ScoreRequest` in `@/types/models`. */
+export type ScoreRequestItem = ScoreRequest;
 
 export interface BureauPersonalDetails {
   consumerId?: string | null;
@@ -189,7 +169,7 @@ export interface BureauLookupResult {
   personalDetails?: BureauPersonalDetails | null;
   creditSummary?: BureauCreditSummary | null;
   creditAccounts?: BureauCreditAccount[] | null;
-  features?: Record<string, number | null> | null;
+  features?: BureauFeatures | null;
   metadata?: BureauMetadata | null;
   enquiryId?: string | null;
   consumerId?: string | null;
@@ -227,7 +207,7 @@ export interface CreateScoreRequestPayload {
     productSource?: string | null;
     creditSummary?: ApiRawBureauLookupResponse["credit_summary"];
     creditAccounts?: ApiRawBureauLookupResponse["credit_accounts"];
-    features?: ApiRawBureauLookupResponse["features"];
+    features?: Partial<BureauFeatures> | null;
   };
   channel?: string;
 }
@@ -264,14 +244,15 @@ export interface RecordPerformancePayload {
 
 function mapScoreRequest(raw: ApiRawScoreRequest): ScoreRequestItem {
   return {
-    id: raw.request_id || (raw as any).id,
+    id: raw.request_id || raw.tracking_id,
     trackingId: raw.tracking_id,
     organizationId: raw.organization_id,
     referenceId: raw.reference_id || undefined,
     status: raw.status as ScoreRequestStatus,
     requestSource: raw.request_source as ScoreRequestSource,
     applicantName: raw.applicant_name || "Unknown",
-    scoreValue: raw.score_value || undefined,
+    scoreValue: raw.score_value ?? null,
+    scoring_result: raw.scoring_result ?? null,
     riskCategory: (raw.risk_category as RiskCategory) || undefined,
     modelVersion: raw.model_version,
     processingTimeMs: raw.processing_time_ms,
@@ -281,8 +262,8 @@ function mapScoreRequest(raw: ApiRawScoreRequest): ScoreRequestItem {
     scoredAt: raw.scored_at || undefined,
     validUntil: raw.valid_until || undefined,
     decision: raw.scoring_result?.decision || undefined,
-    loanAmount: raw.loan_amount || undefined,
-    loanPurpose: raw.loan_purpose || undefined,
+    loanAmount: raw.loan_amount ?? null,
+    loanPurpose: raw.loan_purpose ?? null,
   };
 }
 

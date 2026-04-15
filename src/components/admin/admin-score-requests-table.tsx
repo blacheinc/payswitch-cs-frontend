@@ -169,7 +169,12 @@ export function AdminScoreRequestsTable({
               description="There are no score requests to display."
             />
           ) : (
-            requests.map((request) => (
+            requests.map((request) => {
+              const result = request.scoring_result;
+              const scoringMeta = result?.scoring_metadata;
+              const creditScore = scoringMeta?.credit_score;
+
+              return (
               <TableRow key={request.id}>
                 <TableCell>
                   <span className="font-medium text-primary">{request.id}</span>
@@ -187,8 +192,8 @@ export function AdminScoreRequestsTable({
                 </TableCell>
                 <TableCell>{getStatusBadge(request.status)}</TableCell>
                 <TableCell className="text-center">
-                  {request.scoreValue ? (
-                    <span className="font-semibold">{request.scoreValue}</span>
+                  {creditScore != null ? (
+                    <span className="font-semibold">{creditScore}</span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
@@ -201,7 +206,8 @@ export function AdminScoreRequestsTable({
                   {formatDate(request.createdAt)}
                 </TableCell>
               </TableRow>
-            ))
+              );
+            })
           )}
         </TableBody>
       </Table>

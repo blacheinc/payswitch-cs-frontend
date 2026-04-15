@@ -34,22 +34,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ROUTES } from "@/lib/constant";
+import type { ScoreRequestItem } from "@/lib/score-service";
 
-// Defining a common interface for the score request data to handle both real and mock data gracefully
-export interface OrganizationScoreRequest {
-  id: string;
-  referenceId?: string | null;
-  applicantName: string;
-  status: string;
-  score?: number | null;
-  scoreValue?: number | null; // Support different property names from different sources
-  riskCategory?: string | null;
-  decision?: string | null;
-  createdAt: string;
-}
+/** Alias for table consumers — rows come from `getScoreRequests` list mapping. */
+export type OrganizationScoreRequest = ScoreRequestItem;
 
 interface OrganizationScoreRequestsTableProps {
-  requests: OrganizationScoreRequest[];
+  requests: ScoreRequestItem[];
   isLoading?: boolean;
   isError?: boolean;
   // Pagination props
@@ -120,11 +111,12 @@ export function OrganizationScoreRequestsTable({
       very_high: "bg-red-500/10 text-red-600 border-red-200",
     };
 
+    const riskKey = risk.toLowerCase();
     const label = risk
-      .replace("_", " ")
+      .replace(/_/g, " ")
       .replace(/\b\w/g, (l) => l.toUpperCase());
     return (
-      <Badge variant="outline" className={colors[risk]}>
+      <Badge variant="outline" className={colors[riskKey] ?? colors.medium}>
         {label}
       </Badge>
     );
@@ -134,18 +126,45 @@ export function OrganizationScoreRequestsTable({
     if (!decision) return <span className="text-muted-foreground">—</span>;
 
     const styles: Record<string, { color: string; label: string }> = {
-      APPROVE: { color: "bg-green-100 text-green-700 border-green-200", label: "Approved" },
-      CONDITIONAL_APPROVE: { color: "bg-lime-100 text-lime-700 border-lime-200", label: "Conditional" },
-      DECLINE: { color: "bg-red-100 text-red-700 border-red-200", label: "Declined" },
-      FRAUD_HOLD: { color: "bg-red-100 text-red-700 border-red-200", label: "Fraud Hold" },
-      REFER: { color: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Referred" },
+      APPROVE: {
+        color: "bg-green-100 text-green-700 border-green-200",
+        label: "Approved",
+      },
+      CONDITIONAL_APPROVE: {
+        color: "bg-lime-100 text-lime-700 border-lime-200",
+        label: "Conditional",
+      },
+      DECLINE: {
+        color: "bg-red-100 text-red-700 border-red-200",
+        label: "Declined",
+      },
+      FRAUD_HOLD: {
+        color: "bg-red-100 text-red-700 border-red-200",
+        label: "Fraud Hold",
+      },
+      REFER: {
+        color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        label: "Referred",
+      },
       // Legacy lowercase values
-      approved: { color: "bg-green-100 text-green-700 border-green-200", label: "Approved" },
-      declined: { color: "bg-red-100 text-red-700 border-red-200", label: "Declined" },
-      referred: { color: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Referred" },
+      approved: {
+        color: "bg-green-100 text-green-700 border-green-200",
+        label: "Approved",
+      },
+      declined: {
+        color: "bg-red-100 text-red-700 border-red-200",
+        label: "Declined",
+      },
+      referred: {
+        color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        label: "Referred",
+      },
     };
 
-    const config = styles[decision] || { color: "bg-muted text-muted-foreground", label: decision };
+    const config = styles[decision] || {
+      color: "bg-muted text-muted-foreground",
+      label: decision,
+    };
 
     return (
       <Badge variant="outline" className={config.color}>
@@ -220,7 +239,12 @@ export function OrganizationScoreRequestsTable({
                 description="There are no score requests to display."
               />
             ) : (
-              requests.map((request) => (
+              requests.map((request) => {
+                const result = request.scoring_result;
+                const scoringMeta = result?.scoring_metadata;
+                const creditScore = scoringMeta?.credit_score;
+
+                return (
                 <TableRow key={request.id}>
                   {!isCompact && onSelectRow && (
                     <TableCell>
@@ -248,18 +272,14 @@ export function OrganizationScoreRequestsTable({
                   </TableCell>
                   <TableCell>{getStatusBadge(request.status)}</TableCell>
                   <TableCell className="text-center">
-                    {(request.score ?? request.scoreValue) ? (
-                      <span className="font-semibold">
-                        {request.score ?? request.scoreValue}
-                      </span>
+                    {creditScore != null ? (
+                      <span className="font-semibold">{creditScore}</span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>{getRiskBadge(request.riskCategory)}</TableCell>
-                  <TableCell>
-                    {getDecisionBadge(request.decision)}
-                  </TableCell>
+                  <TableCell>{getDecisionBadge(request.decision)}</TableCell>
                   {!isCompact && (
                     <TableCell className="text-sm text-muted-foreground text-nowrap">
                       {formatDate(request.createdAt)}
@@ -291,7 +311,8 @@ export function OrganizationScoreRequestsTable({
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

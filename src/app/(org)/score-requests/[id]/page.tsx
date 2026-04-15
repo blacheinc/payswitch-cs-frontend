@@ -517,16 +517,10 @@ export default function ScoreRequestDetailPage() {
     recommendations.length > 0;
 
   // Derive score gauge values
-  const creditScore = scoringMeta?.credit_score ?? score?.value;
+  const creditScore = scoringMeta?.credit_score;
   const scoreGrade = scoringMeta?.score_grade ?? null;
-  const maxScoreValue = score?.max_value || 850;
-  const minScoreValue = score?.min_value || 300;
   const riskTier = creditRisk?.risk_tier;
   const riskTierConfig = riskTier ? getRiskTierConfig(riskTier) : null;
-  const scorePercentage =
-    creditScore != null && maxScoreValue > minScoreValue
-      ? ((creditScore - minScoreValue) / (maxScoreValue - minScoreValue)) * 100
-      : 0;
 
   return (
     <div className="space-y-6">

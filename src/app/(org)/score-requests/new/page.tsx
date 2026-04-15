@@ -63,6 +63,7 @@ import {
   type BureauLookupPayload,
   type CreateScoreRequestPayload,
 } from "@/lib/score-service";
+import type { BureauFeatures } from "@/types/models";
 
 // =============================================================================
 // Date helpers — bureau API may return dates in various formats
@@ -146,6 +147,22 @@ function getFeatureLabel(key: string): string {
   );
 }
 
+/** Account-status flags are booleans in the DE contract; all other features are string passthrough. */
+const BOOLEAN_FEATURE_KEYS = new Set<string>([
+  "has_written_off",
+  "has_charged_off",
+  "has_legal_handover",
+  "has_adverse_default",
+]);
+
+function formatFeatureValue(
+  value: string | boolean | null | undefined,
+): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return value;
+}
+
 // =============================================================================
 // Schemas
 // =============================================================================
@@ -207,9 +224,8 @@ export default function NewScoreRequestPage() {
     null,
   );
   // Editable features — initialized from bureau response, user can modify
-  const [editableFeatures, setEditableFeatures] = useState<
-    Record<string, number | null>
-  >({});
+  const [editableFeatures, setEditableFeatures] =
+    useState<Partial<BureauFeatures>>({});
 
   // ── Bureau details expand/collapse in review ──
   const [showBureauDetails, setShowBureauDetails] = useState(false);
@@ -359,11 +375,19 @@ export default function NewScoreRequestPage() {
     });
   };
 
-  /** Update a single feature value */
-  const updateFeature = (key: string, value: string) => {
+  const updateStringFeature = (key: string, value: string) => {
     setEditableFeatures((prev) => ({
       ...prev,
-      [key]: value === "" ? null : Number(value),
+      [key]: value === "" ? null : value,
+    }));
+  };
+
+  const updateBooleanFeature = (key: string, value: string) => {
+    const next: boolean | null =
+      value === "unset" ? null : value === "true";
+    setEditableFeatures((prev) => ({
+      ...prev,
+      [key]: next,
     }));
   };
 
@@ -374,11 +398,6 @@ export default function NewScoreRequestPage() {
   // ═══════════════════════════════════════════════════════════════════════════
   // Render helpers
   // ═══════════════════════════════════════════════════════════════════════════
-
-  const fmtGHS = (value: number | null | undefined) =>
-    value != null
-      ? `GHS ${value.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`
-      : "—";
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -642,24 +661,55 @@ export default function NewScoreRequestPage() {
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(editableFeatures).map(([key, value]) => (
-                  <div key={key} className="space-y-1">
-                    <Label
-                      htmlFor={`feature_${key}`}
-                      className="text-xs font-medium text-muted-foreground"
-                    >
-                      {getFeatureLabel(key)}
-                    </Label>
-                    <Input
-                      id={`feature_${key}`}
-                      type="number"
-                      step="any"
-                      value={value ?? ""}
-                      onChange={(e) => updateFeature(key, e.target.value)}
-                      className="h-8 text-sm font-mono"
-                    />
-                  </div>
-                ))}
+                {Object.entries(editableFeatures).map(([key, value]) => {
+                  const isBool = BOOLEAN_FEATURE_KEYS.has(key);
+                  const boolSelectValue =
+                    value === null || value === undefined
+                      ? "unset"
+                      : value === true
+                        ? "true"
+                        : "false";
+                  return (
+                    <div key={key} className="space-y-1">
+                      <Label
+                        htmlFor={`feature_${key}`}
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        {getFeatureLabel(key)}
+                      </Label>
+                      {isBool ? (
+                        <Select
+                          value={boolSelectValue}
+                          onValueChange={(v) => updateBooleanFeature(key, v)}
+                        >
+                          <SelectTrigger
+                            id={`feature_${key}`}
+                            className="h-8 text-sm font-mono"
+                          >
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unset">—</SelectItem>
+                            <SelectItem value="true">Yes</SelectItem>
+                            <SelectItem value="false">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id={`feature_${key}`}
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          value={typeof value === "string" ? value : ""}
+                          onChange={(e) =>
+                            updateStringFeature(key, e.target.value)
+                          }
+                          className="h-8 text-sm font-mono"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -671,9 +721,10 @@ export default function NewScoreRequestPage() {
         const loan = loanForm.getValues();
         const featureCount = Object.keys(editableFeatures).length;
         const editedCount = bureauResult?.features
-          ? Object.entries(editableFeatures).filter(
-              ([k, v]) => (bureauResult.features as any)?.[k] !== v,
-            ).length
+          ? Object.entries(editableFeatures).filter(([k, v]) => {
+              const orig = bureauResult.features?.[k as keyof BureauFeatures];
+              return orig !== v;
+            }).length
           : 0;
 
         return (
@@ -794,7 +845,8 @@ export default function NewScoreRequestPage() {
                   <Separator className="mb-4" />
                   <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                     {Object.entries(editableFeatures).map(([key, value]) => {
-                      const original = (bureauResult?.features as any)?.[key];
+                      const original =
+                        bureauResult?.features?.[key as keyof BureauFeatures];
                       const isEdited = original !== value;
                       return (
                         <div key={key} className="flex justify-between gap-2">
@@ -809,7 +861,7 @@ export default function NewScoreRequestPage() {
                                 : "text-foreground",
                             )}
                           >
-                            {value ?? "—"}
+                            {formatFeatureValue(value)}
                             {isEdited && " ✎"}
                           </span>
                         </div>
