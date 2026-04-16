@@ -29,6 +29,7 @@ import {
   API_KEY_KEYS,
   type ApiKeyCreatedResponse,
 } from "@/lib/developer-service";
+import { RolePicker } from "@/components/shared/role-picker";
 
 interface GenerateApiKeyModalProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function GenerateApiKeyModal({
 
   const [name, setName] = useState("");
   const [environment, setEnvironment] = useState("sandbox");
+  const [roleId, setRoleId] = useState("");
   const [generatedKey, setGeneratedKey] =
     useState<ApiKeyCreatedResponse | null>(null);
   const [showKey, setShowKey] = useState(false);
@@ -50,6 +52,7 @@ export function GenerateApiKeyModal({
   const resetForm = () => {
     setName("");
     setEnvironment("sandbox");
+    setRoleId("");
     setGeneratedKey(null);
     setShowKey(false);
   };
@@ -67,7 +70,7 @@ export function GenerateApiKeyModal({
   });
 
   const handleGenerate = () => {
-    createMutation.mutate({ name, environment });
+    createMutation.mutate({ name, environment, roleId: roleId || null });
   };
 
   const handleCopy = (text: string) => {
@@ -123,6 +126,12 @@ export function GenerateApiKeyModal({
                   </SelectContent>
                 </Select>
               </div>
+              <RolePicker
+                value={roleId}
+                onValueChange={setRoleId}
+                label="Permissions Role"
+                description="Limits what this key can do. Defaults to full admin access when omitted."
+              />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>

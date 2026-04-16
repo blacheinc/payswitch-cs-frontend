@@ -25,6 +25,7 @@ import {
   PanelRightClose,
   BrainCircuit,
   MonitorDot,
+  ShieldCheck,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ const navItems: NavItem[] = [
   { title: "Training", href: ROUTES.ADMIN.TRAINING, icon: Database },
   { title: "Scoring Engine", href: ROUTES.ADMIN.SCORING_ENGINE, icon: BrainCircuit },
   { title: "Monitoring", href: ROUTES.ADMIN.MONITORING, icon: MonitorDot },
+  { title: "Roles & Permissions", href: ROUTES.ADMIN.ROLES, icon: ShieldCheck },
   // { title: "AI Monitor", href: ROUTES.ADMIN.AI_MONITOR, icon: Activity },
   { title: "Compliance", href: ROUTES.ADMIN.COMPLIANCE, icon: Shield },
   // { title: "Reports", href: ROUTES.ADMIN.REPORTS, icon: FileBarChart },

@@ -77,6 +77,7 @@ export interface InviteUserRequest {
   email: string;
   name: string;
   roleLabel?: string; // "admin" | "credit_officer" | "developer" | "viewer", default: "viewer"
+  roleId?: string | null; // RBAC role UUID — defaults to system ADMIN role when omitted
   callbackUrl?: string | null;
 }
 
@@ -84,4 +85,5 @@ export interface InviteUserRequest {
 export interface UpdateUserRequest {
   name?: string | null;
   roleLabel?: string | null;
+  roleId?: string | null; // Replace the user's RBAC role assignment
 }

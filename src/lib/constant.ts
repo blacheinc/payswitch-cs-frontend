@@ -20,6 +20,7 @@ export const ROUTES = {
     SCORE_REQUESTS: "/admin-score-requests",
     SCORING_ENGINE: "/scoring-engine",
     MONITORING: "/admin-monitoring",
+    ROLES: "/admin-roles",
     SETTINGS: "/admin-settings",
   },
   ORG: {
@@ -88,6 +89,11 @@ export const API_ENDPOINTS = {
   },
   RULES: {
     EVALUATE: "/v1/rules/evaluate",
+  },
+  RBAC: {
+    PERMISSIONS: "/v1/permissions",
+    ROLES: "/v1/roles",
+    ROLE_BY_ID: (id: string) => `/v1/roles/${id}`,
   },
   MONITORING: {
     INFRASTRUCTURE: "/v1/monitoring/infrastructure",

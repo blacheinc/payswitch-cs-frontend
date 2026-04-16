@@ -84,6 +84,7 @@ export const userManagementService = {
         email: data.email,
         name: data.name,
         role_label: data.roleLabel || "viewer",
+        role_id: data.roleId || undefined,
         callback_url: data.callbackUrl || undefined,
       },
     );
@@ -100,6 +101,7 @@ export const userManagementService = {
       {
         name: data.name,
         role_label: data.roleLabel,
+        role_id: data.roleId || undefined,
       },
     );
     return mapUser(response?.data);

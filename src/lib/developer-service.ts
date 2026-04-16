@@ -51,6 +51,7 @@ export interface ApiKeyCreatedResponse {
 export interface CreateApiKeyRequest {
   name: string;
   environment: string; // "sandbox" | "production"
+  roleId?: string | null; // RBAC role UUID — defaults to system ADMIN role when omitted
 }
 
 // ===================== WEBHOOK TYPES =====================
@@ -255,6 +256,7 @@ export const apiKeyService = {
       {
         name: data.name,
         environment: data.environment,
+        role_id: data.roleId || undefined,
       },
     );
     return mapApiKeyCreated(response?.data);

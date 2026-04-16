@@ -30,6 +30,7 @@ import {
   USER_MGMT_KEYS,
 } from "@/lib/user-management-service";
 import { ROLE_LABELS_ENUM, ROUTES } from "@/lib/constant";
+import { RolePicker } from "@/components/shared/role-picker";
 
 interface InviteUserModalProps {
   open: boolean;
@@ -42,11 +43,13 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleLabel, setRoleLabel] = useState("viewer");
+  const [roleId, setRoleId] = useState("");
 
   const resetForm = () => {
     setName("");
     setEmail("");
     setRoleLabel("viewer");
+    setRoleId("");
   };
 
   const inviteMutation = useMutation({
@@ -68,6 +71,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       email,
       name,
       roleLabel,
+      roleId: roleId || null,
       callbackUrl,
     });
   };
@@ -127,7 +131,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               Access Level
             </h3>
             <div className="space-y-2">
-              <Label htmlFor="invite-role">Role</Label>
+              <Label htmlFor="invite-role">Role Label</Label>
               <Select value={roleLabel} onValueChange={setRoleLabel}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role" />
@@ -137,15 +141,18 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                     <SelectItem key={role.value} value={role.value}>
                       <div className="flex flex-col items-start py-1">
                         <span className="font-medium">{role.label}</span>
-                        {/* <span className="text-xs text-muted-foreground">
-                          {role.description}
-                        </span> */}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <RolePicker
+              value={roleId}
+              onValueChange={setRoleId}
+              label="Permissions Role"
+              description="Governs what this user can actually do. Defaults to system role when omitted."
+            />
           </div>
         </div>
         <DialogFooter>

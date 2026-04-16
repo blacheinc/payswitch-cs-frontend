@@ -196,13 +196,25 @@ apiClient.interceptors.response.use(
       503: "The service is currently unavailable. Please try again later.",
     };
 
+    const errorCode =
+      (nested?.code as string) || body?.code || "UNKNOWN_ERROR";
+    let errorMessage =
+      (nested?.message as string) ||
+      body?.message ||
+      httpFallback[error.response?.status || 0] ||
+      "An unexpected error occurred. Please try again.";
+
+    if (
+      error.response?.status === 403 &&
+      errorCode === "AUTHORIZATION_ERROR"
+    ) {
+      errorMessage =
+        errorMessage || "You don't have permission to perform this action.";
+    }
+
     const apiError: ApiError = {
-      code: (nested?.code as string) || body?.code || "UNKNOWN_ERROR",
-      message:
-        (nested?.message as string) ||
-        body?.message ||
-        httpFallback[error.response?.status || 0] ||
-        "An unexpected error occurred. Please try again.",
+      code: errorCode,
+      message: errorMessage,
       details: (nested?.details as Record<string, unknown>) || body?.details,
       statusCode: error.response?.status || 500,
     };

@@ -31,6 +31,7 @@ import {
 } from "@/lib/user-management-service";
 import type { OrgUserResponse } from "@/types/organization-type";
 import { ROLE_LABELS_ENUM } from "@/lib/constant";
+import { RolePicker } from "@/components/shared/role-picker";
 
 interface EditUserModalProps {
   open: boolean;
@@ -47,12 +48,13 @@ export function EditUserModal({
 
   const [name, setName] = useState("");
   const [roleLabel, setRoleLabel] = useState("");
+  const [roleId, setRoleId] = useState("");
 
-  // Populate form when user changes
   useEffect(() => {
     if (user) {
       setName(user.name);
       setRoleLabel(user.roleLabel);
+      setRoleId("");
     }
   }, [user]);
 
@@ -81,6 +83,7 @@ export function EditUserModal({
       data: {
         name: name || null,
         roleLabel: roleLabel || null,
+        roleId: roleId || null,
       },
     });
   };
@@ -118,7 +121,7 @@ export function EditUserModal({
               Access Level
             </h3>
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Role</Label>
+              <Label htmlFor="edit-role">Role Label</Label>
               <Select value={roleLabel} onValueChange={setRoleLabel}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role" />
@@ -128,15 +131,18 @@ export function EditUserModal({
                     <SelectItem key={role.value} value={role.value}>
                       <div className="flex flex-col items-start py-1">
                         <span className="font-medium">{role.label}</span>
-                        {/* <span className="text-xs text-muted-foreground">
-                          {role.description}
-                        </span> */}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <RolePicker
+              value={roleId}
+              onValueChange={setRoleId}
+              label="Permissions Role"
+              description="Replaces the user's current RBAC role. Leave as default to keep unchanged."
+            />
           </div>
         </div>
         <DialogFooter>

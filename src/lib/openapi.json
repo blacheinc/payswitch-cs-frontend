@@ -2171,6 +2171,459 @@
         }
       }
     },
+    "/v1/score/batch": {
+      "post": {
+        "tags": ["Batch Scoring"],
+        "summary": "Submit Batch Job",
+        "description": "Submit a batch scoring job.\n\nPersists a BulkScoringJob record and publishes the job to the\nbatch-score-request Service Bus topic. The orchestrator picks it up\nasynchronously and writes progress to blob storage.",
+        "operationId": "submit_batch_job_v1_score_batch_post",
+        "security": [{ "HTTPBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BatchScoreRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Batch Scoring"],
+        "summary": "List Batch Jobs",
+        "description": "List all batch jobs for the authenticated organization.",
+        "operationId": "list_batch_jobs_v1_score_batch_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter by status",
+              "title": "Status"
+            },
+            "description": "Filter by status"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score/batch/{job_id}": {
+      "get": {
+        "tags": ["Batch Scoring"],
+        "summary": "Get Batch Job Status",
+        "description": "Return status and live progress for a batch job.\n\nWhile the job is in_progress, the orchestrator keeps\nmodel-artifacts/batch/{job_id}/status.json updated.\nThis endpoint merges that blob data with our DB record.",
+        "operationId": "get_batch_job_status_v1_score_batch__job_id__get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Batch job ID",
+              "title": "Job Id"
+            },
+            "description": "Batch job ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score/batch/{job_id}/results": {
+      "get": {
+        "tags": ["Batch Scoring"],
+        "summary": "Get Batch Results",
+        "description": "Return paginated scoring results for a completed batch job.\n\nResults are only available once ingestion_status == \"complete\".\nWhile ingestion is running, the response will indicate the current\ningested_count so the frontend can show a progress state.",
+        "operationId": "get_batch_results_v1_score_batch__job_id__results_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Batch job ID",
+              "title": "Job Id"
+            },
+            "description": "Batch job ID"
+          },
+          {
+            "name": "decision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter by decision outcome",
+              "title": "Decision"
+            },
+            "description": "Filter by decision outcome"
+          },
+          {
+            "name": "risk_tier",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter by risk tier",
+              "title": "Risk Tier"
+            },
+            "description": "Filter by risk tier"
+          },
+          {
+            "name": "score_grade",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter by score grade",
+              "title": "Score Grade"
+            },
+            "description": "Filter by score grade"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(credit_score|probability_of_default|scoring_timestamp)$",
+              "default": "scoring_timestamp",
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(asc|desc)$",
+              "default": "desc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score/batch/{job_id}/cancel": {
+      "post": {
+        "tags": ["Batch Scoring"],
+        "summary": "Cancel Batch Job",
+        "description": "Cancel a queued batch job.\n\nOnly possible while status is 'queued' — once the orchestrator has\nstarted processing, cancellation is no longer available.",
+        "operationId": "cancel_batch_job_v1_score_batch__job_id__cancel_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Batch job ID",
+              "title": "Job Id"
+            },
+            "description": "Batch job ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/permissions": {
+      "get": {
+        "tags": ["Permissions & Roles"],
+        "summary": "List Permissions",
+        "description": "List all permissions visible to the caller.\n\n- Platform admins: all 47 permissions (both scopes).\n- Org users: org-scoped permissions only (27).",
+        "operationId": "list_permissions_v1_permissions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/v1/roles": {
+      "get": {
+        "tags": ["Permissions & Roles"],
+        "summary": "List Roles",
+        "description": "List roles visible to the caller.\n\n- Platform admins: platform-scoped roles (is_system SUPER_ADMIN + custom platform roles).\n- Org users: org-scoped system role (ADMIN) + custom roles belonging to their org.",
+        "operationId": "list_roles_v1_roles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RoleListResponse" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      },
+      "post": {
+        "tags": ["Permissions & Roles"],
+        "summary": "Create Role",
+        "description": "Create a custom role.\n\n- Platform admins create platform-scoped roles (organization_id = None).\n- Org users create org-scoped roles (organization_id = their org).",
+        "operationId": "create_role_v1_roles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateRoleRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RoleResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/v1/roles/{role_id}": {
+      "get": {
+        "tags": ["Permissions & Roles"],
+        "summary": "Get Role",
+        "operationId": "get_role_v1_roles__role_id__get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Role Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RoleResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Permissions & Roles"],
+        "summary": "Update Role",
+        "operationId": "update_role_v1_roles__role_id__patch",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Role Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateRoleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RoleResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Permissions & Roles"],
+        "summary": "Delete Role",
+        "operationId": "delete_role_v1_roles__role_id__delete",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid", "title": "Role Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/org/profile": {
       "get": {
         "tags": ["Org Portal – Profile"],
@@ -2348,7 +2801,7 @@
       "patch": {
         "tags": ["Org Portal – Users"],
         "summary": "Update User",
-        "description": "Update an organization user's name or role.",
+        "description": "Update an organization user's name, role label, or RBAC role.",
         "operationId": "update_user_org_users__user_id__patch",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -3018,6 +3471,52 @@
         "required": ["upload_id", "status"],
         "title": "ApproveUploadResponse"
       },
+      "BatchApplicant": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "description": "Caller-supplied applicant identifier"
+          },
+          "features": {
+            "additionalProperties": { "type": "number" },
+            "type": "object",
+            "title": "Features",
+            "description": "Feature vector — numeric values, e.g. {'utilisation_ratio': 0.78}"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Scoring metadata — credit_score, score_grade, decision_label, etc."
+          }
+        },
+        "type": "object",
+        "required": ["request_id"],
+        "title": "BatchApplicant"
+      },
+      "BatchScoreRequest": {
+        "properties": {
+          "applicants": {
+            "items": { "$ref": "#/components/schemas/BatchApplicant" },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Applicants",
+            "description": "List of applicants to score"
+          },
+          "models_to_run": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Models To Run",
+            "description": "Which models to run: [\"all\"] or specific model types",
+            "default": ["all"]
+          }
+        },
+        "type": "object",
+        "required": ["applicants"],
+        "title": "BatchScoreRequest"
+      },
       "Body_upload_training_data_admin_training_data_upload_post": {
         "properties": {
           "file": {
@@ -3547,6 +4046,14 @@
             "type": "string",
             "title": "Environment",
             "description": "sandbox or production"
+          },
+          "role_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Role Id",
+            "description": "RBAC role for this key. Defaults to system ADMIN role when omitted."
           }
         },
         "type": "object",
@@ -3625,6 +4132,32 @@
         "type": "object",
         "required": ["name", "short_name", "industry_type"],
         "title": "CreateOrganizationRequest"
+      },
+      "CreateRoleRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              { "type": "string", "maxLength": 300 },
+              { "type": "null" }
+            ],
+            "title": "Description"
+          },
+          "permission_codes": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Permission Codes",
+            "description": "List of permission codes to assign to this role"
+          }
+        },
+        "type": "object",
+        "required": ["name"],
+        "title": "CreateRoleRequest"
       },
       "CreateScoreRequestInput": {
         "properties": {
@@ -3994,8 +4527,16 @@
           "name": { "type": "string", "maxLength": 200, "title": "Name" },
           "role_label": {
             "$ref": "#/components/schemas/RoleLabel",
-            "description": "User role: admin, credit_officer, developer, viewer",
+            "description": "User role label: admin, credit_officer, developer, viewer",
             "default": "viewer"
+          },
+          "role_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Role Id",
+            "description": "RBAC role to assign. Defaults to the system ADMIN role when omitted."
           },
           "callback_url": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
@@ -4551,6 +5092,31 @@
         "required": ["request_id"],
         "title": "PerformanceResponse"
       },
+      "PermissionListResponse": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/PermissionResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" }
+        },
+        "type": "object",
+        "required": ["items", "total"],
+        "title": "PermissionListResponse"
+      },
+      "PermissionResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "code": { "type": "string", "title": "Code" },
+          "group_name": { "type": "string", "title": "Group Name" },
+          "description": { "type": "string", "title": "Description" },
+          "scope": { "type": "string", "title": "Scope" }
+        },
+        "type": "object",
+        "required": ["id", "code", "group_name", "description", "scope"],
+        "title": "PermissionResponse"
+      },
       "ProvisionOrganizationRequest": {
         "properties": {
           "callback_url": {
@@ -4763,6 +5329,73 @@
         "enum": ["admin", "credit_officer", "developer", "viewer"],
         "title": "RoleLabel",
         "description": "Valid org user roles."
+      },
+      "RoleListResponse": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/RoleResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" }
+        },
+        "type": "object",
+        "required": ["items", "total"],
+        "title": "RoleListResponse"
+      },
+      "RolePermissionItem": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "code": { "type": "string", "title": "Code" },
+          "group_name": { "type": "string", "title": "Group Name" },
+          "description": { "type": "string", "title": "Description" },
+          "scope": { "type": "string", "title": "Scope" }
+        },
+        "type": "object",
+        "required": ["id", "code", "group_name", "description", "scope"],
+        "title": "RolePermissionItem",
+        "description": "Slim permission summary embedded inside a RoleResponse."
+      },
+      "RoleResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "name": { "type": "string", "title": "Name" },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description"
+          },
+          "scope": { "type": "string", "title": "Scope" },
+          "is_system": { "type": "boolean", "title": "Is System" },
+          "organization_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Organization Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "permissions": {
+            "items": { "$ref": "#/components/schemas/RolePermissionItem" },
+            "type": "array",
+            "title": "Permissions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "scope",
+          "is_system",
+          "organization_id",
+          "created_at"
+        ],
+        "title": "RoleResponse"
       },
       "RuleEvaluateRequest": {
         "properties": {
@@ -5463,6 +6096,34 @@
         "type": "object",
         "title": "UpdateOrganizationRequest"
       },
+      "UpdateRoleRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 100, "minLength": 1 },
+              { "type": "null" }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              { "type": "string", "maxLength": 300 },
+              { "type": "null" }
+            ],
+            "title": "Description"
+          },
+          "permission_codes": {
+            "anyOf": [
+              { "items": { "type": "string" }, "type": "array" },
+              { "type": "null" }
+            ],
+            "title": "Permission Codes",
+            "description": "Full replacement permission code list (replaces existing)"
+          }
+        },
+        "type": "object",
+        "title": "UpdateRoleRequest"
+      },
       "UpdateUserRequest": {
         "properties": {
           "name": {
@@ -5477,7 +6138,15 @@
               { "$ref": "#/components/schemas/RoleLabel" },
               { "type": "null" }
             ],
-            "description": "User role: admin, credit_officer, developer, viewer"
+            "description": "User role label: admin, credit_officer, developer, viewer"
+          },
+          "role_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Role Id",
+            "description": "Replace the user's RBAC role assignment"
           }
         },
         "type": "object",

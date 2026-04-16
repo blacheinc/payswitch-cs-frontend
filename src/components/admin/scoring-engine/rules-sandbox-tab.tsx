@@ -408,8 +408,7 @@ export function RulesSandboxTab() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (form.probability_of_default < 0 || form.probability_of_default > 1) {
       toast.error("Probability of Default must be between 0 and 1");
       return;
@@ -432,24 +431,45 @@ export function RulesSandboxTab() {
   const populatedCount = Object.values(features).filter((v) => v !== "").length;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-5">
-      {/* Input Form */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Core Parameters */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Scale className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Evaluation Input</CardTitle>
-                <CardDescription>
-                  Configure parameters to test against scoring rules
-                </CardDescription>
+    <div className="space-y-6">
+      {/* Action bar — matches page-level CTA pattern */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Sandbox rule evaluation — test scoring rules without persisting data
+        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleReset}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+          <Button disabled={evaluateMutation.isPending} onClick={handleSubmit}>
+            {evaluateMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="mr-2 h-4 w-4" />
+            )}
+            Evaluate
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Input Form */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Core Parameters */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Scale className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Evaluation Input</CardTitle>
+                  <CardDescription>
+                    Core parameters for scoring rules
+                  </CardDescription>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
+            </CardHeader>
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="pd">
                   Probability of Default{" "}
@@ -461,7 +481,6 @@ export function RulesSandboxTab() {
                   step="0.01"
                   min="0"
                   max="1"
-                  required
                   value={form.probability_of_default}
                   onChange={(e) =>
                     setForm((f) => ({
@@ -575,256 +594,239 @@ export function RulesSandboxTab() {
                   placeholder="e.g. 5000.00"
                 />
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="flex gap-2 pt-2">
-                <Button
-                  type="submit"
-                  disabled={evaluateMutation.isPending}
-                  className="flex-1"
-                >
-                  {evaluateMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="mr-2 h-4 w-4" />
-                  )}
-                  Evaluate
-                </Button>
-                <Button type="button" variant="outline" onClick={handleReset}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset
-                </Button>
+          {/* Metadata */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Metadata</CardTitle>
+              <CardDescription className="text-xs">
+                Additional applicant context sent alongside features
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="credit_score" className="text-xs">
+                  Credit Score
+                </Label>
+                <Input
+                  id="credit_score"
+                  type="number"
+                  min="0"
+                  max="1000"
+                  value={metadata.credit_score}
+                  onChange={(e) =>
+                    setMetadata((m) => ({ ...m, credit_score: e.target.value }))
+                  }
+                  placeholder="e.g. 615"
+                  className="h-8 text-xs"
+                />
               </div>
-            </form>
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                <Label htmlFor="applicant_age" className="text-xs">
+                  Applicant Age at Application
+                </Label>
+                <Input
+                  id="applicant_age"
+                  type="number"
+                  min="18"
+                  max="120"
+                  value={metadata.applicant_age_at_application}
+                  onChange={(e) =>
+                    setMetadata((m) => ({
+                      ...m,
+                      applicant_age_at_application: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. 34"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Metadata */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Metadata</CardTitle>
-            <CardDescription className="text-xs">
-              Additional applicant context sent alongside features
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="credit_score" className="text-xs">
-                Credit Score
-              </Label>
-              <Input
-                id="credit_score"
-                type="number"
-                min="0"
-                max="1000"
-                value={metadata.credit_score}
-                onChange={(e) =>
-                  setMetadata((m) => ({ ...m, credit_score: e.target.value }))
-                }
-                placeholder="e.g. 615"
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="applicant_age" className="text-xs">
-                Applicant Age at Application
-              </Label>
-              <Input
-                id="applicant_age"
-                type="number"
-                min="18"
-                max="120"
-                value={metadata.applicant_age_at_application}
-                onChange={(e) =>
-                  setMetadata((m) => ({
-                    ...m,
-                    applicant_age_at_application: e.target.value,
-                  }))
-                }
-                placeholder="e.g. 34"
-                className="h-8 text-xs"
-              />
-            </div>
-          </CardContent>
-        </Card>
+          {/* Features */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm">XDS Bureau Features</CardTitle>
+                  <CardDescription className="text-xs">
+                    30 features extracted from Credit Bureau data — all
+                    optional, float 0-1
+                  </CardDescription>
+                </div>
+                {populatedCount > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {populatedCount}/30
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Accordion type="multiple" className="w-full">
+                {FEATURE_GROUPS.map((group) => (
+                  <AccordionItem key={group.id} value={group.id}>
+                    <AccordionTrigger className="text-xs font-semibold py-2">
+                      {group.label}
+                      <Badge
+                        variant="outline"
+                        className="ml-auto mr-2 text-[10px] px-1.5 py-0"
+                      >
+                        {group.fields.length}
+                      </Badge>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-3 pt-1">
+                        {group.fields.map((field) => (
+                          <FeatureInput
+                            key={field.key}
+                            field={field}
+                            value={features[field.key] ?? ""}
+                            onChange={handleFeatureChange}
+                          />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Features */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+        {/* Result Panel */}
+        <Card className="lg:col-span-3 h-fit lg:sticky lg:top-6">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Gavel className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle className="text-sm">XDS Bureau Features</CardTitle>
-                <CardDescription className="text-xs">
-                  30 features extracted from Credit Bureau data — all optional,
-                  float 0-1
+                <CardTitle>Evaluation Result</CardTitle>
+                <CardDescription>
+                  Rules engine output for the given parameters
                 </CardDescription>
               </div>
-              {populatedCount > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {populatedCount}/30
-                </Badge>
-              )}
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <Accordion type="multiple" className="w-full">
-              {FEATURE_GROUPS.map((group) => (
-                <AccordionItem key={group.id} value={group.id}>
-                  <AccordionTrigger className="text-xs font-semibold py-2">
-                    {group.label}
-                    <Badge
-                      variant="outline"
-                      className="ml-auto mr-2 text-[10px] px-1.5 py-0"
-                    >
-                      {group.fields.length}
-                    </Badge>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-3 pt-1">
-                      {group.fields.map((field) => (
-                        <FeatureInput
-                          key={field.key}
-                          field={field}
-                          value={features[field.key] ?? ""}
-                          onChange={handleFeatureChange}
-                        />
-                      ))}
+          <CardContent>
+            {!result && !evaluateMutation.isPending && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Scale className="h-12 w-12 text-muted-foreground/20 mb-4" />
+                <p className="text-muted-foreground">
+                  Submit an evaluation to see rule results here
+                </p>
+              </div>
+            )}
+
+            {evaluateMutation.isPending && (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {result && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Decision
+                  </span>
+                  {getDecisionBadge(result.decision)}
+                </div>
+
+                {result.triggered_rules &&
+                  result.triggered_rules.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold">
+                        Triggered Rules ({result.triggered_rules.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {result.triggered_rules.map((rule, idx) => (
+                          <div
+                            key={rule.rule_id ?? idx}
+                            className="flex items-start gap-3 p-3 border rounded-lg"
+                          >
+                            <Gavel className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">
+                                {rule.rule_name ??
+                                  rule.rule_id ??
+                                  `Rule ${idx + 1}`}
+                              </p>
+                              {rule.details && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {rule.details}
+                                </p>
+                              )}
+                            </div>
+                            {rule.result && (
+                              <Badge
+                                variant="outline"
+                                className="capitalize shrink-0"
+                              >
+                                {rule.result}
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                  )}
+
+                {result.conditions_applied &&
+                  result.conditions_applied.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold">
+                          Conditions Applied
+                        </h3>
+                        <ul className="space-y-1.5">
+                          {result.conditions_applied.map((cond, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-sm"
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 text-yellow-500 shrink-0" />
+                              <span className="text-muted-foreground">
+                                {cond}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  )}
+
+                {result.decline_reasons &&
+                  result.decline_reasons.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-destructive">
+                          Decline Reasons
+                        </h3>
+                        <ul className="space-y-1.5">
+                          {result.decline_reasons.map((reason, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-sm"
+                            >
+                              <XCircle className="h-3.5 w-3.5 mt-0.5 text-destructive shrink-0" />
+                              <span className="text-muted-foreground">
+                                {reason}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Result Panel */}
-      <Card className="lg:col-span-3 h-fit lg:sticky lg:top-6">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Gavel className="h-5 w-5 text-primary" />
-            <div>
-              <CardTitle>Evaluation Result</CardTitle>
-              <CardDescription>
-                Rules engine output for the given parameters
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!result && !evaluateMutation.isPending && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Scale className="h-12 w-12 text-muted-foreground/20 mb-4" />
-              <p className="text-muted-foreground">
-                Submit an evaluation to see rule results here
-              </p>
-            </div>
-          )}
-
-          {evaluateMutation.isPending && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {result && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Decision
-                </span>
-                {getDecisionBadge(result.decision)}
-              </div>
-
-              {result.triggered_rules && result.triggered_rules.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold">
-                    Triggered Rules ({result.triggered_rules.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {result.triggered_rules.map((rule, idx) => (
-                      <div
-                        key={rule.rule_id ?? idx}
-                        className="flex items-start gap-3 p-3 border rounded-lg"
-                      >
-                        <Gavel className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">
-                            {rule.rule_name ??
-                              rule.rule_id ??
-                              `Rule ${idx + 1}`}
-                          </p>
-                          {rule.details && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {rule.details}
-                            </p>
-                          )}
-                        </div>
-                        {rule.result && (
-                          <Badge
-                            variant="outline"
-                            className="capitalize shrink-0"
-                          >
-                            {rule.result}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {result.conditions_applied &&
-                result.conditions_applied.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold">
-                        Conditions Applied
-                      </h3>
-                      <ul className="space-y-1.5">
-                        {result.conditions_applied.map((cond, idx) => (
-                          <li
-                            key={idx}
-                            className="flex items-start gap-2 text-sm"
-                          >
-                            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 text-yellow-500 shrink-0" />
-                            <span className="text-muted-foreground">
-                              {cond}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                )}
-
-              {result.decline_reasons && result.decline_reasons.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-destructive">
-                      Decline Reasons
-                    </h3>
-                    <ul className="space-y-1.5">
-                      {result.decline_reasons.map((reason, idx) => (
-                        <li
-                          key={idx}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          <XCircle className="h-3.5 w-3.5 mt-0.5 text-destructive shrink-0" />
-                          <span className="text-muted-foreground">
-                            {reason}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
