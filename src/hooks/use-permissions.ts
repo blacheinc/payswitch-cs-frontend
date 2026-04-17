@@ -1,46 +1,47 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
-import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
+import type { PermissionCode } from "@/lib/constant";
 
 /**
- * Fetches the authenticated user's resolved permissions and provides
- * a `can(code)` helper for client-side UI gating.
+ * Client-side RBAC from the **signed-in user's** resolved permission list.
  *
- * Permissions are cached and only fetched when the user is authenticated.
- * The set refreshes on window focus (React Query default) and can be
- * manually invalidated via `queryClient.invalidateQueries({ queryKey: RBAC_KEYS.permissions() })`.
+ * That list comes from `GET /auth/me` → `permissions` (stored on `user.permissions`
+ * in session after login and after session init refresh). It is **not** the catalog
+ * from `GET /v1/permissions`.
+ *
+ * If `permissions` contains `"*"`, the principal is treated as super-admin and
+ * `can()` returns true for every code (per API docs for GET /auth/me/permissions).
  */
 export function usePermissions() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const {
-    data,
-    isLoading: permissionsLoading,
-    isError,
-  } = useQuery({
-    queryKey: RBAC_KEYS.permissions(),
-    queryFn: () => rbacService.listPermissions(),
-    enabled: isAuthenticated && !authLoading,
-    staleTime: 5 * 60 * 1000,
-  });
+  const isMockUser =
+    typeof user?.id === "string" && user.id.startsWith("mock-");
 
   const permissionSet = useMemo(() => {
-    if (!data?.items) return new Set<string>();
-    return new Set(data.items.map((p) => p.code));
-  }, [data]);
+    const list = user?.permissions;
+    if (!list?.length) return new Set<string>();
+    return new Set(list);
+  }, [user?.permissions]);
 
-  const can = useMemo(
-    () => (code: string) => permissionSet.has(code),
-    [permissionSet],
-  );
+  const can = useMemo(() => {
+    return (code: PermissionCode) => {
+      if (isMockUser) return true;
+      if (permissionSet.has("*")) return true;
+      return permissionSet.has(code);
+    };
+  }, [isMockUser, permissionSet]);
+
+  const isLoading =
+    authLoading ||
+    (isAuthenticated && !isMockUser && user?.permissions === undefined);
 
   return {
     permissions: permissionSet,
     can,
-    isLoading: authLoading || permissionsLoading,
-    isError,
+    isLoading,
+    isError: false,
   };
 }

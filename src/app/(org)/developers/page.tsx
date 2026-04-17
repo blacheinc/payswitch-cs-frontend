@@ -49,8 +49,11 @@ import { WebhookTable } from "@/components/developers/webhook-table";
 import { AddWebhookModal } from "@/components/developers/add-webhook-modal";
 import { EditWebhookModal } from "@/components/developers/edit-webhook-modal";
 import { DeleteWebhookModal } from "@/components/developers/delete-webhook-modal";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
 
 export default function DevelopersPage() {
+  const { can } = usePermissions();
   // ---- API Keys state ----
   const [isGenerateKeyOpen, setIsGenerateKeyOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{
@@ -156,9 +159,11 @@ export default function DevelopersPage() {
                   Secret keys used to authenticate your requests
                 </CardDescription>
               </div>
-              <Button onClick={() => setIsGenerateKeyOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Generate New Key
-              </Button>
+              {can(PERMISSION_CODES.API_KEYS.CREATE) && (
+                <Button onClick={() => setIsGenerateKeyOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Generate New Key
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <ApiKeyTable
@@ -310,12 +315,14 @@ export default function DevelopersPage() {
               <div>
                 <CardTitle>Webhook Endpoints</CardTitle>
                 <CardDescription>
-                  Receive real-time notifications when scoring events occur
+                  Receive signed HTTP callbacks when scoring events complete
                 </CardDescription>
               </div>
-              <Button onClick={() => setIsAddWebhookOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add Endpoint
-              </Button>
+              {can(PERMISSION_CODES.WEBHOOKS.MANAGE) && (
+                <Button onClick={() => setIsAddWebhookOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Endpoint
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <WebhookTable

@@ -1,11 +1,10 @@
 "use client";
 
-import { Building2, User, Bell } from "lucide-react";
+import { Building2, User } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrgProfileTab } from "@/components/settings/org-profile-tab";
 import { PersonalAccountTab } from "@/components/settings/personal-account-tab";
-import { NotificationsTab } from "@/components/settings/notifications-tab";
 
 export default function SettingsPage() {
   return (
@@ -28,20 +27,12 @@ export default function SettingsPage() {
             <Building2 className="w-4 h-4 mr-2" />
             Organization Profile
           </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="w-4 h-4 mr-2" />
-            Notifications
-          </TabsTrigger>
         </TabsList>
         <TabsContent value="account" className="space-y-6">
           <PersonalAccountTab />
         </TabsContent>
         <TabsContent value="profile" className="space-y-6">
           <OrgProfileTab />
-        </TabsContent>
-
-        <TabsContent value="notifications" className="space-y-6">
-          <NotificationsTab />
         </TabsContent>
       </Tabs>
     </div>

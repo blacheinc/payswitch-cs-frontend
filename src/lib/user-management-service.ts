@@ -14,6 +14,7 @@ interface ApiOrgUserResponse {
   email: string;
   name: string;
   role_label: string;
+  role_id?: string | null;
   status: string;
   last_login_at: string | null;
   created_at: string;
@@ -35,6 +36,7 @@ function mapUser(raw: ApiOrgUserResponse): OrgUserResponse {
     email: raw?.email,
     name: raw?.name,
     roleLabel: raw?.role_label,
+    roleId: raw?.role_id ?? undefined,
     status: raw?.status,
     lastLoginAt: raw?.last_login_at,
     createdAt: raw?.created_at,
@@ -83,8 +85,7 @@ export const userManagementService = {
       {
         email: data.email,
         name: data.name,
-        role_label: data.roleLabel || "viewer",
-        role_id: data.roleId || undefined,
+        role_id: data.roleId,
         callback_url: data.callbackUrl || undefined,
       },
     );
@@ -96,13 +97,15 @@ export const userManagementService = {
     userId: string,
     data: UpdateUserRequest,
   ): Promise<OrgUserResponse> {
+    const body: Record<string, unknown> = {};
+    if (data.name !== undefined) body.name = data.name;
+    if (data.roleId !== undefined) {
+      body.role_id =
+        data.roleId === null || data.roleId === "" ? null : data.roleId;
+    }
     const response = await apiClient.patch<ApiOrgUserResponse>(
       API_ENDPOINTS.ORG.USER_BY_ID(userId),
-      {
-        name: data.name,
-        role_label: data.roleLabel,
-        role_id: data.roleId || undefined,
-      },
+      body,
     );
     return mapUser(response?.data);
   },

@@ -57,21 +57,31 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
   ok: <CheckCircle className="h-4 w-4 text-green-500" />,
 };
 
+const LIMIT_OPTIONS = [
+  { value: "25", label: "25" },
+  { value: "50", label: "50" },
+  { value: "100", label: "100" },
+  { value: "200", label: "200" },
+];
+
 export function AlertsTab() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
+  const [limit, setLimit] = useState("50");
+
+  const limitNum = Number.parseInt(limit, 10) || 50;
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: MONITORING_KEYS.alerts({
       status: statusFilter === "all" ? undefined : statusFilter,
       severity: severityFilter === "all" ? undefined : severityFilter,
-      limit: 50,
+      limit: limitNum,
     }),
     queryFn: () =>
       monitoringService.getAlerts({
         status: statusFilter === "all" ? undefined : statusFilter,
         severity: severityFilter === "all" ? undefined : severityFilter,
-        limit: 50,
+        limit: limitNum,
       }),
   });
 
@@ -87,9 +97,13 @@ export function AlertsTab() {
   };
 
   const alerts = data ?? [];
-  const firingCount = alerts.filter((a) => a.status === "firing").length;
+  const firingCount = alerts.filter(
+    (a) => String(a.status).toLowerCase() === "firing",
+  ).length;
   const criticalCount = alerts.filter(
-    (a) => a.severity === "critical" && a.status === "firing",
+    (a) =>
+      String(a.severity).toLowerCase() === "critical" &&
+      String(a.status).toLowerCase() === "firing",
   ).length;
 
   if (isLoading) {
@@ -140,7 +154,19 @@ export function AlertsTab() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={limit} onValueChange={setLimit}>
+            <SelectTrigger className="w-[72px]">
+              <SelectValue placeholder="Limit" />
+            </SelectTrigger>
+            <SelectContent>
+              {LIMIT_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={severityFilter} onValueChange={setSeverityFilter}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -206,16 +232,17 @@ function AlertCard({
   alert: AlertItem;
   formatDate: (d?: string | null) => string;
 }) {
-  const severityStyle =
-    SEVERITY_STYLES[alert.severity] ?? SEVERITY_STYLES.warning;
-  const statusIcon = STATUS_ICONS[alert.status] ?? STATUS_ICONS.ok;
+  const sev = String(alert.severity ?? "warning").toLowerCase();
+  const severityStyle = SEVERITY_STYLES[sev] ?? SEVERITY_STYLES.warning;
+  const st = String(alert.status ?? "ok").toLowerCase();
+  const statusIcon = STATUS_ICONS[st] ?? STATUS_ICONS.ok;
 
   return (
     <Card
       className={`border-l-4 ${
-        alert.status === "firing" && alert.severity === "critical"
+        st === "firing" && sev === "critical"
           ? "border-l-red-500"
-          : alert.status === "firing"
+          : st === "firing"
             ? "border-l-yellow-500"
             : "border-l-green-500"
       }`}
@@ -231,10 +258,10 @@ function AlertCard({
                   variant="outline"
                   className={`capitalize text-xs ${severityStyle}`}
                 >
-                  {alert.severity}
+                  {sev}
                 </Badge>
                 <Badge variant="outline" className="capitalize text-xs">
-                  {alert.status}
+                  {st}
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground flex items-center gap-1">

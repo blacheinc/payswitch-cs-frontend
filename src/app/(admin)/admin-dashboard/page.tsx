@@ -241,7 +241,7 @@ export default function AdminDashboardPage() {
             <CardHeader>
               <CardTitle>Recent Alerts</CardTitle>
               <CardDescription>
-                System notifications and health checks
+                System health checks and status overview
               </CardDescription>
             </CardHeader>
             <CardContent>

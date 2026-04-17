@@ -183,8 +183,10 @@ export interface FairnessMetric {
 
 export interface AlertItem {
   id: string;
-  severity: "warning" | "critical";
-  status: "firing" | "resolved" | "ok";
+  /** OpenAPI: warning | critical */
+  severity: string;
+  /** OpenAPI: firing | resolved | ok */
+  status: string;
   title: string;
   message: string;
   source: string;

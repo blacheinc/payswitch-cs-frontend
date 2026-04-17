@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
+import { MonitoringTimeseriesChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
 
 const MODEL_TYPE_OPTIONS = [
   { value: "all", label: "All Models" },
@@ -108,7 +109,7 @@ export function ModelOpsTab() {
     );
   }
 
-  if (isError || !data) {
+  if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mb-4" />
@@ -119,9 +120,10 @@ export function ModelOpsTab() {
     );
   }
 
-  const champion = data.champion ?? {};
-  const driftMetrics = data.drift_metrics ?? [];
-  const retrainingHistory = data.retraining_history ?? [];
+  const champion = data?.champion ?? {};
+  const driftMetrics = data?.drift_metrics ?? [];
+  const retrainingHistory = data?.retraining_history ?? [];
+  const perfTs = data?.performance_timeseries ?? [];
 
   return (
     <div className="space-y-6">
@@ -222,6 +224,12 @@ export function ModelOpsTab() {
         </CardContent>
       </Card>
 
+      <MonitoringTimeseriesChart
+        title="Champion performance"
+        description="GET /v1/monitoring/model-ops — performance_timeseries when present"
+        data={perfTs}
+      />
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Feature Drift */}
         <Card>
@@ -244,8 +252,9 @@ export function ModelOpsTab() {
             ) : (
               <div className="space-y-4">
                 {driftMetrics.map((dm) => {
+                  const key = String(dm.status ?? "ok").toLowerCase();
                   const style =
-                    DRIFT_STATUS_STYLES[dm.status] ?? DRIFT_STATUS_STYLES.ok;
+                    DRIFT_STATUS_STYLES[key] ?? DRIFT_STATUS_STYLES.ok;
                   return (
                     <div key={dm.feature} className="space-y-1.5">
                       <div className="flex items-center justify-between text-sm">
@@ -261,7 +270,7 @@ export function ModelOpsTab() {
                             className={`capitalize ${style.className}`}
                           >
                             {style.icon}
-                            {dm.status}
+                            {key}
                           </Badge>
                         </div>
                       </div>

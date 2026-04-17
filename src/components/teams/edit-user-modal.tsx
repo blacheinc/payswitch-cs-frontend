@@ -16,13 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
 import {
@@ -30,7 +23,6 @@ import {
   USER_MGMT_KEYS,
 } from "@/lib/user-management-service";
 import type { OrgUserResponse } from "@/types/organization-type";
-import { ROLE_LABELS_ENUM } from "@/lib/constant";
 import { RolePicker } from "@/components/shared/role-picker";
 
 interface EditUserModalProps {
@@ -47,14 +39,12 @@ export function EditUserModal({
   const queryClient = useQueryClient();
 
   const [name, setName] = useState("");
-  const [roleLabel, setRoleLabel] = useState("");
   const [roleId, setRoleId] = useState("");
 
   useEffect(() => {
     if (user) {
       setName(user.name);
-      setRoleLabel(user.roleLabel);
-      setRoleId("");
+      setRoleId(user.roleId ?? "");
     }
   }, [user]);
 
@@ -82,7 +72,6 @@ export function EditUserModal({
       id: user.id,
       data: {
         name: name || null,
-        roleLabel: roleLabel || null,
         roleId: roleId || null,
       },
     });
@@ -118,30 +107,13 @@ export function EditUserModal({
 
           <div className="space-y-4">
             <h3 className="text-sm font-medium leading-none text-muted-foreground">
-              Access Level
+              Role
             </h3>
-            <div className="space-y-2">
-              <Label htmlFor="edit-role">Role Label</Label>
-              <Select value={roleLabel} onValueChange={setRoleLabel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ROLE_LABELS_ENUM).map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      <div className="flex flex-col items-start py-1">
-                        <span className="font-medium">{role.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <RolePicker
               value={roleId}
               onValueChange={setRoleId}
-              label="Permissions Role"
-              description="Replaces the user's current RBAC role. Leave as default to keep unchanged."
+              label="Organization role"
+              description="Choose the RBAC role for this member. “None” keeps the server default until a role is assigned."
             />
           </div>
         </div>

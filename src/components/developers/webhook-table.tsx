@@ -92,7 +92,7 @@ export function WebhookTable({
           <TableEmpty
             colSpan={5}
             title="No webhook endpoints"
-            description="Register a new endpoint to receive event notifications."
+            description="Register a new endpoint to receive scoring webhook events."
           />
         </TableBody>
       </Table>

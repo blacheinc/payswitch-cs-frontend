@@ -77,6 +77,16 @@ export interface UserProfileResponse {
   organization_id?: string | null;
   last_login_at?: string | null;
   created_at?: string | null;
+  /** Resolved RBAC permission codes for this principal (from GET /auth/me). */
+  permissions?: string[];
+}
+
+/** GET /auth/me/permissions — resolved permission set only. */
+export interface UserPermissionsResponse {
+  user_id: string;
+  user_type: string;
+  permissions: string[];
+  is_super_admin: boolean;
 }
 
 /**

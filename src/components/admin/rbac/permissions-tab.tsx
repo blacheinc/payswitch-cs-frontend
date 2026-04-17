@@ -45,12 +45,14 @@ export function PermissionsTab() {
 
   const permissions = data?.items ?? [];
 
+  const q = search.toLowerCase();
   const filtered = search
     ? permissions.filter(
         (p) =>
-          p.code.toLowerCase().includes(search.toLowerCase()) ||
-          p.description.toLowerCase().includes(search.toLowerCase()) ||
-          p.group_name.toLowerCase().includes(search.toLowerCase()),
+          p.code.toLowerCase().includes(q) ||
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.group_name.toLowerCase().includes(q),
       )
     : permissions;
 
@@ -113,23 +115,25 @@ export function PermissionsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
+                  <TableHead>Name</TableHead>
+
                   <TableHead>Description</TableHead>
                   <TableHead className="w-[100px]">Scope</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groupPerms.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-mono text-sm">
-                      {p.code}
+                {groupPerms.map((permission) => (
+                  <TableRow key={permission.id}>
+                    <TableCell>
+                      <p className="text-sm font-medium">{permission?.name}</p>
                     </TableCell>
+
                     <TableCell className="text-sm text-muted-foreground">
-                      {p.description}
+                      {permission?.description}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize text-xs">
-                        {p.scope}
+                        {permission?.scope}
                       </Badge>
                     </TableCell>
                   </TableRow>

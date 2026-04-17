@@ -63,6 +63,8 @@ export interface User {
   organization?: Organization;
   lastLoginAt?: string;
   createdAt: string;
+  /** Resolved RBAC codes from GET /auth/me `permissions` (or refreshed via GET /auth/me/permissions). */
+  permissions?: string[];
 }
 
 export interface AdminUser extends User {

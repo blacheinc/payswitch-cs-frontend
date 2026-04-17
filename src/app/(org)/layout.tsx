@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   Menu,
   TrendingUp,
-  Bell,
   LogOut,
   Moon,
   Sun,
@@ -34,7 +33,6 @@ import { useTheme } from "@/contexts/theme-context";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { NotificationCenter } from "@/components/shared/notification-center";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +54,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: "Dashboard", href: ROUTES.ORG.DASHBOARD, icon: LayoutDashboard },
   { title: "Score Requests", href: ROUTES.ORG.SCORE_REQUESTS, icon: FileText },
-  // { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Key },
+  { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Key },
   { title: "Teams", href: ROUTES.ORG.TEAMS, icon: Users },
   { title: "Reports", href: ROUTES.ORG.REPORTS, icon: BarChart3 },
   { title: "Settings", href: ROUTES.ORG.SETTINGS, icon: Settings },
@@ -239,9 +237,6 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
-            {/* Notifications */}
-            <NotificationCenter type="org" />
-
             {/* Theme toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {resolvedTheme === "dark" ? (

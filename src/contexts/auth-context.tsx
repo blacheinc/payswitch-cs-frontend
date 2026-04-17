@@ -9,14 +9,12 @@ import {
   ReactNode,
   useCallback,
 } from "react";
-import apiClient from "@/lib/api-client";
-import { API_ENDPOINTS } from "@/lib/constant";
 import {
   saveSession,
   getSession,
   clearSession,
-  getAccessToken,
 } from "@/lib/session-storage";
+import { authService, mergeUserFromMeProfile } from "@/lib/auth-service";
 import { User, Organization, AdminUser, OrgUser } from "@/types/models";
 import { INACTIVITY_TIMEOUT_MS } from "@/lib/constant";
 
@@ -100,9 +98,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
       pendingEmail: null,
     });
 
-    // Note: /auth/me is not available in the current API spec.
-    // The session hydrated from localStorage/cookie is the source of truth.
-    // Re-enable this block when the backend adds a /auth/me endpoint.
+    // Refresh profile + resolved RBAC `permissions` from GET /auth/me
+    try {
+      const profile = await authService.getMe();
+      const merged = mergeUserFromMeProfile(
+        session.user,
+        profile,
+        session.userType,
+      );
+      saveSession({ ...session, user: merged });
+      setState({
+        user: merged,
+        organization: getOrganization(merged),
+        isAuthenticated: true,
+        isLoading: false,
+        isAdmin: checkIsAdmin(merged),
+        requires2FA: false,
+        pendingEmail: null,
+      });
+    } catch {
+      // Avoid indefinite loading in usePermissions when /auth/me fails
+      if (session.user.permissions === undefined) {
+        const patched = { ...session.user, permissions: [] as string[] };
+        saveSession({ ...session, user: patched });
+        setState({
+          user: patched,
+          organization: getOrganization(patched),
+          isAuthenticated: true,
+          isLoading: false,
+          isAdmin: checkIsAdmin(patched),
+          requires2FA: false,
+          pendingEmail: null,
+        });
+      }
+    }
   }, []);
 
   // Initialize on mount

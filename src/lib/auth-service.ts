@@ -1,7 +1,54 @@
 import apiClient from "./api-client";
-import type { User } from "@/types/models";
-import type { AuthResult, Setup2FAResponse } from "@/types/auth-type";
+import type { AdminUser, User } from "@/types/models";
+import type {
+  AuthResult,
+  Setup2FAResponse,
+  UserPermissionsResponse,
+  UserProfileResponse,
+} from "@/types/auth-type";
 import { API_ENDPOINTS } from "@/lib/constant";
+
+/** Merge stored session user with GET /auth/me (profile + resolved `permissions`). */
+export function mergeUserFromMeProfile(
+  existing: User,
+  profile: UserProfileResponse,
+  sessionUserType?: string,
+): User {
+  const effectiveType = profile.user_type || sessionUserType;
+  const permissions = profile.permissions ?? existing.permissions ?? [];
+
+  const next: User = {
+    ...existing,
+    id: profile.id,
+    email: profile.email,
+    name: profile.name,
+    roleLabel: profile.role as User["roleLabel"],
+    status: profile.status as User["status"],
+    lastLoginAt: profile.last_login_at ?? existing.lastLoginAt,
+    createdAt: profile.created_at || existing.createdAt,
+    organizationId: profile.organization_id ?? existing.organizationId,
+    permissions,
+  };
+
+  if (effectiveType === "admin") {
+    return {
+      ...next,
+      isAdmin: true,
+      adminRole:
+        "isAdmin" in existing && existing.isAdmin
+          ? (existing as AdminUser).adminRole
+          : "super_admin",
+    } as AdminUser;
+  }
+
+  if ("isAdmin" in next && (next as AdminUser).isAdmin) {
+    const asAdmin = next as AdminUser;
+    const { isAdmin: _a, adminRole: _r, ...orgShape } = asAdmin;
+    return orgShape as User;
+  }
+
+  return next;
+}
 
 // Removed parseJwt safely as we will now fetch profiles directly using /auth/me
 // ---- Raw API response types (snake_case, matching backend) ----
@@ -61,18 +108,31 @@ export const authService = {
     }
 
     const userProfile = await authService.getMe(data?.access_token);
-    const user: User = {
+    const permissions = userProfile?.permissions ?? [];
+
+    const baseUser: User = {
       id: userProfile?.id,
       email: data?.email || userProfile?.email || credentials?.email,
       name: userProfile?.name,
-      roleLabel: userProfile?.role as any,
-      status: userProfile?.status as any,
+      roleLabel: userProfile?.role as User["roleLabel"],
+      status: userProfile?.status as User["status"],
       createdAt: userProfile?.created_at || new Date().toISOString(),
+      permissions,
     };
 
     if (userProfile?.organization_id) {
-      user.organizationId = userProfile?.organization_id;
+      baseUser.organizationId = userProfile?.organization_id;
     }
+
+    const isAdminUser =
+      data?.user_type === "admin" || userProfile?.user_type === "admin";
+    const user: User = isAdminUser
+      ? ({
+          ...baseUser,
+          isAdmin: true,
+          adminRole: "super_admin",
+        } as AdminUser)
+      : baseUser;
 
     return {
       requires2FA: false,
@@ -101,22 +161,34 @@ export const authService = {
     );
 
     const userProfile = await authService.getMe(response?.data?.access_token);
-    const user: User = {
+    const permissions = userProfile?.permissions ?? [];
+
+    const baseUser: User = {
       id: userProfile?.id,
       email: userProfile?.email,
       name: userProfile?.name,
-      roleLabel: userProfile?.role as any,
-      status: userProfile?.status as any,
+      roleLabel: userProfile?.role as User["roleLabel"],
+      status: userProfile?.status as User["status"],
       createdAt: userProfile?.created_at || new Date().toISOString(),
+      permissions,
     };
 
     if (userProfile?.organization_id) {
-      user.organizationId = userProfile?.organization_id;
+      baseUser.organizationId = userProfile?.organization_id;
     }
 
     const userType =
       userProfile?.user_type ||
       (userProfile?.organization_id ? "org_user" : "admin");
+
+    const isAdminUser = userType === "admin" || userProfile?.user_type === "admin";
+    const user: User = isAdminUser
+      ? ({
+          ...baseUser,
+          isAdmin: true,
+          adminRole: "super_admin",
+        } as AdminUser)
+      : baseUser;
 
     return {
       accessToken: response?.data?.access_token,
@@ -130,15 +202,22 @@ export const authService = {
   },
 
   // GET /auth/me → UserProfileResponse (authenticated)
-  async getMe(
-    accessToken?: string,
-  ): Promise<import("@/types/auth-type").UserProfileResponse> {
+  async getMe(accessToken?: string): Promise<UserProfileResponse> {
     const headers = accessToken
       ? { Authorization: `Bearer ${accessToken}` }
       : undefined;
-    const response = await apiClient.get<
-      import("@/types/auth-type").UserProfileResponse
-    >(API_ENDPOINTS.AUTH.ME, { headers });
+    const response = await apiClient.get<UserProfileResponse>(
+      API_ENDPOINTS.AUTH.ME,
+      { headers },
+    );
+    return response?.data;
+  },
+
+  /** GET /auth/me/permissions — resolved codes only (e.g. after role change). */
+  async getMyPermissions(): Promise<UserPermissionsResponse> {
+    const response = await apiClient.get<UserPermissionsResponse>(
+      API_ENDPOINTS.AUTH.ME_PERMISSIONS,
+    );
     return response?.data;
   },
 

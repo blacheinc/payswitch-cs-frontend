@@ -23,8 +23,10 @@ export default function AdminMonitoringPage() {
         <div>
           <h1 className="text-2xl font-bold">Monitoring</h1>
           <p className="text-muted-foreground">
-            Platform health, risk analytics, model operations, compliance, and
-            alerts
+            Live data from{" "}
+            <code className="text-xs bg-muted px-1 rounded">/v1/monitoring/*</code>{" "}
+            — infrastructure, risk, model ops, compliance, and alerts (query
+            params match OpenAPI).
           </p>
         </div>
       </div>

@@ -40,6 +40,7 @@ export const API_ENDPOINTS = {
     LOGOUT: "/auth/logout",
     REFRESH: "/auth/refresh",
     ME: "/auth/me",
+    ME_PERMISSIONS: "/auth/me/permissions",
     VERIFY_2FA: "/auth/2fa/verify",
     SETUP_2FA: "/auth/2fa/setup",
     REMOVE_2FA: "/auth/2fa/remove",
@@ -166,6 +167,78 @@ export const INDUSTRY_TYPE_ENUM = {
     label: "Other",
   },
 };
+
+// RBAC Permission Codes
+export const PERMISSION_CODES = {
+  // Platform-scoped (admin dashboard)
+  ADMIN: {
+    ORGS_CREATE: "admin.organizations.create",
+    ORGS_READ: "admin.organizations.read",
+    ORGS_UPDATE: "admin.organizations.update",
+    ORGS_PROVISION: "admin.organizations.provision",
+    ORGS_SUSPEND: "admin.organizations.suspend",
+    TRAINING_UPLOAD: "admin.training_data.upload",
+    TRAINING_READ: "admin.training_data.read",
+    TRAINING_APPROVE: "admin.training_data.approve",
+    SOURCES_MANAGE: "admin.sources.manage",
+    SOURCES_READ: "admin.sources.read",
+    ROLES_READ: "admin.roles.read",
+    ROLES_MANAGE: "admin.roles.manage",
+    ROLES_ASSIGN: "admin.roles.assign",
+  },
+  MONITORING: {
+    RISK: "monitoring.risk",
+    INFRASTRUCTURE: "monitoring.infrastructure",
+    MODEL_OPS: "monitoring.model_ops",
+    COMPLIANCE: "monitoring.compliance",
+    ALERTS: "monitoring.alerts",
+  },
+  MODELS: {
+    READ: "models.read",
+  },
+  RULES: {
+    EVALUATE: "rules.evaluate",
+  },
+  // Org-scoped (organization dashboard)
+  SCORE_REQUESTS: {
+    CREATE: "score_requests.create",
+    LIST: "score_requests.list",
+    READ: "score_requests.read",
+    OVERRIDE: "score_requests.override",
+    REPORT_OUTCOME: "score_requests.report_outcome",
+    REPORT_PERFORMANCE: "score_requests.report_performance",
+  },
+  USERS: {
+    INVITE: "users.invite",
+    LIST: "users.list",
+    UPDATE: "users.update",
+    SUSPEND: "users.suspend",
+    DELETE: "users.delete",
+  },
+  API_KEYS: {
+    CREATE: "api_keys.create",
+    LIST: "api_keys.list",
+    REVOKE: "api_keys.revoke",
+  },
+  WEBHOOKS: {
+    MANAGE: "webhooks.manage",
+    LIST: "webhooks.list",
+  },
+  API_LOGS: {
+    READ: "api_logs.read",
+  },
+  ROLES: {
+    READ: "roles.read",
+    MANAGE: "roles.manage",
+    ASSIGN: "roles.assign",
+  },
+} as const;
+
+type NestedValues<T> = T extends string
+  ? T
+  : { [K in keyof T]: NestedValues<T[K]> }[keyof T];
+
+export type PermissionCode = NestedValues<typeof PERMISSION_CODES>;
 
 export const ROLE_LABELS_ENUM = {
   ADMIN: {

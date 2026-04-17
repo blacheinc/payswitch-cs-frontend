@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -124,118 +123,124 @@ export function EditRoleModal({ open, onOpenChange, role }: EditRoleModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Edit Role</DialogTitle>
-          <DialogDescription>
-            {isSystem
-              ? "System roles cannot be modified"
-              : "Update role details and permissions"}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[600px]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-6">
+          <DialogHeader className="shrink-0 text-left">
+            <DialogTitle>Edit Role</DialogTitle>
+            <DialogDescription>
+              {isSystem
+                ? "System roles cannot be modified"
+                : "Update role details and permissions"}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-6 py-4 flex-1 overflow-hidden flex flex-col">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-role-name">
-                Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="edit-role-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Credit Analyst"
-                maxLength={100}
-                disabled={isSystem}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-role-desc">Description</Label>
-              <Input
-                id="edit-role-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional role description"
-                maxLength={300}
-                disabled={isSystem}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2 flex-1 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between">
-              <Label>Permissions</Label>
-              {selectedCodes.size > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {selectedCodes.size} selected
-                </Badge>
-              )}
-            </div>
-
-            <ScrollArea className="flex-1 border rounded-md p-3">
-              <div className="space-y-4">
-                {grouped.map(([groupName, groupPerms]) => {
-                  const codes = groupPerms.map((p) => p.code);
-                  const allSelected = codes.every((c) =>
-                    selectedCodes.has(c),
-                  );
-                  const someSelected =
-                    !allSelected && codes.some((c) => selectedCodes.has(c));
-
-                  return (
-                    <div key={groupName} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={
-                            allSelected
-                              ? true
-                              : someSelected
-                                ? "indeterminate"
-                                : false
-                          }
-                          onCheckedChange={() => toggleGroup(groupPerms)}
-                          disabled={isSystem}
-                        />
-                        <span className="text-sm font-semibold">
-                          {groupName}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {groupPerms.length}
-                        </Badge>
-                      </div>
-                      <div className="ml-6 space-y-1.5">
-                        {groupPerms.map((p) => (
-                          <div
-                            key={p.code}
-                            className="flex items-start gap-2"
-                          >
-                            <Checkbox
-                              checked={selectedCodes.has(p.code)}
-                              onCheckedChange={() => toggleCode(p.code)}
-                              className="mt-0.5"
-                              disabled={isSystem}
-                            />
-                            <div className="min-w-0">
-                              <p className="text-sm">{p.code}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {p.description}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+          <div className="flex min-h-0 flex-1 flex-col gap-6 py-4">
+            <div className="shrink-0 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-role-name">
+                  Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="edit-role-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Credit Analyst"
+                  maxLength={100}
+                  disabled={isSystem}
+                />
               </div>
-            </ScrollArea>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-role-desc">Description</Label>
+                <Input
+                  id="edit-role-desc"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Optional role description"
+                  maxLength={300}
+                  disabled={isSystem}
+                />
+              </div>
+            </div>
+
+            <Separator className="shrink-0" />
+
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <div className="flex shrink-0 items-center justify-between">
+                <Label>Permissions</Label>
+                {selectedCodes.size > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedCodes.size} selected
+                  </Badge>
+                )}
+              </div>
+
+              <div
+                role="region"
+                aria-label="Permission groups"
+                className="max-h-[min(52vh,28rem)] min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain rounded-md border p-3 [scrollbar-gutter:stable]"
+              >
+                <div className="space-y-4">
+                  {grouped.map(([groupName, groupPerms]) => {
+                    const codes = groupPerms.map((p) => p.code);
+                    const allSelected = codes.every((c) =>
+                      selectedCodes.has(c),
+                    );
+                    const someSelected =
+                      !allSelected && codes.some((c) => selectedCodes.has(c));
+
+                    return (
+                      <div key={groupName} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={
+                              allSelected
+                                ? true
+                                : someSelected
+                                  ? "indeterminate"
+                                  : false
+                            }
+                            onCheckedChange={() => toggleGroup(groupPerms)}
+                            disabled={isSystem}
+                          />
+                          <span className="text-sm font-semibold">
+                            {groupName}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {groupPerms.length}
+                          </Badge>
+                        </div>
+                        <div className="ml-6 space-y-1.5">
+                          {groupPerms.map((p) => (
+                            <div
+                              key={p.code}
+                              className="flex items-start gap-2"
+                            >
+                              <Checkbox
+                                checked={selectedCodes.has(p.code)}
+                                onCheckedChange={() => toggleCode(p.code)}
+                                className="mt-0.5"
+                                disabled={isSystem}
+                              />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium">{p.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {p.description}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t bg-background px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

@@ -57,12 +57,15 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { scoreService, SCORE_KEYS } from "@/lib/score-service";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
 
 // Mock data removed - now fetched from API
 
 import { OrganizationScoreRequestsTable } from "@/components/score-requests/organization-score-requests-table";
 
 export default function ScoreRequestsPage() {
+  const { can } = usePermissions();
   const [page, setPage] = useState(1);
   const [perPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -127,12 +130,14 @@ export default function ScoreRequestsPage() {
               Bulk Request
             </Link>
           </Button>
-          <Button asChild>
-            <Link href={`${ROUTES.ORG.SCORE_REQUESTS}/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Request
-            </Link>
-          </Button>
+          {can(PERMISSION_CODES.SCORE_REQUESTS.CREATE) && (
+            <Button asChild>
+              <Link href={`${ROUTES.ORG.SCORE_REQUESTS}/new`}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Request
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 

@@ -221,8 +221,6 @@ export default function AIMonitorPage() {
     autoRestart: true,
     maxConcurrentAgents: 5,
     driftThreshold: 0.15,
-    emailNotifications: true,
-    slackNotifications: false,
   });
 
   const handleRefresh = () => {
@@ -352,38 +350,6 @@ export default function AIMonitorPage() {
                   <p className="text-xs text-muted-foreground">
                     Trigger retraining alert when data drift exceeds this value.
                   </p>
-                </div>
-                <Separator />
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Notifications</Label>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm text-muted-foreground">
-                      Email Alerts
-                    </Label>
-                    <Switch
-                      checked={orchestratorConfig.emailNotifications}
-                      onCheckedChange={(checked) =>
-                        setOrchestratorConfig((prev) => ({
-                          ...prev,
-                          emailNotifications: checked,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm text-muted-foreground">
-                      Slack Alerts
-                    </Label>
-                    <Switch
-                      checked={orchestratorConfig.slackNotifications}
-                      onCheckedChange={(checked) =>
-                        setOrchestratorConfig((prev) => ({
-                          ...prev,
-                          slackNotifications: checked,
-                        }))
-                      }
-                    />
-                  </div>
                 </div>
               </div>
               <DialogFooter>

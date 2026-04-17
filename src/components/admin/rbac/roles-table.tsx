@@ -30,6 +30,8 @@ interface RolesTableProps {
   isError: boolean;
   onEditRole: (role: RoleResponse) => void;
   onDeleteRole: (role: { id: string; name: string }) => void;
+  /** Org roles are always org-scoped; hiding Scope avoids redundant UI. @default true */
+  showScope?: boolean;
 }
 
 export function RolesTable({
@@ -38,7 +40,9 @@ export function RolesTable({
   isError,
   onEditRole,
   onDeleteRole,
+  showScope = true,
 }: RolesTableProps) {
+  const colCount = showScope ? 5 : 4;
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -60,7 +64,7 @@ export function RolesTable({
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
-          <TableHead>Scope</TableHead>
+          {showScope && <TableHead>Scope</TableHead>}
           <TableHead>Permissions</TableHead>
           <TableHead>Created</TableHead>
           <TableHead className="text-right">Actions</TableHead>
@@ -69,7 +73,7 @@ export function RolesTable({
       <TableBody>
         {!roles || roles.length === 0 ? (
           <TableEmpty
-            colSpan={5}
+            colSpan={colCount}
             title="No roles found"
             description="Create a custom role to get started."
           />
@@ -78,7 +82,10 @@ export function RolesTable({
             <TableRow key={role.id}>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{role.name}</span>
+                  <span className="font-medium">
+                    {role?.name?.replace(/_/g, " ")}
+                  </span>
+
                   {role.is_system && (
                     <Badge
                       variant="secondary"
@@ -95,11 +102,13 @@ export function RolesTable({
                   </p>
                 )}
               </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="capitalize text-xs">
-                  {role.scope}
-                </Badge>
-              </TableCell>
+              {showScope && (
+                <TableCell>
+                  <Badge variant="outline" className="capitalize text-xs">
+                    {role.scope}
+                  </Badge>
+                </TableCell>
+              )}
               <TableCell>
                 <Badge variant="secondary" className="text-xs">
                   {role.permissions.length}

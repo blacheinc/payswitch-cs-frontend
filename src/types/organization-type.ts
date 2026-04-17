@@ -66,7 +66,10 @@ export interface OrgUserResponse {
   id: string;
   email: string;
   name: string;
+  /** Legacy org seat label (admin, viewer, …) when returned by API */
   roleLabel: string;
+  /** Assigned RBAC role id when returned by API */
+  roleId?: string | null;
   status: string;
   lastLoginAt: string | null;
   createdAt: string;
@@ -76,14 +79,14 @@ export interface OrgUserResponse {
 export interface InviteUserRequest {
   email: string;
   name: string;
-  roleLabel?: string; // "admin" | "credit_officer" | "developer" | "viewer", default: "viewer"
-  roleId?: string | null; // RBAC role UUID — defaults to system ADMIN role when omitted
+  /** RBAC role UUID from GET /v1/roles (org-scoped). */
+  roleId: string;
   callbackUrl?: string | null;
 }
 
 /** PATCH /org/users/{user_id} — update a user's name or role */
 export interface UpdateUserRequest {
   name?: string | null;
-  roleLabel?: string | null;
-  roleId?: string | null; // Replace the user's RBAC role assignment
+  /** Replace the user's RBAC role assignment (null clears to server default). */
+  roleId?: string | null;
 }

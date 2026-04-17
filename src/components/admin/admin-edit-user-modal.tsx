@@ -16,13 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
@@ -30,7 +23,7 @@ import type {
   OrgUserResponse,
   UpdateUserRequest,
 } from "@/types/organization-type";
-import { ROLE_LABELS_ENUM } from "@/lib/constant";
+import { RolePicker } from "@/components/shared/role-picker";
 
 interface AdminEditUserModalProps {
   open: boolean;
@@ -48,13 +41,12 @@ export function AdminEditUserModal({
   const queryClient = useQueryClient();
 
   const [name, setName] = useState("");
-  const [roleLabel, setRoleLabel] = useState("");
+  const [roleId, setRoleId] = useState("");
 
-  // Populate form when user changes
   useEffect(() => {
     if (user) {
       setName(user.name);
-      setRoleLabel(user.roleLabel);
+      setRoleId(user.roleId ?? "");
     }
   }, [user]);
 
@@ -84,7 +76,7 @@ export function AdminEditUserModal({
       userId: user.id,
       data: {
         name: name || null,
-        roleLabel: roleLabel || null,
+        roleId: roleId || null,
       },
     });
   };
@@ -119,28 +111,14 @@ export function AdminEditUserModal({
 
           <div className="space-y-4">
             <h3 className="text-sm font-medium leading-none text-muted-foreground">
-              Access Level
+              Role
             </h3>
-            <div className="space-y-2">
-              <Label htmlFor="edit-role">Role</Label>
-              <Select value={roleLabel} onValueChange={setRoleLabel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ROLE_LABELS_ENUM).map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      <div className="flex flex-col items-start py-1">
-                        <span className="font-medium">{role.label}</span>
-                        {/* <span className="text-xs text-muted-foreground">
-                          {role.description}
-                        </span> */}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <RolePicker
+              value={roleId}
+              onValueChange={setRoleId}
+              label="Organization role"
+              description="RBAC role for this member (from /v1/roles for the organization context)."
+            />
           </div>
         </div>
         <DialogFooter>

@@ -46,7 +46,7 @@
       "get": {
         "tags": ["Authentication"],
         "summary": "Get Me",
-        "description": "Get the currently authenticated user's profile.",
+        "description": "Get the currently authenticated user's profile, including their resolved permissions.",
         "operationId": "get_me_auth_me_get",
         "responses": {
           "200": {
@@ -54,6 +54,27 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UserProfileResponse" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
+    "/auth/me/permissions": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get My Permissions",
+        "description": "Return the resolved permission set for the currently authenticated principal.\n\nWorks for JWT-authenticated users (admin and org users) as well as API keys.\nCall this once after login and cache the result in your auth store — refresh\nwhenever the user's role changes.\n\nA ``permissions`` list containing ``[\"*\"]`` means the caller holds the\nSUPER_ADMIN role and passes every permission check on the platform.",
+        "operationId": "get_my_permissions_auth_me_permissions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPermissionsResponse"
+                }
               }
             }
           }
@@ -2502,7 +2523,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/RoleResponse" }
+                "schema": { "$ref": "#/components/schemas/RoleActionResponse" }
               }
             }
           },
@@ -2577,7 +2598,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/RoleResponse" }
+                "schema": { "$ref": "#/components/schemas/RoleActionResponse" }
               }
             }
           },
@@ -5109,12 +5130,20 @@
         "properties": {
           "id": { "type": "string", "format": "uuid", "title": "Id" },
           "code": { "type": "string", "title": "Code" },
+          "name": { "type": "string", "title": "Name" },
           "group_name": { "type": "string", "title": "Group Name" },
           "description": { "type": "string", "title": "Description" },
           "scope": { "type": "string", "title": "Scope" }
         },
         "type": "object",
-        "required": ["id", "code", "group_name", "description", "scope"],
+        "required": [
+          "id",
+          "code",
+          "name",
+          "group_name",
+          "description",
+          "scope"
+        ],
         "title": "PermissionResponse"
       },
       "ProvisionOrganizationRequest": {
@@ -5324,6 +5353,16 @@
         "required": ["code", "category", "description", "impact", "severity"],
         "title": "RiskFactor"
       },
+      "RoleActionResponse": {
+        "properties": {
+          "message": { "type": "string", "title": "Message" },
+          "role": { "$ref": "#/components/schemas/RoleResponse" }
+        },
+        "type": "object",
+        "required": ["message", "role"],
+        "title": "RoleActionResponse",
+        "description": "Returned by create and update role endpoints — message + full role data."
+      },
       "RoleLabel": {
         "type": "string",
         "enum": ["admin", "credit_officer", "developer", "viewer"],
@@ -5347,12 +5386,20 @@
         "properties": {
           "id": { "type": "string", "format": "uuid", "title": "Id" },
           "code": { "type": "string", "title": "Code" },
+          "name": { "type": "string", "title": "Name" },
           "group_name": { "type": "string", "title": "Group Name" },
           "description": { "type": "string", "title": "Description" },
           "scope": { "type": "string", "title": "Scope" }
         },
         "type": "object",
-        "required": ["id", "code", "group_name", "description", "scope"],
+        "required": [
+          "id",
+          "code",
+          "name",
+          "group_name",
+          "description",
+          "scope"
+        ],
         "title": "RolePermissionItem",
         "description": "Slim permission summary embedded inside a RoleResponse."
       },
@@ -6207,6 +6254,22 @@
         "title": "UploadStatusResponse",
         "description": "Lightweight status poll response."
       },
+      "UserPermissionsResponse": {
+        "properties": {
+          "user_id": { "type": "string", "title": "User Id" },
+          "user_type": { "type": "string", "title": "User Type" },
+          "permissions": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "is_super_admin": { "type": "boolean", "title": "Is Super Admin" }
+        },
+        "type": "object",
+        "required": ["user_id", "user_type", "permissions", "is_super_admin"],
+        "title": "UserPermissionsResponse",
+        "description": "Returned by GET /auth/me/permissions."
+      },
       "UserProfileResponse": {
         "properties": {
           "id": { "type": "string", "title": "Id" },
@@ -6227,6 +6290,12 @@
           "created_at": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Created At"
+          },
+          "permissions": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Permissions",
+            "default": []
           }
         },
         "type": "object",

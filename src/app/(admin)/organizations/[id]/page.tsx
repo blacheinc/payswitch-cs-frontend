@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
+import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
 import type { OrgUserResponse } from "@/types/organization-type";
 
 import { EditOrganizationModal } from "@/components/organization/edit-organization-modal";
@@ -81,6 +82,20 @@ export default function OrganizationDetailPage() {
       organizationService.listUsers(orgId, { page: usersPage, perPage: 10 }),
     enabled: !!orgId,
   });
+
+  const { data: rolesData } = useQuery({
+    queryKey: RBAC_KEYS.roles(),
+    queryFn: () => rbacService.listRoles(),
+    enabled: !!orgId,
+  });
+
+  const roleNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rolesData?.items ?? []) {
+      m.set(r.id, r.name);
+    }
+    return m;
+  }, [rolesData?.items]);
 
   // ---- Modal state ----
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -377,8 +392,10 @@ export default function OrganizationDetailPage() {
                         <TableCell className="text-sm text-muted-foreground">
                           {user.email}
                         </TableCell>
-                        <TableCell className="capitalize text-sm">
-                          {user.roleLabel}
+                        <TableCell className="text-sm">
+                          {user.roleId && roleNameById.has(user.roleId)
+                            ? roleNameById.get(user.roleId)
+                            : user.roleLabel.replace(/_/g, " ")}
                         </TableCell>
                         <TableCell>{getUserStatusBadge(user.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">

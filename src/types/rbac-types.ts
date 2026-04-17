@@ -4,6 +4,7 @@
 export interface PermissionResponse {
   id: string;
   code: string;
+  name: string;
   group_name: string;
   description: string;
   scope: string;
@@ -17,6 +18,7 @@ export interface PermissionListResponse {
 export interface RolePermissionItem {
   id: string;
   code: string;
+  name: string;
   group_name: string;
   description: string;
   scope: string;

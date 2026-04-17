@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Users, UserPlus, Mail, Shield } from "lucide-react";
 
@@ -12,7 +12,10 @@ import {
   userManagementService,
   USER_MGMT_KEYS,
 } from "@/lib/user-management-service";
+import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
 import type { OrgUserResponse } from "@/types/organization-type";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
 
 import { UserManagementTable } from "./user-management-table";
 import { InviteUserModal } from "./invite-user-modal";
@@ -22,6 +25,7 @@ import { ActivateUserModal } from "./activate-user-modal";
 import { RemoveUserModal } from "./remove-user-modal";
 
 export function MembersTab() {
+  const { can } = usePermissions();
   const [page, setPage] = useState(1);
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -44,12 +48,32 @@ export function MembersTab() {
     queryFn: () => userManagementService.list({ page }),
   });
 
+  const { data: rolesData } = useQuery({
+    queryKey: RBAC_KEYS.roles(),
+    queryFn: () => rbacService.listRoles(),
+  });
+
   const users = data?.items ?? [];
   const totalUsers = data?.total ?? 0;
   const invitedCount = users.filter(
     (u) => u.status === "invited" || u.status === "pending",
   ).length;
-  const adminCount = users.filter((u) => u.roleLabel === "admin").length;
+
+  const adminRoleIds = useMemo(
+    () =>
+      new Set(
+        (rolesData?.items ?? [])
+          .filter((r) => r.name.trim().toLowerCase() === "admin")
+          .map((r) => r.id),
+      ),
+    [rolesData?.items],
+  );
+
+  const adminCount = users.filter(
+    (u) =>
+      u.roleLabel === "admin" ||
+      (u.roleId != null && u.roleId !== "" && adminRoleIds.has(u.roleId)),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -57,10 +81,12 @@ export function MembersTab() {
         <p className="text-sm text-muted-foreground">
           Manage your organization members and their access levels
         </p>
-        <Button size="sm" onClick={() => setIsInviteOpen(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Invite Member
-        </Button>
+        {can(PERMISSION_CODES.USERS.INVITE) && (
+          <Button size="sm" onClick={() => setIsInviteOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite Member
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

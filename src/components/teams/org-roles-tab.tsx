@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
 import type { RoleResponse } from "@/types/rbac-types";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
 
 import { RolesTable } from "@/components/admin/rbac/roles-table";
 import { CreateRoleModal } from "@/components/admin/rbac/create-role-modal";
@@ -16,6 +18,7 @@ import { EditRoleModal } from "@/components/admin/rbac/edit-role-modal";
 import { DeleteRoleModal } from "@/components/admin/rbac/delete-role-modal";
 
 export function OrgRolesTab() {
+  const { can } = usePermissions();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<RoleResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -34,10 +37,12 @@ export function OrgRolesTab() {
         <p className="text-sm text-muted-foreground">
           Create custom roles for your organization members
         </p>
-        <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Role
-        </Button>
+        {can(PERMISSION_CODES.ROLES.MANAGE) && (
+          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Role
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -48,6 +53,7 @@ export function OrgRolesTab() {
             isError={isError}
             onEditRole={setEditTarget}
             onDeleteRole={setDeleteTarget}
+            showScope={false}
           />
         </CardContent>
       </Card>

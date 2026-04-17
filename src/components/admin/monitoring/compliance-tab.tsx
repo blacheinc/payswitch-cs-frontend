@@ -32,13 +32,17 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
+import { formatPercent } from "@/lib/monitoring-display";
+import { MonitoringTimeseriesChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
 
+/** GET /v1/monitoring/compliance — period: 7d | 30d | 90d (default 30d) */
 const PERIOD_OPTIONS = [
   { value: "7d", label: "Last 7 Days" },
   { value: "30d", label: "Last 30 Days" },
@@ -79,7 +83,7 @@ export function ComplianceTab() {
     );
   }
 
-  if (isError || !data) {
+  if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mb-4" />
@@ -90,13 +94,15 @@ export function ComplianceTab() {
     );
   }
 
-  const summary = data.summary ?? {};
-  const fairnessMetrics = data.fairness_metrics ?? [];
+  const summary = data?.summary ?? {};
+  const fairnessMetrics = Array.isArray(data?.fairness_metrics)
+    ? data.fairness_metrics
+    : [];
+  const dqTs = data?.data_quality_timeseries ?? [];
   const piiCount = summary.pii_incidents ?? 0;
 
   return (
     <div className="space-y-6">
-      {/* Period filter */}
       <div className="flex items-center justify-end">
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-44">
@@ -112,7 +118,6 @@ export function ComplianceTab() {
         </Select>
       </div>
 
-      {/* Summary cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -139,9 +144,7 @@ export function ComplianceTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {summary.fairness_score != null
-                ? `${(summary.fairness_score * 100).toFixed(1)}%`
-                : "—"}
+              {formatPercent(summary.fairness_score ?? null, 1)}
             </div>
           </CardContent>
         </Card>
@@ -155,9 +158,7 @@ export function ComplianceTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {summary.data_quality_avg != null
-                ? `${(summary.data_quality_avg * 100).toFixed(1)}%`
-                : "—"}
+              {formatPercent(summary.data_quality_avg ?? null, 1)}
             </div>
           </CardContent>
         </Card>
@@ -181,30 +182,42 @@ export function ComplianceTab() {
         </Card>
       </div>
 
-      {/* Fairness Metrics table */}
-      {fairnessMetrics.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Fairness Metrics</CardTitle>
-            <CardDescription>
-              Disparate impact analysis across protected attributes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Attribute</TableHead>
-                  <TableHead className="text-right">
-                    Disparate Impact
-                  </TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fairnessMetrics.map((fm) => {
-                  const style =
-                    FAIRNESS_STYLES[fm.status] ?? FAIRNESS_STYLES.pass;
+      <MonitoringTimeseriesChart
+        title="Data quality"
+        description="Trend from GET /v1/monitoring/compliance"
+        data={dqTs}
+        valueFormatter={(n) => formatPercent(n, 1)}
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Fairness metrics</CardTitle>
+          <CardDescription>
+            Disparate impact analysis across protected attributes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Attribute</TableHead>
+                <TableHead className="text-right">
+                  Disparate Impact
+                </TableHead>
+                <TableHead className="text-right">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fairnessMetrics.length === 0 ? (
+                <TableEmpty
+                  colSpan={3}
+                  title="No fairness rows"
+                  description="The API returned no fairness metric rows for this period."
+                />
+              ) : (
+                fairnessMetrics.map((fm) => {
+                  const key = String(fm.status ?? "pass").toLowerCase();
+                  const style = FAIRNESS_STYLES[key] ?? FAIRNESS_STYLES.pass;
                   return (
                     <TableRow key={fm.attribute}>
                       <TableCell className="font-medium capitalize">
@@ -221,17 +234,17 @@ export function ComplianceTab() {
                           className={`capitalize ${style.className}`}
                         >
                           {style.icon}
-                          {fm.status}
+                          {key}
                         </Badge>
                       </TableCell>
                     </TableRow>
                   );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

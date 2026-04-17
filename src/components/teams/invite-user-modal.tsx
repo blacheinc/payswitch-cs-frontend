@@ -16,20 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
 import {
   userManagementService,
   USER_MGMT_KEYS,
 } from "@/lib/user-management-service";
-import { ROLE_LABELS_ENUM, ROUTES } from "@/lib/constant";
+import { ROUTES } from "@/lib/constant";
 import { RolePicker } from "@/components/shared/role-picker";
 
 interface InviteUserModalProps {
@@ -42,13 +35,11 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [roleLabel, setRoleLabel] = useState("viewer");
   const [roleId, setRoleId] = useState("");
 
   const resetForm = () => {
     setName("");
     setEmail("");
-    setRoleLabel("viewer");
     setRoleId("");
   };
 
@@ -66,12 +57,15 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   });
 
   const handleSubmit = () => {
+    if (!roleId) {
+      toast.error("Select a role for this member");
+      return;
+    }
     const callbackUrl = `${window.location.origin}${ROUTES.AUTH.LOGIN}`;
     inviteMutation.mutate({
       email,
       name,
-      roleLabel,
-      roleId: roleId || null,
+      roleId,
       callbackUrl,
     });
   };
@@ -128,30 +122,14 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
 
           <div className="space-y-4">
             <h3 className="text-sm font-medium leading-none text-muted-foreground">
-              Access Level
+              Role
             </h3>
-            <div className="space-y-2">
-              <Label htmlFor="invite-role">Role Label</Label>
-              <Select value={roleLabel} onValueChange={setRoleLabel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ROLE_LABELS_ENUM).map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      <div className="flex flex-col items-start py-1">
-                        <span className="font-medium">{role.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <RolePicker
               value={roleId}
               onValueChange={setRoleId}
-              label="Permissions Role"
-              description="Governs what this user can actually do. Defaults to system role when omitted."
+              allowNone={false}
+              label="Organization role"
+              placeholder="Select a role"
             />
           </div>
         </div>
@@ -161,7 +139,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!name || !email || inviteMutation.isPending}
+            disabled={!name || !email || !roleId || inviteMutation.isPending}
           >
             {inviteMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

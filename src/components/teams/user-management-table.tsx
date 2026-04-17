@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
@@ -35,13 +37,11 @@ import {
 
 import type { OrgUserResponse } from "@/types/organization-type";
 import type { PaginatedResponse } from "@/types/api-type";
+import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
-  credit_officer: "Credit Officer",
-  developer: "Developer",
-  viewer: "Viewer",
-};
+function formatLegacyRoleLabel(label: string): string {
+  return label.replace(/_/g, " ");
+}
 
 interface UserManagementTableProps {
   data: PaginatedResponse<OrgUserResponse> | undefined;
@@ -68,6 +68,19 @@ export function UserManagementTable({
 }: UserManagementTableProps) {
   const users = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
+
+  const { data: rolesData } = useQuery({
+    queryKey: RBAC_KEYS.roles(),
+    queryFn: () => rbacService.listRoles(),
+  });
+
+  const roleNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rolesData?.items ?? []) {
+      m.set(r.id, r.name);
+    }
+    return m;
+  }, [rolesData?.items]);
 
   const getInitials = (name: string) =>
     name
@@ -99,6 +112,20 @@ export function UserManagementTable({
           </Badge>
         );
     }
+  };
+
+  const getRoleDisplay = (user: OrgUserResponse) => {
+    const rbacName =
+      user.roleId && roleNameById.has(user.roleId)
+        ? roleNameById.get(user.roleId)
+        : undefined;
+    return rbacName ?? formatLegacyRoleLabel(user.roleLabel);
+  };
+
+  const isAdminDisplay = (user: OrgUserResponse) => {
+    if (user.roleLabel === "admin") return true;
+    const n = user.roleId ? roleNameById.get(user.roleId) : undefined;
+    return n?.trim().toLowerCase() === "admin";
   };
 
   if (isLoading) {
@@ -155,13 +182,10 @@ export function UserManagementTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    {user.roleLabel === "admin" && (
+                    {isAdminDisplay(user) && (
                       <Shield className="h-3 w-3 text-primary" />
                     )}
-                    <span className="capitalize">
-                      {ROLE_LABELS[user.roleLabel] ||
-                        user.roleLabel.replace("_", " ")}
-                    </span>
+                    <span>{getRoleDisplay(user)}</span>
                   </div>
                 </TableCell>
                 <TableCell>{getStatusBadge(user.status)}</TableCell>
@@ -225,7 +249,6 @@ export function UserManagementTable({
         </TableBody>
       </Table>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-4">
           <p className="text-sm text-muted-foreground">
