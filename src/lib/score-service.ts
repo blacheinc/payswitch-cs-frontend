@@ -358,6 +358,202 @@ function mapBureauLookup(raw: ApiRawBureauLookupResponse): BureauLookupResult {
   };
 }
 
+// ===================== BATCH SCORING TYPES =====================
+
+export type BatchJobStatus =
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type BatchItemStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface BatchItemPayload {
+  fullName?: string;
+  dateOfBirth: string;
+  identification?: string;
+  phoneNumber?: string;
+  accountNumber?: string;
+  enquiryReason?: string;
+}
+
+export interface SubmitBatchPayload {
+  items: BatchItemPayload[];
+}
+
+export interface SubmitBatchResponse {
+  jobId: string;
+  status: BatchJobStatus;
+  total: number;
+  requestedAt: string;
+}
+
+export interface BatchItemCounts {
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+}
+
+export interface BatchJobStatusResponse {
+  jobId: string;
+  status: BatchJobStatus;
+  total: number;
+  progressPct: number;
+  items: BatchItemCounts;
+  requestedAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+}
+
+export interface BatchJobListItem {
+  jobId: string;
+  status: BatchJobStatus;
+  total: number;
+  completed: number;
+  failed: number;
+  requestedAt: string;
+  completedAt?: string | null;
+}
+
+export interface BatchJobsListResponse {
+  items: BatchJobListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface BatchResultItem {
+  index: number;
+  status: BatchItemStatus;
+  scoreRequestId?: string | null;
+  scoreTrackingId?: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  payload: Record<string, unknown>;
+  completedAt?: string | null;
+}
+
+export interface BatchResultsResponse {
+  jobId: string;
+  items: BatchResultItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CancelBatchResponse {
+  jobId: string;
+  status: BatchJobStatus;
+  cancelledItems: number;
+}
+
+export interface BatchJobsListParams {
+  status?: BatchJobStatus | "all";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface BatchResultsParams {
+  status?: BatchItemStatus | "all";
+  page?: number;
+  pageSize?: number;
+}
+
+// ===================== BATCH MAPPERS =====================
+
+interface ApiBatchSubmitResponse {
+  job_id: string;
+  status: string;
+  total: number;
+  requested_at: string;
+}
+
+interface ApiBatchStatus {
+  job_id: string;
+  status: string;
+  total: number;
+  progress_pct: number;
+  items: BatchItemCounts;
+  requested_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+}
+
+interface ApiBatchJobListItem {
+  job_id: string;
+  status: string;
+  total: number;
+  completed: number;
+  failed: number;
+  requested_at: string;
+  completed_at?: string | null;
+}
+
+interface ApiBatchJobsList {
+  items: ApiBatchJobListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+interface ApiBatchResultItem {
+  index: number;
+  status: string;
+  score_request_id?: string | null;
+  score_tracking_id?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  payload: Record<string, unknown>;
+  completed_at?: string | null;
+}
+
+interface ApiBatchResults {
+  job_id: string;
+  items: ApiBatchResultItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+interface ApiBatchCancel {
+  job_id: string;
+  status: string;
+  cancelled_items: number;
+}
+
+function mapBatchJobListItem(raw: ApiBatchJobListItem): BatchJobListItem {
+  return {
+    jobId: raw.job_id,
+    status: raw.status as BatchJobStatus,
+    total: raw.total,
+    completed: raw.completed,
+    failed: raw.failed,
+    requestedAt: raw.requested_at,
+    completedAt: raw.completed_at ?? null,
+  };
+}
+
+function mapBatchResultItem(raw: ApiBatchResultItem): BatchResultItem {
+  return {
+    index: raw.index,
+    status: raw.status as BatchItemStatus,
+    scoreRequestId: raw.score_request_id ?? null,
+    scoreTrackingId: raw.score_tracking_id ?? null,
+    errorCode: raw.error_code ?? null,
+    errorMessage: raw.error_message ?? null,
+    payload: raw.payload ?? {},
+    completedAt: raw.completed_at ?? null,
+  };
+}
+
 // ===================== QUERY KEYS =====================
 
 export const SCORE_KEYS = {
@@ -368,6 +564,17 @@ export const SCORE_KEYS = {
   detail: (id: string) => [...SCORE_KEYS.details(), id] as const,
   scoringResult: (id: string) =>
     [...SCORE_KEYS.all, "scoring-result", id] as const,
+};
+
+export const BATCH_KEYS = {
+  all: ["batch-scoring"] as const,
+  lists: () => [...BATCH_KEYS.all, "list"] as const,
+  list: (params: BatchJobsListParams) =>
+    [...BATCH_KEYS.lists(), params] as const,
+  details: () => [...BATCH_KEYS.all, "detail"] as const,
+  detail: (jobId: string) => [...BATCH_KEYS.details(), jobId] as const,
+  results: (jobId: string, params: BatchResultsParams) =>
+    [...BATCH_KEYS.all, "results", jobId, params] as const,
 };
 
 export const BUREAU_KEYS = {
@@ -504,6 +711,119 @@ export const scoreService = {
       },
     );
     return response.data;
+  },
+
+  // ===================== BATCH SCORING =====================
+
+  /** POST /v1/score/batch — submit a batch of applicants */
+  async submitBatch(
+    payload: SubmitBatchPayload,
+  ): Promise<SubmitBatchResponse> {
+    const response = await apiClient.post<ApiBatchSubmitResponse>(
+      API_ENDPOINTS.BATCH_SCORING.BASE,
+      {
+        items: payload.items.map((item) => ({
+          full_name: item.fullName || undefined,
+          date_of_birth: item.dateOfBirth,
+          identification: item.identification || undefined,
+          phone_number: item.phoneNumber || undefined,
+          account_number: item.accountNumber || undefined,
+          enquiry_reason: item.enquiryReason || undefined,
+        })),
+      },
+    );
+    const data = response.data;
+    return {
+      jobId: data.job_id,
+      status: data.status as BatchJobStatus,
+      total: data.total,
+      requestedAt: data.requested_at,
+    };
+  },
+
+  /** GET /v1/score/batch — list org's batch jobs */
+  async listBatchJobs(
+    params?: BatchJobsListParams,
+  ): Promise<BatchJobsListResponse> {
+    const response = await apiClient.get<ApiBatchJobsList>(
+      API_ENDPOINTS.BATCH_SCORING.BASE,
+      {
+        params: {
+          status:
+            params?.status && params.status !== "all"
+              ? params.status
+              : undefined,
+          page: params?.page,
+          page_size: params?.pageSize,
+        },
+      },
+    );
+    const data = response.data;
+    return {
+      items: data?.items?.map(mapBatchJobListItem) ?? [],
+      total: data?.total ?? 0,
+      page: data?.page ?? 1,
+      pageSize: data?.page_size ?? 20,
+    };
+  },
+
+  /** GET /v1/score/batch/{job_id} — job progress + counts */
+  async getBatchJobStatus(jobId: string): Promise<BatchJobStatusResponse> {
+    const response = await apiClient.get<ApiBatchStatus>(
+      API_ENDPOINTS.BATCH_SCORING.BY_ID(jobId),
+    );
+    const data = response.data;
+    return {
+      jobId: data.job_id,
+      status: data.status as BatchJobStatus,
+      total: data.total,
+      progressPct: data.progress_pct,
+      items: data.items,
+      requestedAt: data.requested_at,
+      startedAt: data.started_at ?? null,
+      completedAt: data.completed_at ?? null,
+    };
+  },
+
+  /** GET /v1/score/batch/{job_id}/results — per-item results */
+  async getBatchResults(
+    jobId: string,
+    params?: BatchResultsParams,
+  ): Promise<BatchResultsResponse> {
+    const response = await apiClient.get<ApiBatchResults>(
+      API_ENDPOINTS.BATCH_SCORING.RESULTS(jobId),
+      {
+        params: {
+          status:
+            params?.status && params.status !== "all"
+              ? params.status
+              : undefined,
+          page: params?.page,
+          page_size: params?.pageSize,
+        },
+      },
+    );
+    const data = response.data;
+    return {
+      jobId: data.job_id,
+      items: data?.items?.map(mapBatchResultItem) ?? [],
+      total: data?.total ?? 0,
+      page: data?.page ?? 1,
+      pageSize: data?.page_size ?? 50,
+    };
+  },
+
+  /** POST /v1/score/batch/{job_id}/cancel — cancel queued/processing job */
+  async cancelBatchJob(jobId: string): Promise<CancelBatchResponse> {
+    const response = await apiClient.post<ApiBatchCancel>(
+      API_ENDPOINTS.BATCH_SCORING.CANCEL(jobId),
+    );
+    const data = response.data;
+    return {
+      jobId: data.job_id,
+      status: data.status as BatchJobStatus,
+      cancelledItems: data.cancelled_items,
+    };
   },
 
   /** POST /v1/score-requests/{id}/performance */

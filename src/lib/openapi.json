@@ -2196,7 +2196,7 @@
       "post": {
         "tags": ["Batch Scoring"],
         "summary": "Submit Batch Job",
-        "description": "Submit a batch scoring job.\n\nPersists a BulkScoringJob record and publishes the job to the\nbatch-score-request Service Bus topic. The orchestrator picks it up\nasynchronously and writes progress to blob storage.",
+        "description": "Submit a batch scoring job.\n\nAccepts up to 100 applicant payloads.  Each applicant needs the same\npersonal details as a bureau lookup (full_name/identification + date_of_birth).\nReturns immediately with a job_id — poll GET /v1/score/batch/{job_id} for progress.",
         "operationId": "submit_batch_job_v1_score_batch_post",
         "security": [{ "HTTPBearer": [] }],
         "requestBody": {
@@ -2225,7 +2225,7 @@
       "get": {
         "tags": ["Batch Scoring"],
         "summary": "List Batch Jobs",
-        "description": "List all batch jobs for the authenticated organization.",
+        "description": "List all batch jobs for the authenticated organisation.",
         "operationId": "list_batch_jobs_v1_score_batch_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -2235,10 +2235,10 @@
             "required": false,
             "schema": {
               "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "description": "Filter by status",
+              "description": "Filter by job status",
               "title": "Status"
             },
-            "description": "Filter by status"
+            "description": "Filter by job status"
           },
           {
             "name": "page",
@@ -2284,7 +2284,7 @@
       "get": {
         "tags": ["Batch Scoring"],
         "summary": "Get Batch Job Status",
-        "description": "Return status and live progress for a batch job.\n\nWhile the job is in_progress, the orchestrator keeps\nmodel-artifacts/batch/{job_id}/status.json updated.\nThis endpoint merges that blob data with our DB record.",
+        "description": "Return status and per-item progress counts for a batch job.",
         "operationId": "get_batch_job_status_v1_score_batch__job_id__get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -2320,7 +2320,7 @@
       "get": {
         "tags": ["Batch Scoring"],
         "summary": "Get Batch Results",
-        "description": "Return paginated scoring results for a completed batch job.\n\nResults are only available once ingestion_status == \"complete\".\nWhile ingestion is running, the response will indicate the current\ningested_count so the frontend can show a progress state.",
+        "description": "Return paginated per-item results for a batch job.\n\nItems are returned as soon as they are processed — no need to wait for the\nentire job to complete.  Use the ``status`` filter to show only failed items\nor only successful ones.\n\nEach completed item includes a ``score_request_id`` and ``score_tracking_id``\nthe frontend can use to deep-link into the individual scoring result.",
         "operationId": "get_batch_results_v1_score_batch__job_id__results_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -2336,59 +2336,15 @@
             "description": "Batch job ID"
           },
           {
-            "name": "decision",
+            "name": "status",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "description": "Filter by decision outcome",
-              "title": "Decision"
+              "description": "Filter items by status: completed | failed | pending | cancelled",
+              "title": "Status"
             },
-            "description": "Filter by decision outcome"
-          },
-          {
-            "name": "risk_tier",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "description": "Filter by risk tier",
-              "title": "Risk Tier"
-            },
-            "description": "Filter by risk tier"
-          },
-          {
-            "name": "score_grade",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [{ "type": "string" }, { "type": "null" }],
-              "description": "Filter by score grade",
-              "title": "Score Grade"
-            },
-            "description": "Filter by score grade"
-          },
-          {
-            "name": "sort_by",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^(credit_score|probability_of_default|scoring_timestamp)$",
-              "default": "scoring_timestamp",
-              "title": "Sort By"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^(asc|desc)$",
-              "default": "desc",
-              "title": "Order"
-            }
+            "description": "Filter items by status: completed | failed | pending | cancelled"
           },
           {
             "name": "page",
@@ -2407,7 +2363,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 200,
+              "maximum": 100,
               "minimum": 1,
               "default": 50,
               "title": "Page Size"
@@ -2434,7 +2390,7 @@
       "post": {
         "tags": ["Batch Scoring"],
         "summary": "Cancel Batch Job",
-        "description": "Cancel a queued batch job.\n\nOnly possible while status is 'queued' — once the orchestrator has\nstarted processing, cancellation is no longer available.",
+        "description": "Cancel a batch job.\n\nAll PENDING items are marked CANCELLED immediately.  Items currently being\nprocessed (status=processing) will finish naturally — the worker checks the\nstatus before starting and skips non-PENDING items.\n\nOnly jobs in 'queued' or 'processing' state can be cancelled.",
         "operationId": "cancel_batch_job_v1_score_batch__job_id__cancel_post",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -2631,6 +2587,127 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api-logs": {
+      "get": {
+        "tags": ["Admin – Platform Logs"],
+        "summary": "List Platform Api Logs",
+        "description": "Paginated list of platform-level API request logs.\n\nThese are requests made by admin users against /admin/* endpoints.\nEach log entry includes an ``actor`` object with the admin user's name and email.",
+        "operationId": "list_platform_api_logs_admin_api_logs_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Filter by HTTP method",
+              "title": "Method"
+            },
+            "description": "Filter by HTTP method"
+          },
+          {
+            "name": "status_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "description": "Exact status code",
+              "title": "Status Code"
+            },
+            "description": "Exact status code"
+          },
+          {
+            "name": "status_class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "string", "pattern": "^[1-5]xx$" },
+                { "type": "null" }
+              ],
+              "description": "Status class filter, e.g. 4xx or 5xx",
+              "title": "Status Class"
+            },
+            "description": "Status class filter, e.g. 4xx or 5xx"
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Partial path match",
+              "title": "Path"
+            },
+            "description": "Partial path match"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "ISO date, e.g. 2026-01-01",
+              "title": "From Date"
+            },
+            "description": "ISO date, e.g. 2026-01-01"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "ISO date, e.g. 2026-02-01",
+              "title": "To Date"
+            },
+            "description": "ISO date, e.g. 2026-02-01"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedResponse" }
               }
             }
           },
@@ -3492,50 +3569,70 @@
         "required": ["upload_id", "status"],
         "title": "ApproveUploadResponse"
       },
-      "BatchApplicant": {
+      "BatchItemPayload": {
         "properties": {
-          "request_id": {
+          "full_name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200, "minLength": 2 },
+              { "type": "null" }
+            ],
+            "title": "Full Name",
+            "description": "Applicant full name. Optional if identification is provided."
+          },
+          "date_of_birth": {
             "type": "string",
-            "title": "Request Id",
-            "description": "Caller-supplied applicant identifier"
+            "format": "date",
+            "title": "Date Of Birth",
+            "description": "Applicant date of birth"
           },
-          "features": {
-            "additionalProperties": { "type": "number" },
-            "type": "object",
-            "title": "Features",
-            "description": "Feature vector — numeric values, e.g. {'utilisation_ratio': 0.78}"
+          "identification": {
+            "anyOf": [
+              { "type": "string", "maxLength": 50 },
+              { "type": "null" }
+            ],
+            "title": "Identification",
+            "description": "National ID / Ghana Card number"
           },
-          "metadata": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Metadata",
-            "description": "Scoring metadata — credit_score, score_grade, decision_label, etc."
+          "phone_number": {
+            "anyOf": [
+              { "type": "string", "pattern": "^\\+?[0-9]{10,15}$" },
+              { "type": "null" }
+            ],
+            "title": "Phone Number",
+            "description": "Mobile number for Product 49 lookup"
+          },
+          "account_number": {
+            "anyOf": [
+              { "type": "string", "maxLength": 50 },
+              { "type": "null" }
+            ],
+            "title": "Account Number"
+          },
+          "enquiry_reason": {
+            "type": "string",
+            "title": "Enquiry Reason",
+            "description": "XDS enquiry reason — defaults to standard credit application",
+            "default": "Application for credit by a borrower"
           }
         },
         "type": "object",
-        "required": ["request_id"],
-        "title": "BatchApplicant"
+        "required": ["date_of_birth"],
+        "title": "BatchItemPayload",
+        "description": "Personal details for one applicant — mirrors BureauLookupRequest."
       },
       "BatchScoreRequest": {
         "properties": {
-          "applicants": {
-            "items": { "$ref": "#/components/schemas/BatchApplicant" },
+          "items": {
+            "items": { "$ref": "#/components/schemas/BatchItemPayload" },
             "type": "array",
-            "maxItems": 1000,
+            "maxItems": 100,
             "minItems": 1,
-            "title": "Applicants",
-            "description": "List of applicants to score"
-          },
-          "models_to_run": {
-            "items": { "type": "string" },
-            "type": "array",
-            "title": "Models To Run",
-            "description": "Which models to run: [\"all\"] or specific model types",
-            "default": ["all"]
+            "title": "Items",
+            "description": "Array of applicants to score. Maximum 100 per batch."
           }
         },
         "type": "object",
-        "required": ["applicants"],
+        "required": ["items"],
         "title": "BatchScoreRequest"
       },
       "Body_upload_training_data_admin_training_data_upload_post": {
@@ -4457,6 +4554,11 @@
       },
       "HardStopDeclineResponse": {
         "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Application declined — eligibility criteria not met."
+          },
           "request_id": { "type": "string", "title": "Request Id" },
           "status": {
             "type": "string",
@@ -4547,9 +4649,9 @@
           "email": { "type": "string", "format": "email", "title": "Email" },
           "name": { "type": "string", "maxLength": 200, "title": "Name" },
           "role_label": {
-            "$ref": "#/components/schemas/RoleLabel",
-            "description": "User role label: admin, credit_officer, developer, viewer",
-            "default": "viewer"
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Role Label",
+            "description": "Optional display label (e.g. 'credit_officer'). Defaults to 'viewer'."
           },
           "role_id": {
             "anyOf": [
@@ -5363,12 +5465,6 @@
         "title": "RoleActionResponse",
         "description": "Returned by create and update role endpoints — message + full role data."
       },
-      "RoleLabel": {
-        "type": "string",
-        "enum": ["admin", "credit_officer", "developer", "viewer"],
-        "title": "RoleLabel",
-        "description": "Valid org user roles."
-      },
       "RoleListResponse": {
         "properties": {
           "items": {
@@ -5577,6 +5673,11 @@
       },
       "ScoreRequestResponse": {
         "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Score request submitted successfully. Your request is being processed."
+          },
           "request_id": { "type": "string", "title": "Request Id" },
           "reference_id": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
@@ -6181,11 +6282,9 @@
             "title": "Name"
           },
           "role_label": {
-            "anyOf": [
-              { "$ref": "#/components/schemas/RoleLabel" },
-              { "type": "null" }
-            ],
-            "description": "User role label: admin, credit_officer, developer, viewer"
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Role Label",
+            "description": "Optional display label update. Unknown values are coerced to 'viewer'."
           },
           "role_id": {
             "anyOf": [

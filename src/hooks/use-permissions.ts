@@ -28,6 +28,7 @@ export function usePermissions() {
 
   const can = useMemo(() => {
     return (code: PermissionCode) => {
+      // return true;
       if (isMockUser) return true;
       if (permissionSet.has("*")) return true;
       return permissionSet.has(code);

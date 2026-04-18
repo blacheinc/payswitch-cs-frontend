@@ -60,10 +60,11 @@ export const API_ENDPOINTS = {
   BUREAU: {
     LOOKUP: "/v1/bureau-lookup",
   },
-  // Bulk requests not explicitly in OpenAPI, allowing fallback or future implementation
-  BULK_REQUESTS: {
-    BASE: "/v1/bulk-requests",
-    BY_ID: (id: string) => `/v1/bulk-requests/${id}`,
+  BATCH_SCORING: {
+    BASE: "/v1/score/batch",
+    BY_ID: (jobId: string) => `/v1/score/batch/${jobId}`,
+    RESULTS: (jobId: string) => `/v1/score/batch/${jobId}/results`,
+    CANCEL: (jobId: string) => `/v1/score/batch/${jobId}/cancel`,
   },
   USAGE: "/v1/usage",
   HEALTH: "/health", // Specific endpoint from spec
@@ -207,6 +208,12 @@ export const PERMISSION_CODES = {
     OVERRIDE: "score_requests.override",
     REPORT_OUTCOME: "score_requests.report_outcome",
     REPORT_PERFORMANCE: "score_requests.report_performance",
+  },
+  BATCH_SCORING: {
+    CREATE: "batch_scoring.create",
+    LIST: "batch_scoring.list",
+    READ: "batch_scoring.read",
+    CANCEL: "batch_scoring.cancel",
   },
   USERS: {
     INVITE: "users.invite",
