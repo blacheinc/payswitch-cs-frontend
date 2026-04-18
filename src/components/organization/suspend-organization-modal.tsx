@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -16,8 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
+import {
+  suspendOrganizationSchema,
+  type SuspendOrganizationValues,
+} from "@/lib/schemas/organization-management";
 
 interface SuspendOrganizationModalProps {
   open: boolean;
@@ -31,7 +37,17 @@ export function SuspendOrganizationModal({
   organizationId,
 }: SuspendOrganizationModalProps) {
   const queryClient = useQueryClient();
-  const [reason, setReason] = useState("");
+  const form = useForm<SuspendOrganizationValues>({
+    resolver: zodResolver(suspendOrganizationSchema),
+    defaultValues: { reason: "" },
+    mode: "onTouched",
+  });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({ reason: "" });
+    }
+  }, [open, form]);
 
   const suspendMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
@@ -39,7 +55,7 @@ export function SuspendOrganizationModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ORG_KEYS.all });
       onOpenChange(false);
-      setReason("");
+      form.reset({ reason: "" });
       toast.success("Organization suspended");
     },
     onError: (error) => {
@@ -47,16 +63,16 @@ export function SuspendOrganizationModal({
     },
   });
 
-  const handleConfirm = () => {
-    if (!organizationId || reason.trim().length < 5) return;
-    suspendMutation.mutate({ id: organizationId, reason });
+  const handleConfirm = (values: SuspendOrganizationValues) => {
+    if (!organizationId) return;
+    suspendMutation.mutate({ id: organizationId, reason: values.reason.trim() });
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        if (!v) setReason("");
+        if (!v) form.reset({ reason: "" });
         onOpenChange(v);
       }}
     >
@@ -67,33 +83,38 @@ export function SuspendOrganizationModal({
             Please provide a reason for suspending this organization.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-2">
-          <Label htmlFor="suspend-reason">
-            Reason <span className="text-red-500">*</span>
-          </Label>
-          <Textarea
-            id="suspend-reason"
-            placeholder="Enter suspension reason (min 5 characters)..."
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={reason.trim().length < 5 || suspendMutation.isPending}
-          >
-            {suspendMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <form
+          onSubmit={form.handleSubmit(handleConfirm)}
+          className="space-y-4 py-4"
+          noValidate
+        >
+          <Field>
+            <FieldLabel htmlFor="suspend-reason" required>
+              Reason
+            </FieldLabel>
+            <Textarea
+              id="suspend-reason"
+              placeholder="Enter suspension reason (min 5 characters)..."
+              rows={3}
+              aria-invalid={!!form.formState.errors.reason}
+              {...form.register("reason")}
+            />
+            {form.formState.errors.reason && (
+              <FieldError errors={[form.formState.errors.reason]} />
             )}
-            Confirm Suspension
-          </Button>
-        </DialogFooter>
+          </Field>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" type="submit" disabled={suspendMutation.isPending}>
+              {suspendMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Confirm Suspension
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

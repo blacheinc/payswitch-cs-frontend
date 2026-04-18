@@ -81,6 +81,8 @@ export interface InviteUserRequest {
   name: string;
   /** RBAC role UUID from GET /v1/roles (org-scoped). */
   roleId: string;
+  /** Selected RBAC role display name sent as legacy label for compatibility. */
+  roleLabel: string;
   callbackUrl?: string | null;
 }
 

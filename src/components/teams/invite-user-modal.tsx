@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 
 import {
@@ -24,6 +32,17 @@ import {
 } from "@/lib/user-management-service";
 import { ROUTES } from "@/lib/constant";
 import { RolePicker } from "@/components/shared/role-picker";
+import {
+  inviteTeamMemberSchema,
+  type InviteTeamMemberValues,
+} from "@/lib/schemas/team-management";
+import type { RoleResponse } from "@/types/rbac-types";
+
+const INVITE_DEFAULTS: InviteTeamMemberValues = {
+  name: "",
+  email: "",
+  roleId: "",
+};
 
 interface InviteUserModalProps {
   open: boolean;
@@ -32,43 +51,53 @@ interface InviteUserModalProps {
 
 export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const queryClient = useQueryClient();
+  const baseId = useId();
+  const [selectedRole, setSelectedRole] = useState<RoleResponse | null>(null);
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [roleId, setRoleId] = useState("");
+  const form = useForm<InviteTeamMemberValues>({
+    resolver: zodResolver(inviteTeamMemberSchema),
+    defaultValues: INVITE_DEFAULTS,
+    mode: "onTouched",
+  });
 
-  const resetForm = () => {
-    setName("");
-    setEmail("");
-    setRoleId("");
-  };
+  useEffect(() => {
+    if (open) {
+      form.reset(INVITE_DEFAULTS);
+      setSelectedRole(null);
+    }
+  }, [open, form]);
 
   const inviteMutation = useMutation({
     mutationFn: userManagementService.invite,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: USER_MGMT_KEYS.all });
       onOpenChange(false);
-      resetForm();
-      toast.success(`Invitation sent to ${email}`);
+      form.reset(INVITE_DEFAULTS);
+      toast.success(`Invitation sent to ${variables.email}`);
     },
     onError: (error) => {
       toast.error(error?.message || "Failed to send invitation");
     },
   });
 
-  const handleSubmit = () => {
-    if (!roleId) {
-      toast.error("Select a role for this member");
+  const onSubmit = (values: InviteTeamMemberValues) => {
+    if (!selectedRole) {
+      toast.error("Please select a valid role");
       return;
     }
+
     const callbackUrl = `${window.location.origin}${ROUTES.AUTH.LOGIN}`;
     inviteMutation.mutate({
-      email,
-      name,
-      roleId,
+      email: values.email,
+      name: values.name,
+      roleId: values.roleId,
+      roleLabel: selectedRole.name,
       callbackUrl,
     });
   };
+
+  const nameId = `${baseId}-name`;
+  const emailId = `${baseId}-email`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,73 +109,115 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
             email to set up their account.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium leading-none text-muted-foreground">
-              Member Details
-            </h3>
-            <div className="space-y-2">
-              <Label htmlFor="invite-name">
-                Full Name <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="invite-name"
-                  placeholder="John Doe"
-                  className="pl-8"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6 py-4"
+          noValidate
+        >
+          <FieldGroup className="gap-6">
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium leading-none text-muted-foreground">
+                Member details
+              </h3>
+              <Controller
+                name="name"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor={nameId} required>
+                      Full name
+                    </FieldLabel>
+                    <div className="relative">
+                      <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        id={nameId}
+                        placeholder="John Doe"
+                        className="pl-8"
+                        autoComplete="name"
+                        aria-invalid={fieldState.invalid}
+                        {...field}
+                      />
+                    </div>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor={emailId} required>
+                      Email
+                    </FieldLabel>
+                    <div className="relative">
+                      <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        id={emailId}
+                        type="email"
+                        placeholder="colleague@company.com"
+                        className="pl-8"
+                        autoComplete="email"
+                        aria-invalid={fieldState.invalid}
+                        {...field}
+                      />
+                    </div>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="invite-email">
-                Email Address <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="invite-email"
-                  type="email"
-                  placeholder="colleague@company.com"
-                  className="pl-8"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium leading-none text-muted-foreground">
+                Role
+              </h3>
+              <Controller
+                name="roleId"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel required>Organization role (RBAC)</FieldLabel>
+                    <RolePicker
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      onRoleChange={setSelectedRole}
+                      allowNone={false}
+                      label=""
+                      placeholder="Select a role"
+                    />
+
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
             </div>
-          </div>
+          </FieldGroup>
 
-          <Separator />
-
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium leading-none text-muted-foreground">
-              Role
-            </h3>
-            <RolePicker
-              value={roleId}
-              onValueChange={setRoleId}
-              allowNone={false}
-              label="Organization role"
-              placeholder="Select a role"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!name || !email || !roleId || inviteMutation.isPending}
-          >
-            {inviteMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Send Invitation
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={inviteMutation.isPending}>
+              {inviteMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Send invitation
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

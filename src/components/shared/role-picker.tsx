@@ -14,11 +14,15 @@ import {
 } from "@/components/ui/select";
 
 import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
+import type { RoleResponse } from "@/types/rbac-types";
 
 interface RolePickerProps {
   value: string;
   onValueChange: (value: string) => void;
+  onRoleChange?: (role: RoleResponse | null) => void;
+  /** Omit or pass empty string to hide the built-in label (use with shadcn FormLabel). */
   label?: string;
+  description?: string;
   /** Placeholder shown when no role is selected */
   placeholder?: string;
   /**
@@ -37,8 +41,9 @@ const NONE_VALUE = "__none__";
 export function RolePicker({
   value,
   onValueChange,
+  onRoleChange,
   label = "RBAC Role",
-
+  description,
   placeholder = "System default",
   allowNone = true,
 }: RolePickerProps) {
@@ -56,7 +61,9 @@ export function RolePicker({
   }, [isLoading, showNone, roles, value, onValueChange]);
 
   const handleChange = (v: string) => {
-    onValueChange(v === NONE_VALUE ? "" : v);
+    const normalized = v === NONE_VALUE ? "" : v;
+    onValueChange(normalized);
+    onRoleChange?.(roles.find((role) => role.id === normalized) ?? null);
   };
 
   const selectValue = showNone
@@ -65,8 +72,10 @@ export function RolePicker({
 
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
-
+      {label ? <Label>{label}</Label> : null}
+      {description ? (
+        <p className="text-xs text-muted-foreground">{description}</p>
+      ) : null}
       {isLoading ? (
         <div className="flex items-center gap-2 h-10 px-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />

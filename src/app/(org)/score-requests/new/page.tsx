@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,16 +22,20 @@ import {
   Building2,
   ChevronDown,
   ChevronUp,
-  CalendarIcon,
   RefreshCw,
-  Pencil,
 } from "lucide-react";
 import { format, parse, isValid, parseISO } from "date-fns";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Card,
   CardContent,
@@ -48,12 +52,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/constant";
 import {
@@ -63,7 +61,7 @@ import {
   type BureauLookupPayload,
   type CreateScoreRequestPayload,
 } from "@/lib/score-service";
-import type { BureauFeatures } from "@/types/models";
+
 
 // =============================================================================
 // Date helpers — bureau API may return dates in various formats
@@ -147,14 +145,6 @@ function getFeatureLabel(key: string): string {
   );
 }
 
-/** Account-status flags are booleans in the DE contract; all other features are string passthrough. */
-const BOOLEAN_FEATURE_KEYS = new Set<string>([
-  "has_written_off",
-  "has_charged_off",
-  "has_legal_handover",
-  "has_adverse_default",
-]);
-
 function formatFeatureValue(
   value: string | boolean | null | undefined,
 ): string {
@@ -223,10 +213,6 @@ export default function NewScoreRequestPage() {
   const [bureauResult, setBureauResult] = useState<BureauLookupResult | null>(
     null,
   );
-  // Editable features — initialized from bureau response, user can modify
-  const [editableFeatures, setEditableFeatures] =
-    useState<Partial<BureauFeatures>>({});
-
   // ── Bureau details expand/collapse in review ──
   const [showBureauDetails, setShowBureauDetails] = useState(false);
 
@@ -242,6 +228,7 @@ export default function NewScoreRequestPage() {
       accountNumber: "",
       referenceId: generateReferenceId(),
     },
+    mode: "onTouched",
   });
 
   // ── Step 2: Loan form ──
@@ -253,10 +240,8 @@ export default function NewScoreRequestPage() {
       tenureMonths: "",
       purpose: "",
     },
+    mode: "onTouched",
   });
-
-  const applicantData = applicantForm.watch();
-  const loanData = loanForm.watch();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Mutations
@@ -268,10 +253,6 @@ export default function NewScoreRequestPage() {
       scoreService.bureauLookup(payload),
     onSuccess: (result) => {
       setBureauResult(result);
-
-      // Initialize editable features from the bureau response
-      const features = result.features || {};
-      setEditableFeatures({ ...features });
 
       if (result.bureauHitStatus === "NO_RECORD") {
         toast.warning(
@@ -369,26 +350,10 @@ export default function NewScoreRequestPage() {
         productSource: bureauResult.metadata?.productSource || null,
         creditSummary: null,
         creditAccounts: null,
-        features: editableFeatures,
+        features: bureauResult.features || null,
       },
       channel: "web_portal",
     });
-  };
-
-  const updateStringFeature = (key: string, value: string) => {
-    setEditableFeatures((prev) => ({
-      ...prev,
-      [key]: value === "" ? null : value,
-    }));
-  };
-
-  const updateBooleanFeature = (key: string, value: string) => {
-    const next: boolean | null =
-      value === "unset" ? null : value === "true";
-    setEditableFeatures((prev) => ({
-      ...prev,
-      [key]: next,
-    }));
   };
 
   const prevStep = () => {
@@ -404,210 +369,231 @@ export default function NewScoreRequestPage() {
       // ─── Step 1: Applicant Info ────────────────────────────────────────
       case 1:
         return (
-          <div className="space-y-4">
+          <FieldGroup className="gap-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name *</Label>
-                <Input
-                  id="fullName"
-                  placeholder="Kwame Asante"
-                  {...applicantForm.register("fullName")}
-                />
-                {applicantForm.formState.errors.fullName && (
-                  <p className="text-sm text-destructive">
-                    {applicantForm.formState.errors.fullName.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Date of Birth *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="dateOfBirth"
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal h-9",
-                        !applicantData.dateOfBirth && "text-muted-foreground",
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {applicantData.dateOfBirth
-                        ? safeFormatDate(applicantData.dateOfBirth)
-                        : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={safeParseDateStr(
-                        applicantData.dateOfBirth || "",
-                      )}
-                      onSelect={(date) =>
-                        applicantForm.setValue(
-                          "dateOfBirth",
-                          date ? format(date, "yyyy-MM-dd") : "",
-                        )
-                      }
-                      captionLayout="dropdown"
-                      fromYear={1940}
-                      toYear={new Date().getFullYear()}
-                      disabled={(date) => date > new Date()}
+              <Controller
+                name="fullName"
+                control={applicantForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="fullName" required>
+                      Full Name
+                    </FieldLabel>
+                    <Input
+                      id="fullName"
+                      placeholder="Kwame Asante"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="name"
+                      {...field}
                     />
-                  </PopoverContent>
-                </Popover>
-                {applicantForm.formState.errors.dateOfBirth && (
-                  <p className="text-sm text-destructive">
-                    {applicantForm.formState.errors.dateOfBirth.message}
-                  </p>
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
                 )}
-              </div>
+              />
+              <Controller
+                name="dateOfBirth"
+                control={applicantForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="dateOfBirth" required>
+                      Date of Birth
+                    </FieldLabel>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      max={new Date().toISOString().split("T")[0]}
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="nationalIdNumber">
-                  National ID / Ghana Card
-                </Label>
-                <Input
-                  id="nationalIdNumber"
-                  placeholder="GHA-123456789-0"
-                  {...applicantForm.register("nationalIdNumber")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  placeholder="+233 20 123 4567"
-                  {...applicantForm.register("phone")}
-                />
-              </div>
+              <Controller
+                name="nationalIdNumber"
+                control={applicantForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="nationalIdNumber">
+                      National ID / Ghana Card
+                    </FieldLabel>
+                    <Input
+                      id="nationalIdNumber"
+                      placeholder="GHA-123456789-0"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="phone"
+                control={applicantForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="phone">Phone Number</FieldLabel>
+                    <Input
+                      id="phone"
+                      placeholder="+233 20 123 4567"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="tel"
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input
-                  id="accountNumber"
-                  placeholder="Bank account number (optional)"
-                  {...applicantForm.register("accountNumber")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="referenceId">Reference ID *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="referenceId"
-                    placeholder="REF-20260408-A1B2C"
-                    {...applicantForm.register("referenceId")}
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() =>
-                      applicantForm.setValue(
-                        "referenceId",
-                        generateReferenceId(),
-                      )
-                    }
-                    title="Regenerate reference ID"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Auto-generated. Edit or regenerate as needed.
-                </p>
-                {applicantForm.formState.errors.referenceId && (
-                  <p className="text-sm text-destructive">
-                    {applicantForm.formState.errors.referenceId.message}
-                  </p>
+              <Controller
+                name="accountNumber"
+                control={applicantForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="accountNumber">Account Number</FieldLabel>
+                    <Input
+                      id="accountNumber"
+                      placeholder="Bank account number (optional)"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
                 )}
-              </div>
+              />
+              <Controller
+                name="referenceId"
+                control={applicantForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="referenceId" required>
+                      Reference ID
+                    </FieldLabel>
+                    <div className="flex gap-2">
+                      <Input
+                        id="referenceId"
+                        placeholder="REF-20260408-A1B2C"
+                        className="font-mono text-sm"
+                        aria-invalid={fieldState.invalid}
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => field.onChange(generateReferenceId())}
+                        title="Regenerate reference ID"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <FieldDescription>
+                      Auto-generated. Edit or regenerate as needed.
+                    </FieldDescription>
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
             </div>
-          </div>
+          </FieldGroup>
         );
 
       // ─── Step 2: Loan Details ──────────────────────────────────────────
       case 2:
         return (
-          <div className="space-y-4">
+          <FieldGroup className="gap-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="amount">Loan Amount (GHS) *</Label>
+              <Field>
+                <FieldLabel htmlFor="amount" required>
+                  Loan Amount (GHS)
+                </FieldLabel>
                 <Input
                   id="amount"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   placeholder="50000"
+                  aria-invalid={!!loanForm.formState.errors.amount}
                   {...loanForm.register("amount")}
                 />
                 {loanForm.formState.errors.amount && (
-                  <p className="text-sm text-destructive">
-                    {loanForm.formState.errors.amount.message}
-                  </p>
+                  <FieldError errors={[loanForm.formState.errors.amount]} />
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tenureMonths">Tenure (months) *</Label>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="tenureMonths" required>
+                  Tenure (months)
+                </FieldLabel>
                 <Input
                   id="tenureMonths"
-                  type="number"
-                  min={1}
-                  max={360}
+                  type="text"
+                  inputMode="numeric"
                   placeholder="24"
+                  aria-invalid={!!loanForm.formState.errors.tenureMonths}
                   {...loanForm.register("tenureMonths")}
                 />
                 {loanForm.formState.errors.tenureMonths && (
-                  <p className="text-sm text-destructive">
-                    {loanForm.formState.errors.tenureMonths.message}
-                  </p>
+                  <FieldError errors={[loanForm.formState.errors.tenureMonths]} />
                 )}
-              </div>
+              </Field>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="purpose">Loan Purpose</Label>
-                <Select
-                  value={loanData.purpose || ""}
-                  onValueChange={(value) => loanForm.setValue("purpose", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select purpose (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="personal">Personal</SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
-                    <SelectItem value="education">Education</SelectItem>
-                    <SelectItem value="housing">Housing</SelectItem>
-                    <SelectItem value="vehicle">Vehicle</SelectItem>
-                    <SelectItem value="medical">Medical</SelectItem>
-                    <SelectItem value="agriculture">Agriculture</SelectItem>
-                    <SelectItem value="debt_consolidation">
-                      Debt Consolidation
-                    </SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Controller
+                name="purpose"
+                control={loanForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="purpose">Loan Purpose</FieldLabel>
+                    <Select
+                      value={field.value || undefined}
+                      onValueChange={(value) => field.onChange(value)}
+                    >
+                      <SelectTrigger id="purpose" aria-invalid={fieldState.invalid}>
+                        <SelectValue placeholder="Select purpose (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="personal">Personal</SelectItem>
+                        <SelectItem value="business">Business</SelectItem>
+                        <SelectItem value="education">Education</SelectItem>
+                        <SelectItem value="housing">Housing</SelectItem>
+                        <SelectItem value="vehicle">Vehicle</SelectItem>
+                        <SelectItem value="medical">Medical</SelectItem>
+                        <SelectItem value="agriculture">Agriculture</SelectItem>
+                        <SelectItem value="debt_consolidation">
+                          Debt Consolidation
+                        </SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
             </div>
-          </div>
+          </FieldGroup>
         );
 
-      // ─── Step 3: Bureau Data (Editable Features) ───────────────────────
-      case 3:
+      // ─── Step 3: Bureau Data (Read-only) ─────────────────────────────
+      case 3: {
+        const features = bureauResult?.features;
+        const featureEntries = features
+          ? Object.entries(features)
+          : [];
+
         return (
           <div className="space-y-4">
             {/* Info banner */}
             <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
-              <Pencil className="h-3.5 w-3.5 shrink-0" />
+              <Database className="h-3.5 w-3.5 shrink-0" />
               <span>
-                These values were retrieved from the credit bureau. You may edit
-                any value before generating the credit score.
+                These values were retrieved from the credit bureau and will be
+                sent as-is with the score request.
               </span>
             </div>
 
@@ -650,8 +636,8 @@ export default function NewScoreRequestPage() {
               </div>
             )}
 
-            {/* Feature fields grid */}
-            {Object.keys(editableFeatures).length === 0 ? (
+            {/* Feature display grid (read-only) */}
+            {featureEntries.length === 0 ? (
               <div className="flex items-center gap-2 rounded-lg border border-yellow-300/30 bg-yellow-50 dark:bg-yellow-900/10 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-200">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 <span>
@@ -660,72 +646,32 @@ export default function NewScoreRequestPage() {
                 </span>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(editableFeatures).map(([key, value]) => {
-                  const isBool = BOOLEAN_FEATURE_KEYS.has(key);
-                  const boolSelectValue =
-                    value === null || value === undefined
-                      ? "unset"
-                      : value === true
-                        ? "true"
-                        : "false";
-                  return (
-                    <div key={key} className="space-y-1">
-                      <Label
-                        htmlFor={`feature_${key}`}
-                        className="text-xs font-medium text-muted-foreground"
-                      >
-                        {getFeatureLabel(key)}
-                      </Label>
-                      {isBool ? (
-                        <Select
-                          value={boolSelectValue}
-                          onValueChange={(v) => updateBooleanFeature(key, v)}
-                        >
-                          <SelectTrigger
-                            id={`feature_${key}`}
-                            className="h-8 text-sm font-mono"
-                          >
-                            <SelectValue placeholder="—" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unset">—</SelectItem>
-                            <SelectItem value="true">Yes</SelectItem>
-                            <SelectItem value="false">No</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          id={`feature_${key}`}
-                          type="text"
-                          inputMode="decimal"
-                          autoComplete="off"
-                          value={typeof value === "string" ? value : ""}
-                          onChange={(e) =>
-                            updateStringFeature(key, e.target.value)
-                          }
-                          className="h-8 text-sm font-mono"
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {featureEntries.map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="flex justify-between gap-2 rounded-md border px-3 py-2"
+                  >
+                    <span className="text-xs text-muted-foreground truncate">
+                      {getFeatureLabel(key)}
+                    </span>
+                    <span className="font-mono text-xs shrink-0 text-foreground">
+                      {formatFeatureValue(value)}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         );
+      }
 
       // ─── Step 4: Review & Generate ─────────────────────────────────────
       case 4: {
         const applicant = applicantForm.getValues();
         const loan = loanForm.getValues();
-        const featureCount = Object.keys(editableFeatures).length;
-        const editedCount = bureauResult?.features
-          ? Object.entries(editableFeatures).filter(([k, v]) => {
-              const orig = bureauResult.features?.[k as keyof BureauFeatures];
-              return orig !== v;
-            }).length
-          : 0;
+        const reviewFeatures = bureauResult?.features || {};
+        const featureCount = Object.keys(reviewFeatures).length;
 
         return (
           <div className="space-y-6">
@@ -819,11 +765,6 @@ export default function NewScoreRequestPage() {
                     <Badge variant="outline" className="text-xs">
                       {featureCount} features
                     </Badge>
-                    {editedCount > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {editedCount} edited
-                      </Badge>
-                    )}
                     <Button
                       type="button"
                       variant="ghost"
@@ -844,29 +785,16 @@ export default function NewScoreRequestPage() {
                 <CardContent className="pt-0">
                   <Separator className="mb-4" />
                   <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                    {Object.entries(editableFeatures).map(([key, value]) => {
-                      const original =
-                        bureauResult?.features?.[key as keyof BureauFeatures];
-                      const isEdited = original !== value;
-                      return (
+                    {Object.entries(reviewFeatures).map(([key, value]) => (
                         <div key={key} className="flex justify-between gap-2">
                           <span className="text-muted-foreground text-xs truncate">
                             {getFeatureLabel(key)}
                           </span>
-                          <span
-                            className={cn(
-                              "font-mono text-xs shrink-0",
-                              isEdited
-                                ? "font-semibold text-primary"
-                                : "text-foreground",
-                            )}
-                          >
+                          <span className="font-mono text-xs shrink-0 text-foreground">
                             {formatFeatureValue(value)}
-                            {isEdited && " ✎"}
                           </span>
                         </div>
-                      );
-                    })}
+                    ))}
                   </div>
                 </CardContent>
               )}
@@ -954,7 +882,7 @@ export default function NewScoreRequestPage() {
             {currentStep === 2 &&
               "Provide the loan details. Bureau data will be fetched automatically."}
             {currentStep === 3 &&
-              "Review and edit the bureau feature data used for scoring."}
+              "Review the bureau feature data that will be used for scoring."}
             {currentStep === 4 &&
               "Review all information and generate the credit score."}
           </CardDescription>

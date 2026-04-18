@@ -85,6 +85,7 @@ export const userManagementService = {
       {
         email: data.email,
         name: data.name,
+        role_label: data.roleLabel,
         role_id: data.roleId,
         callback_url: data.callbackUrl || undefined,
       },
