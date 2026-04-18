@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -21,7 +21,7 @@ import { authService } from "@/lib/auth-service";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constant";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   Card,
   CardContent,
@@ -63,12 +63,6 @@ export default function ResetPasswordPage() {
     resolver: zodResolver(resetPasswordSchema),
     mode: "onChange",
   });
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = form;
 
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -144,102 +138,114 @@ export default function ResetPasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground focus:outline-none"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">
-                  {errors.password.message}
-                </p>
-              )}
-
-              {/* Password Requirements List */}
-              <div className="rounded-md border bg-muted/50 p-3 space-y-2 mt-2">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Password requirements:
-                </p>
-                <ul className="space-y-1">
-                  {[
-                    {
-                      label: "At least 8 characters",
-                      met: (form.watch("password") || "").length >= 8,
-                    },
-                    {
-                      label: "Uppercase & lowercase letters",
-                      met:
-                        /[A-Z]/.test(form.watch("password") || "") &&
-                        /[a-z]/.test(form.watch("password") || ""),
-                    },
-                    {
-                      label: "At least one number",
-                      met: /[0-9]/.test(form.watch("password") || ""),
-                    },
-                    {
-                      label: "At least one special character",
-                      met: /[^a-zA-Z0-9]/.test(form.watch("password") || ""),
-                    },
-                  ].map((req, index) => (
-                    <li
-                      key={index}
-                      className={`text-xs flex items-center gap-2 ${
-                        req.met ? "text-green-600" : "text-muted-foreground"
-                      }`}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <Controller
+              name="password"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="password" required>
+                    New Password
+                  </FieldLabel>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground focus:outline-none"
+                      onClick={() => setShowPassword(!showPassword)}
                     >
-                      {req.met ? (
-                        <CheckCircle className="h-3 w-3" />
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
                       ) : (
-                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                        <Eye className="h-4 w-4" />
                       )}
-                      <span>{req.label}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  {...register("confirmPassword")}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground focus:outline-none"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">
-                  {errors.confirmPassword.message}
-                </p>
+                    </button>
+                  </div>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+
+                  {/* Password Requirements List */}
+                  <div className="rounded-md border bg-muted/50 p-3 space-y-2 mt-2">
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Password requirements:
+                    </p>
+                    <ul className="space-y-1">
+                      {[
+                        {
+                          label: "At least 8 characters",
+                          met: (form.watch("password") || "").length >= 8,
+                        },
+                        {
+                          label: "Uppercase & lowercase letters",
+                          met:
+                            /[A-Z]/.test(form.watch("password") || "") &&
+                            /[a-z]/.test(form.watch("password") || ""),
+                        },
+                        {
+                          label: "At least one number",
+                          met: /[0-9]/.test(form.watch("password") || ""),
+                        },
+                        {
+                          label: "At least one special character",
+                          met: /[^a-zA-Z0-9]/.test(form.watch("password") || ""),
+                        },
+                      ].map((req, index) => (
+                        <li
+                          key={index}
+                          className={`text-xs flex items-center gap-2 ${
+                            req.met ? "text-green-600" : "text-muted-foreground"
+                          }`}
+                        >
+                          {req.met ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                          )}
+                          <span>{req.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </Field>
               )}
-            </div>
+            />
+            <Controller
+              name="confirmPassword"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="confirmPassword" required>
+                    Confirm Password
+                  </FieldLabel>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground focus:outline-none"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
             <Button
               className="w-full"
               type="submit"

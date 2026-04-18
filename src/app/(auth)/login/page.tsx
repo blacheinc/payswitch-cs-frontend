@@ -25,7 +25,7 @@ import { saveSession } from "@/lib/session-storage";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   InputOTP,
   InputOTPGroup,
@@ -71,6 +71,7 @@ export default function LoginPage() {
       email: "",
       password: "",
     },
+    mode: "onTouched",
   });
 
   // 2FA form
@@ -79,6 +80,7 @@ export default function LoginPage() {
     defaultValues: {
       code: "",
     },
+    mode: "onTouched",
   });
 
   // Mutations
@@ -361,26 +363,35 @@ export default function LoginPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="name@company.com"
-                        autoComplete="email"
-                        disabled={isLoading}
-                        {...loginForm.register("email")}
-                      />
-                      {loginForm.formState.errors.email && (
-                        <p className="text-sm text-destructive">
-                          {loginForm.formState.errors.email.message}
-                        </p>
+                    <Controller
+                      name="email"
+                      control={loginForm.control}
+                      render={({ field, fieldState }) => (
+                        <Field>
+                          <FieldLabel htmlFor="email" required>
+                            Email
+                          </FieldLabel>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="name@company.com"
+                            autoComplete="email"
+                            disabled={isLoading}
+                            aria-invalid={fieldState.invalid}
+                            {...field}
+                          />
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </Field>
                       )}
-                    </div>
+                    />
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Password</Label>
+                        <FieldLabel htmlFor="password" required>
+                          Password
+                        </FieldLabel>
                         <Link
                           href={ROUTES.AUTH.FORGOT_PASSWORD}
                           className="text-sm text-primary hover:underline"
@@ -389,13 +400,20 @@ export default function LoginPage() {
                         </Link>
                       </div>
                       <div className="relative">
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          autoComplete="current-password"
-                          disabled={isLoading}
-                          {...loginForm.register("password")}
+                        <Controller
+                          name="password"
+                          control={loginForm.control}
+                          render={({ field, fieldState }) => (
+                            <Input
+                              id="password"
+                              type={showPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              autoComplete="current-password"
+                              disabled={isLoading}
+                              aria-invalid={fieldState.invalid}
+                              {...field}
+                            />
+                          )}
                         />
                         <button
                           type="button"
@@ -410,9 +428,7 @@ export default function LoginPage() {
                         </button>
                       </div>
                       {loginForm.formState.errors.password && (
-                        <p className="text-sm text-destructive">
-                          {loginForm.formState.errors.password.message}
-                        </p>
+                        <FieldError errors={[loginForm.formState.errors.password]} />
                       )}
                     </div>
 
@@ -481,7 +497,9 @@ export default function LoginPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="code">Verification Code</Label>
+                    <FieldLabel htmlFor="code" required>
+                      Verification Code
+                    </FieldLabel>
                     <Controller
                       control={twoFactorForm.control}
                       name="code"
@@ -527,9 +545,7 @@ export default function LoginPage() {
                       )}
                     />
                     {twoFactorForm.formState.errors.code && (
-                      <p className="text-sm text-destructive">
-                        {twoFactorForm.formState.errors.code.message}
-                      </p>
+                      <FieldError errors={[twoFactorForm.formState.errors.code]} />
                     )}
                   </div>
 

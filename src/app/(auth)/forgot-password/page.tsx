@@ -11,7 +11,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constant";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Controller } from "react-hook-form";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   Card,
   CardContent,
@@ -35,12 +36,6 @@ export default function ForgotPasswordPage() {
   const form = useForm<FormData>({
     resolver: zodResolver(forgotPasswordSchema),
   });
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = form;
 
   const forgotPasswordMutation = useMutation({
     mutationFn: (data: { email: string; callbackUrl: string }) =>
@@ -95,21 +90,27 @@ export default function ForgotPasswordPage() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  {...register("email")}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">
-                    {errors.email.message}
-                  </p>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="email" required>
+                      Email
+                    </FieldLabel>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="name@example.com"
+                      autoComplete="email"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
                 )}
-              </div>
+              />
               <Button
                 className="w-full"
                 type="submit"

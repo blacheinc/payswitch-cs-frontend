@@ -57,8 +57,10 @@ export function RolePicker({
 
   useEffect(() => {
     if (isLoading || showNone || roles.length === 0 || value) return;
-    onValueChange(roles[0]!.id);
-  }, [isLoading, showNone, roles, value, onValueChange]);
+    const first = roles[0]!;
+    onValueChange(first.id);
+    onRoleChange?.(first);
+  }, [isLoading, showNone, roles, value, onValueChange, onRoleChange]);
 
   const handleChange = (v: string) => {
     const normalized = v === NONE_VALUE ? "" : v;

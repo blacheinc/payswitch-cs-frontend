@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, ShieldOff, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   InputOTP,
@@ -23,7 +24,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { authService } from "@/lib/auth-service";
+import {
+  removeTwoFactorSchema,
+  type RemoveTwoFactorValues,
+} from "@/lib/schemas/settings-management";
 
 interface RemoveTwoFactorDialogProps {
   open: boolean;
@@ -36,13 +42,15 @@ export function RemoveTwoFactorDialog({
   onOpenChange,
   onDisabled,
 }: RemoveTwoFactorDialogProps) {
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const form = useForm<RemoveTwoFactorValues>({
+    resolver: zodResolver(removeTwoFactorSchema),
+    defaultValues: { password: "", code: "" },
+    mode: "onTouched",
+  });
 
   const resetState = () => {
-    setPassword("");
-    setCode("");
+    form.reset({ password: "", code: "" });
     setShowPassword(false);
   };
 
@@ -52,7 +60,7 @@ export function RemoveTwoFactorDialog({
   };
 
   const removeMutation = useMutation({
-    mutationFn: () => authService.remove2FA({ password, code }),
+    mutationFn: (values: RemoveTwoFactorValues) => authService.remove2FA(values),
     onSuccess: () => {
       handleOpenChange(false);
       onDisabled();
@@ -66,16 +74,8 @@ export function RemoveTwoFactorDialog({
     },
   });
 
-  const handleRemove = () => {
-    if (!password) {
-      toast.error("Please enter your current password");
-      return;
-    }
-    if (!code || code.length !== 6) {
-      toast.error("Please enter a valid 6-digit code");
-      return;
-    }
-    removeMutation.mutate();
+  const handleRemove = (values: RemoveTwoFactorValues) => {
+    removeMutation.mutate(values);
   };
 
   return (
@@ -91,82 +91,97 @@ export function RemoveTwoFactorDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="password">Current Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={removeMutation.isPending}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={removeMutation.isPending}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Authenticator Code</Label>
-            <div className="pt-2">
-              <InputOTP
-                maxLength={6}
-                value={code}
-                onChange={(value) => setCode(value)}
-                disabled={removeMutation.isPending}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Enter the 6-digit code from your authenticator app
-            </p>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={removeMutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleRemove}
-            disabled={
-              removeMutation.isPending || !password || code.length !== 6
-            }
-          >
-            {removeMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <form
+          onSubmit={form.handleSubmit(handleRemove)}
+          className="space-y-4 py-4"
+          noValidate
+        >
+          <Controller
+            name="password"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel htmlFor="password" required>
+                  Current Password
+                </FieldLabel>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    aria-invalid={fieldState.invalid}
+                    disabled={removeMutation.isPending}
+                    {...field}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={removeMutation.isPending}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
             )}
-            Disable 2FA
-          </Button>
-        </DialogFooter>
+          />
+
+          <Controller
+            name="code"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel required>Authenticator Code</FieldLabel>
+                <div className="pt-2">
+                  <InputOTP
+                    maxLength={6}
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={removeMutation.isPending}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                <FieldDescription>
+                  Enter the 6-digit code from your authenticator app.
+                </FieldDescription>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={removeMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="destructive" disabled={removeMutation.isPending}>
+              {removeMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Disable 2FA
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -13,9 +14,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -25,8 +32,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
-import type { CreateDataSourceRequest } from "@/types/training-type";
 import { SOURCE_TYPE_ENUM } from "@/lib/constant";
+import {
+  addDataSourceSchema,
+  type AddDataSourceValues,
+} from "@/lib/schemas/developer-training-management";
 
 interface AddDataSourceModalProps {
   isOpen: boolean;
@@ -38,16 +48,27 @@ export function AddDataSourceModal({
   onClose,
 }: AddDataSourceModalProps) {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<CreateDataSourceRequest>({
-    name: "",
-    shortCode: "",
-    sourceType: "bank",
-    description: "",
+  const form = useForm<AddDataSourceValues>({
+    resolver: zodResolver(addDataSourceSchema),
+    defaultValues: {
+      name: "",
+      shortCode: "",
+      sourceType: "bank",
+      description: "",
+    },
+    mode: "onTouched",
   });
 
+  const resetForm = () =>
+    form.reset({
+      name: "",
+      shortCode: "",
+      sourceType: "bank",
+      description: "",
+    });
+
   const createMutation = useMutation({
-    mutationFn: (data: CreateDataSourceRequest) =>
-      trainingService.createSource(data),
+    mutationFn: trainingService.createSource,
     onSuccess: () => {
       toast.success("Data source registered successfully.");
       queryClient.invalidateQueries({ queryKey: TRAINING_KEYS.all });
@@ -61,19 +82,12 @@ export function AddDataSourceModal({
   });
 
   const handleClose = () => {
-    setFormData({
-      name: "",
-      shortCode: "",
-      sourceType: "bank",
-      description: "",
-    });
+    resetForm();
     onClose();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.shortCode) return;
-    createMutation.mutate(formData);
+  const handleSubmit = (values: AddDataSourceValues) => {
+    createMutation.mutate(values);
   };
 
   const generateShortCode = (name: string) => {
@@ -87,7 +101,7 @@ export function AddDataSourceModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
           <DialogHeader>
             <DialogTitle>Add Data Source</DialogTitle>
             <DialogDescription>
@@ -95,83 +109,104 @@ export function AddDataSourceModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g. GCB Bank"
-                value={formData.name}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setFormData((prev) => ({
-                    ...prev,
-                    name,
-                    shortCode: generateShortCode(name),
-                  }));
-                }}
-                required
-              />
-            </div>
+          <FieldGroup className="grid gap-4 py-4">
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="name" required>
+                    Name
+                  </FieldLabel>
+                  <Input
+                    id="name"
+                    placeholder="e.g. GCB Bank"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      field.onChange(name);
+                      form.setValue("shortCode", generateShortCode(name), {
+                        shouldValidate: true,
+                        shouldTouch: true,
+                      });
+                    }}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="shortCode">Short Code</Label>
-              <Input
-                id="shortCode"
-                placeholder="e.g. gcb-bank"
-                value={formData.shortCode}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    shortCode: e.target.value
-                      .toLowerCase()
-                      .replace(/\s+/g, "-"),
-                  }))
-                }
-                required
-              />
-              <p className="text-[10px] text-muted-foreground">
-                URL-safe unique identifier for this source.
-              </p>
-            </div>
+            <Controller
+              name="shortCode"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="shortCode" required>
+                    Short Code
+                  </FieldLabel>
+                  <Input
+                    id="shortCode"
+                    placeholder="e.g. gcb-bank"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value.toLowerCase().replace(/\s+/g, "-"),
+                      )
+                    }
+                  />
+                  <FieldDescription>
+                    URL-safe unique identifier for this source.
+                  </FieldDescription>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="type">Source Type</Label>
-              <Select
-                value={formData.sourceType}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, sourceType: value }))
-                }
-              >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(SOURCE_TYPE_ENUM).map((industry) => (
-                    <SelectItem key={industry.value} value={industry.value}>
-                      {industry.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Controller
+              name="sourceType"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="type" required>
+                    Source Type
+                  </FieldLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="type" aria-invalid={fieldState.invalid}>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(SOURCE_TYPE_ENUM).map((industry) => (
+                        <SelectItem key={industry.value} value={industry.value}>
+                          {industry.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                placeholder="Briefly describe this data source..."
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                className="max-h-[100px]"
-              />
-            </div>
-          </div>
+            <Controller
+              name="description"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="description">Description</FieldLabel>
+                  <Textarea
+                    id="description"
+                    placeholder="Briefly describe this data source..."
+                    className="max-h-[100px]"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+          </FieldGroup>
 
           <DialogFooter>
             <Button variant="outline" type="button" onClick={handleClose}>
@@ -179,11 +214,7 @@ export function AddDataSourceModal({
             </Button>
             <Button
               type="submit"
-              disabled={
-                !formData.name ||
-                !formData.shortCode ||
-                createMutation.isPending
-              }
+              disabled={createMutation.isPending}
               className="min-w-[100px]"
             >
               {createMutation.isPending ? (

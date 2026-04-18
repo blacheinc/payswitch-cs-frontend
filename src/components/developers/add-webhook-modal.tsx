@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -18,8 +18,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 
 import { webhookService, WEBHOOK_KEYS } from "@/lib/developer-service";
+import {
+  webhookFormSchema,
+  type WebhookFormValues,
+} from "@/lib/schemas/developer-training-management";
 
 // Fallback event definitions used when the API events haven't loaded yet
 const FALLBACK_EVENTS = [
@@ -47,12 +52,15 @@ interface AddWebhookModalProps {
 
 export function AddWebhookModal({ open, onOpenChange }: AddWebhookModalProps) {
   const queryClient = useQueryClient();
-
-  const [url, setUrl] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedEvents, setSelectedEvents] = useState<string[]>([
-    "score.completed",
-  ]);
+  const form = useForm<WebhookFormValues>({
+    resolver: zodResolver(webhookFormSchema),
+    defaultValues: {
+      url: "",
+      description: "",
+      events: ["score.completed"],
+    },
+    mode: "onTouched",
+  });
 
   // Fetch supported events from API — shape may vary, so we normalise
   const { data: rawEvents } = useQuery({
@@ -72,9 +80,11 @@ export function AddWebhookModal({ open, onOpenChange }: AddWebhookModalProps) {
       : FALLBACK_EVENTS;
 
   const resetForm = () => {
-    setUrl("");
-    setDescription("");
-    setSelectedEvents(["score.completed"]);
+    form.reset({
+      url: "",
+      description: "",
+      events: ["score.completed"],
+    });
   };
 
   const createMutation = useMutation({
@@ -90,24 +100,12 @@ export function AddWebhookModal({ open, onOpenChange }: AddWebhookModalProps) {
     },
   });
 
-  const handleSubmit = () => {
-    if (!url || selectedEvents.length === 0) {
-      toast.error("Please provide a URL and select at least one event.");
-      return;
-    }
+  const handleSubmit = (values: WebhookFormValues) => {
     createMutation.mutate({
-      url,
-      events: selectedEvents,
-      description: description || undefined,
+      url: values.url,
+      events: values.events,
+      description: values.description || undefined,
     });
-  };
-
-  const toggleEvent = (eventId: string) => {
-    setSelectedEvents((prev) =>
-      prev.includes(eventId)
-        ? prev.filter((e) => e !== eventId)
-        : [...prev, eventId],
-    );
   };
 
   return (
@@ -126,85 +124,112 @@ export function AddWebhookModal({ open, onOpenChange }: AddWebhookModalProps) {
             for verification.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
-          <div className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4" noValidate>
+          <FieldGroup className="gap-4">
             <h3 className="text-sm font-medium leading-none text-muted-foreground">
               Endpoint
             </h3>
-            <div className="space-y-2">
-              <Label htmlFor="webhook-url">
-                Webhook URL <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <Globe className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="webhook-url"
-                  className="pl-8"
-                  placeholder="https://api.yourbank.com/webhooks/credit-score"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="webhook-desc">Description</Label>
-              <Input
-                id="webhook-desc"
-                placeholder="e.g. Production scoring webhook"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-          </div>
+            <Controller
+              name="url"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="webhook-url" required>
+                    Webhook URL
+                  </FieldLabel>
+                  <div className="relative">
+                    <Globe className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      id="webhook-url"
+                      className="pl-8"
+                      placeholder="https://api.yourbank.com/webhooks/credit-score"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="url"
+                      {...field}
+                    />
+                  </div>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+            <Controller
+              name="description"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel htmlFor="webhook-desc">Description</FieldLabel>
+                  <Input
+                    id="webhook-desc"
+                    placeholder="e.g. Production scoring webhook"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+          </FieldGroup>
 
           <Separator />
 
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium leading-none text-muted-foreground">
-              Subscribe to Events <span className="text-red-500">*</span>
-            </h3>
-            <div className="space-y-3">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => toggleEvent(event.id)}
-                >
-                  <Checkbox
-                    checked={selectedEvents.includes(event.id)}
-                    onCheckedChange={() => toggleEvent(event.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-0.5"
-                  />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium leading-none">
-                      {event.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {event.description}
-                    </p>
-                  </div>
+          <Controller
+            name="events"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel required>Subscribe to Events</FieldLabel>
+                <div className="space-y-3">
+                  {events.map((event) => {
+                    const isChecked = field.value.includes(event.id);
+                    const toggleEvent = () => {
+                      field.onChange(
+                        isChecked
+                          ? field.value.filter((e) => e !== event.id)
+                          : [...field.value, event.id],
+                      );
+                    };
+
+                    return (
+                      <div
+                        key={event.id}
+                        className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={toggleEvent}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={toggleEvent}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-0.5"
+                        />
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium leading-none">
+                            {event.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {event.description}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={
-              !url || selectedEvents.length === 0 || createMutation.isPending
-            }
-          >
-            {createMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
             )}
-            Register Endpoint
-          </Button>
-        </DialogFooter>
+          />
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Register Endpoint
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

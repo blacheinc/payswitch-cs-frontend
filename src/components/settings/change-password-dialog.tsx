@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +19,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { authService } from "@/lib/auth-service";
+import {
+  changePasswordSchema,
+  type ChangePasswordValues,
+} from "@/lib/schemas/settings-management";
 
 interface ChangePasswordDialogProps {
   open: boolean;
@@ -27,18 +33,25 @@ export function ChangePasswordDialog({
   open,
   onOpenChange,
 }: ChangePasswordDialogProps) {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const form = useForm<ChangePasswordValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+    mode: "onTouched",
+  });
 
   const resetForm = () => {
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    form.reset({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
     setShowCurrent(false);
     setShowNew(false);
     setShowConfirm(false);
@@ -67,29 +80,11 @@ export function ChangePasswordDialog({
     },
   });
 
-  const handleSubmit = () => {
-    if (!currentPassword) {
-      toast.error("Current password is required");
-      return;
-    }
-    if (!newPassword) {
-      toast.error("New password is required");
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters");
-      return;
-    }
-    if (newPassword === currentPassword) {
-      toast.error("New password must differ from current password");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    changePasswordMutation.mutate({ currentPassword, newPassword });
+  const handleSubmit = (values: ChangePasswordValues) => {
+    changePasswordMutation.mutate({
+      currentPassword: values.currentPassword,
+      newPassword: values.newPassword,
+    });
   };
 
   return (
@@ -102,113 +97,140 @@ export function ChangePasswordDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-4 py-4"
+          noValidate
+        >
           {/* Current Password */}
-          <div className="space-y-2">
-            <Label htmlFor="current-password">Current Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="current-password"
-                type={showCurrent ? "text" : "password"}
-                className="pl-9 pr-10"
-                placeholder="Enter current password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowCurrent(!showCurrent)}
-                tabIndex={-1}
-              >
-                {showCurrent ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          </div>
+          <Controller
+            name="currentPassword"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel htmlFor="current-password" required>
+                  Current Password
+                </FieldLabel>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="current-password"
+                    type={showCurrent ? "text" : "password"}
+                    className="pl-9 pr-10"
+                    placeholder="Enter current password"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowCurrent(!showCurrent)}
+                    tabIndex={-1}
+                  >
+                    {showCurrent ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
 
           {/* New Password */}
-          <div className="space-y-2">
-            <Label htmlFor="new-password">New Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="new-password"
-                type={showNew ? "text" : "password"}
-                className="pl-9 pr-10"
-                placeholder="Enter new password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowNew(!showNew)}
-                tabIndex={-1}
-              >
-                {showNew ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Must be at least 8 characters
-            </p>
-          </div>
+          <Controller
+            name="newPassword"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel htmlFor="new-password" required>
+                  New Password
+                </FieldLabel>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="new-password"
+                    type={showNew ? "text" : "password"}
+                    className="pl-9 pr-10"
+                    placeholder="Enter new password"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowNew(!showNew)}
+                    tabIndex={-1}
+                  >
+                    {showNew ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <FieldDescription>Must be at least 8 characters.</FieldDescription>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
 
           {/* Confirm New Password */}
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm New Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="confirm-password"
-                type={showConfirm ? "text" : "password"}
-                className="pl-9 pr-10"
-                placeholder="Re-enter new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowConfirm(!showConfirm)}
-                tabIndex={-1}
-              >
-                {showConfirm ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={changePasswordMutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={changePasswordMutation.isPending}
-          >
-            {changePasswordMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Controller
+            name="confirmPassword"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel htmlFor="confirm-password" required>
+                  Confirm New Password
+                </FieldLabel>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirm-password"
+                    type={showConfirm ? "text" : "password"}
+                    className="pl-9 pr-10"
+                    placeholder="Re-enter new password"
+                    aria-invalid={fieldState.invalid}
+                    {...field}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    tabIndex={-1}
+                  >
+                    {showConfirm ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
             )}
-            Update Password
-          </Button>
-        </DialogFooter>
+          />
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={changePasswordMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={changePasswordMutation.isPending}>
+              {changePasswordMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Update Password
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

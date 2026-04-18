@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Copy, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 
 import {
   apiKeyService,
@@ -30,6 +32,10 @@ import {
   type ApiKeyCreatedResponse,
 } from "@/lib/developer-service";
 import { RolePicker } from "@/components/shared/role-picker";
+import {
+  generateApiKeySchema,
+  type GenerateApiKeyValues,
+} from "@/lib/schemas/developer-training-management";
 
 interface GenerateApiKeyModalProps {
   open: boolean;
@@ -41,18 +47,25 @@ export function GenerateApiKeyModal({
   onOpenChange,
 }: GenerateApiKeyModalProps) {
   const queryClient = useQueryClient();
-
-  const [name, setName] = useState("");
-  const [environment, setEnvironment] = useState("sandbox");
-  const [roleId, setRoleId] = useState("");
+  const form = useForm<GenerateApiKeyValues>({
+    resolver: zodResolver(generateApiKeySchema),
+    defaultValues: {
+      name: "",
+      environment: "sandbox",
+      roleId: "",
+    },
+    mode: "onTouched",
+  });
   const [generatedKey, setGeneratedKey] =
     useState<ApiKeyCreatedResponse | null>(null);
   const [showKey, setShowKey] = useState(false);
 
   const resetForm = () => {
-    setName("");
-    setEnvironment("sandbox");
-    setRoleId("");
+    form.reset({
+      name: "",
+      environment: "sandbox",
+      roleId: "",
+    });
     setGeneratedKey(null);
     setShowKey(false);
   };
@@ -69,8 +82,12 @@ export function GenerateApiKeyModal({
     },
   });
 
-  const handleGenerate = () => {
-    createMutation.mutate({ name, environment, roleId: roleId || null });
+  const handleGenerate = (values: GenerateApiKeyValues) => {
+    createMutation.mutate({
+      name: values.name,
+      environment: values.environment,
+      roleId: values.roleId || null,
+    });
   };
 
   const handleCopy = (text: string) => {
@@ -100,53 +117,79 @@ export function GenerateApiKeyModal({
                 Create a new key to authenticate your API requests.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="key-name">
-                  Key Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="key-name"
-                  placeholder="e.g. ERP Integration"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="key-env">Environment</Label>
-                <Select value={environment} onValueChange={setEnvironment}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                    <SelectItem value="production">
-                      Production (Real Data)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <RolePicker
-                value={roleId}
-                onValueChange={setRoleId}
-                label="Permissions Role"
-                description="Limits what this key can do. Defaults to full admin access when omitted."
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleGenerate}
-                disabled={!name || createMutation.isPending}
-              >
-                {createMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <form
+              onSubmit={form.handleSubmit(handleGenerate)}
+              className="space-y-4 py-4"
+              noValidate
+            >
+              <Controller
+                name="name"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="key-name" required>
+                      Key Name
+                    </FieldLabel>
+                    <Input
+                      id="key-name"
+                      placeholder="e.g. ERP Integration"
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
                 )}
-                Generate
-              </Button>
-            </DialogFooter>
+              />
+              <Controller
+                name="environment"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel htmlFor="key-env" required>
+                      Environment
+                    </FieldLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="key-env" aria-invalid={fieldState.invalid}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                        <SelectItem value="production">
+                          Production (Real Data)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="roleId"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <RolePicker
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      label="Permissions Role"
+                      description="Limits what this key can do. Defaults to full admin access when omitted."
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Generate
+                </Button>
+              </DialogFooter>
+            </form>
           </>
         ) : (
           <div className="space-y-4 py-4">

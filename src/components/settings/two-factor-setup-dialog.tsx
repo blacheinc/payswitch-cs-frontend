@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Shield, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   InputOTP,
   InputOTPGroup,
@@ -25,6 +27,10 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { authService } from "@/lib/auth-service";
+import {
+  twoFactorVerifySchema,
+  type TwoFactorVerifyValues,
+} from "@/lib/schemas/settings-management";
 
 interface TwoFactorSetupDialogProps {
   open: boolean;
@@ -43,15 +49,19 @@ export function TwoFactorSetupDialog({
   const [secret, setSecret] = useState("");
   const [uri, setUri] = useState("");
   const [tempToken, setTempToken] = useState("");
-  const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const form = useForm<TwoFactorVerifyValues>({
+    resolver: zodResolver(twoFactorVerifySchema),
+    defaultValues: { code: "" },
+    mode: "onTouched",
+  });
 
   const resetState = () => {
     setStep("setup");
     setSecret("");
     setUri("");
     setTempToken("");
-    setCode("");
+    form.reset({ code: "" });
     setCopied(false);
   };
 
@@ -77,8 +87,8 @@ export function TwoFactorSetupDialog({
   // Step 2: Verify the code the user enters
   // with the temporary token. We call verify2FA with the code and tempToken.
   const verifyMutation = useMutation({
-    mutationFn: (verifyCode: string) =>
-      authService.verify2FA({ code: verifyCode, tempToken }),
+    mutationFn: (values: TwoFactorVerifyValues) =>
+      authService.verify2FA({ code: values.code, tempToken }),
     onSuccess: (data) => {
       handleOpenChange(false);
       onEnabled();
@@ -104,12 +114,8 @@ export function TwoFactorSetupDialog({
     }
   };
 
-  const handleVerify = () => {
-    if (!code || code.length !== 6) {
-      toast.error("Please enter a valid 6-digit code");
-      return;
-    }
-    verifyMutation.mutate(code);
+  const handleVerify = (values: TwoFactorVerifyValues) => {
+    verifyMutation.mutate(values);
   };
 
   const isPending = setupMutation.isPending || verifyMutation.isPending;
@@ -167,9 +173,9 @@ export function TwoFactorSetupDialog({
 
             {/* Manual entry key */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">
+              <FieldLabel className="text-xs text-muted-foreground">
                 Can&apos;t scan? Enter this key manually:
-              </Label>
+              </FieldLabel>
               <div className="flex items-center gap-2">
                 <code className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm font-mono break-all">
                   {secret}
@@ -192,31 +198,40 @@ export function TwoFactorSetupDialog({
             <Separator />
 
             {/* Verification code input */}
-            <div className="space-y-2">
-              <Label>Verification Code</Label>
-              <div className="flex">
-                <InputOTP
-                  maxLength={6}
-                  value={code}
-                  onChange={(value) => setCode(value)}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                  </InputOTPGroup>
-                  <InputOTPSeparator />
-                  <InputOTPGroup>
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Enter the 6-digit code from your authenticator app
-              </p>
-            </div>
+            <form onSubmit={form.handleSubmit(handleVerify)} noValidate>
+              <Controller
+                name="code"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel required>Verification Code</FieldLabel>
+                    <div className="flex">
+                      <InputOTP
+                        maxLength={6}
+                        value={field.value}
+                        onChange={field.onChange}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                        </InputOTPGroup>
+                        <InputOTPSeparator />
+                        <InputOTPGroup>
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    <FieldDescription>
+                      Enter the 6-digit code from your authenticator app.
+                    </FieldDescription>
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+            </form>
           </div>
         )}
 
@@ -240,8 +255,8 @@ export function TwoFactorSetupDialog({
             </Button>
           ) : (
             <Button
-              onClick={handleVerify}
-              disabled={verifyMutation.isPending || code.length !== 6}
+              onClick={() => form.handleSubmit(handleVerify)()}
+              disabled={verifyMutation.isPending}
             >
               {verifyMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
