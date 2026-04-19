@@ -199,7 +199,7 @@ function ModelCard({ model }: { model: ChampionModelEntry }) {
   const metricEntries = Object.entries(model.metrics).filter(
     ([, v]) => v != null,
   );
-  const tagEntries = Object.entries(model.tags);
+  const tagEntries = Object.entries(model.tags ?? {});
 
   return (
     <Card>

@@ -3,18 +3,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Loader2,
-  AlertTriangle,
-  Trophy,
   Activity,
-  GitBranch,
+  AlertTriangle,
   CheckCircle,
+  GitBranch,
+  Loader2,
+  RefreshCcw,
+  Trophy,
   XCircle,
-  AlertCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -40,66 +40,54 @@ import {
 } from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
-import { MonitoringTimeseriesChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
+import {
+  formatDateTime,
+  formatMetric,
+  prettyModelType,
+} from "@/lib/monitoring-display";
+import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import type { ModelOpsPeriod } from "@/types/monitoring-types";
+
+const PERIOD_OPTIONS: { value: ModelOpsPeriod; label: string }[] = [
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+];
 
 const MODEL_TYPE_OPTIONS = [
-  { value: "all", label: "All Models" },
-  { value: "credit_risk", label: "Credit Risk" },
-  { value: "fraud_detection", label: "Fraud Detection" },
-  { value: "loan_amount", label: "Loan Amount" },
-  { value: "income_verification", label: "Income Verification" },
+  { value: "all", label: "All models" },
+  { value: "credit_risk", label: "Credit risk" },
+  { value: "fraud_detection", label: "Fraud detection" },
+  { value: "loan_amount", label: "Loan amount" },
+  { value: "income_verification", label: "Income verification" },
 ];
 
-const PERIOD_OPTIONS = [
-  { value: "7d", label: "Last 7 Days" },
-  { value: "30d", label: "Last 30 Days" },
-  { value: "90d", label: "Last 90 Days" },
-];
+const POLL_MS = 10 * 60_000;
 
-const DRIFT_STATUS_STYLES: Record<
-  string,
-  { className: string; icon: React.ReactNode }
-> = {
-  ok: {
-    className: "bg-green-50 text-green-700 border-green-200",
-    icon: <CheckCircle className="mr-1 h-3 w-3" />,
-  },
-  warning: {
-    className: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    icon: <AlertCircle className="mr-1 h-3 w-3" />,
-  },
-  critical: {
-    className: "bg-red-50 text-red-700 border-red-200",
-    icon: <XCircle className="mr-1 h-3 w-3" />,
-  },
-};
+function driftTone(psi: number): "success" | "warning" | "danger" {
+  if (psi >= 0.25) return "danger";
+  if (psi >= 0.1) return "warning";
+  return "success";
+}
 
 export function ModelOpsTab() {
-  const [modelType, setModelType] = useState("all");
-  const [period, setPeriod] = useState("30d");
+  const [period, setPeriod] = useState<ModelOpsPeriod>("30d");
+  const [modelType, setModelType] = useState<string>("all");
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: MONITORING_KEYS.modelOps({
-      model_type: modelType === "all" ? undefined : modelType,
       period,
+      model_type: modelType === "all" ? undefined : modelType,
     }),
     queryFn: () =>
       monitoringService.getModelOps({
-        model_type: modelType === "all" ? undefined : modelType,
         period,
+        model_type: modelType === "all" ? undefined : modelType,
       }),
+    refetchInterval: POLL_MS,
+    staleTime: POLL_MS / 2,
   });
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(dateString));
-  };
 
   if (isLoading) {
     return (
@@ -109,28 +97,28 @@ export function ModelOpsTab() {
     );
   }
 
-  if (isError) {
+  if (isError || !data) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mb-4" />
         <p className="text-muted-foreground">
-          Failed to load ModelOps dashboard data.
+          Failed to load ModelOps data.
         </p>
       </div>
     );
   }
 
-  const champion = data?.champion ?? {};
-  const driftMetrics = data?.drift_metrics ?? [];
-  const retrainingHistory = data?.retraining_history ?? [];
-  const perfTs = data?.performance_timeseries ?? [];
+  const champions = data.champions ?? [];
+  const drift = data.feature_drift ?? [];
+  const distPsi = data.score_distribution_psi ?? [];
+  const history = data.retraining_history ?? [];
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="flex items-center justify-end gap-3">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         <Select value={modelType} onValueChange={setModelType}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -141,8 +129,11 @@ export function ModelOpsTab() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-44">
+        <Select
+          value={period}
+          onValueChange={(v) => setPeriod(v as ModelOpsPeriod)}
+        >
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -153,134 +144,216 @@ export function ModelOpsTab() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          <RefreshCcw
+            className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+          />
+        </Button>
       </div>
 
-      {/* Champion summary */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            <div>
-              <CardTitle>Champion Model</CardTitle>
-              <CardDescription>
-                Currently deployed model performance summary
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-6">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                Version
-              </p>
-              <p className="text-lg font-bold">
-                {champion.model_version ?? "—"}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                Type
-              </p>
-              <p className="text-sm font-medium capitalize">
-                {champion.model_type?.replace(/_/g, " ") ?? "—"}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                AUC
-              </p>
-              <p className="text-lg font-bold">
-                {champion.auc != null ? champion.auc.toFixed(4) : "—"}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                KS
-              </p>
-              <p className="text-lg font-bold">
-                {champion.ks != null ? champion.ks.toFixed(4) : "—"}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                Gini
-              </p>
-              <p className="text-lg font-bold">
-                {champion.gini != null ? champion.gini.toFixed(4) : "—"}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                Predictions
-              </p>
-              <p className="text-lg font-bold">
-                {champion.predictions_count != null
-                  ? champion.predictions_count.toLocaleString()
-                  : "—"}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AlertInlineList alerts={data.alerts} title="Model performance alerts" />
 
-      <MonitoringTimeseriesChart
-        title="Champion performance"
-        description="GET /v1/monitoring/model-ops — performance_timeseries when present"
-        data={perfTs}
-      />
+      {/* Champion cards */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {champions.length === 0 ? (
+          <Card className="lg:col-span-2">
+            <CardContent className="py-10 text-center">
+              <Trophy className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+              <p className="text-muted-foreground text-sm">
+                No active models yet. They&apos;ll appear here after the first
+                training run completes.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          champions.map((c) => {
+            const auc = c.live_auc ?? c.current_metrics?.auc;
+            const change = c.auc_change_pct;
+            const changeTone =
+              change == null
+                ? "text-muted-foreground"
+                : change < -2
+                  ? "text-red-600"
+                  : change < 0
+                    ? "text-yellow-600"
+                    : "text-green-600";
+            return (
+              <Card
+                key={`${c.model_type}-${c.version}`}
+                className={c.auc_alert ? "border-red-300" : ""}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-yellow-500" />
+                        {prettyModelType(c.model_type)}
+                      </CardTitle>
+                      <CardDescription className="font-mono text-xs mt-1">
+                        {c.registry_name} · v{c.version}
+                      </CardDescription>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        c.auc_alert
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-green-50 text-green-700 border-green-200"
+                      }
+                    >
+                      {c.auc_alert ? "Accuracy dropped" : "Healthy"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Accuracy (AUC)
+                      </p>
+                      <p className="text-xl font-semibold">
+                        {formatMetric(auc, 3)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Accuracy change
+                      </p>
+                      <p className={`text-xl font-semibold ${changeTone}`}>
+                        {change != null
+                          ? `${change > 0 ? "+" : ""}${change.toFixed(2)}%`
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Deployed</p>
+                      <p className="text-xs mt-1.5">
+                        {formatDateTime(c.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                  {c.current_metrics && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {Object.entries(c.current_metrics)
+                        .filter(([k]) => k !== "auc")
+                        .map(([k, v]) => (
+                          <Badge
+                            key={k}
+                            variant="outline"
+                            className="font-mono text-xs"
+                          >
+                            {k}: {formatMetric(v, 3)}
+                          </Badge>
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Feature Drift */}
+      {/* Distribution PSI cards */}
+      {distPsi.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">
+            Score stability
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            How much the score pattern has shifted vs the training data. Higher
+            means more shift — alerts fire above 0.20.
+          </p>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {distPsi.map((d) => (
+              <StatCard
+                key={d.model_type}
+                label={prettyModelType(d.model_type)}
+                value={formatMetric(d.psi, 3)}
+                description="alerts above 0.20"
+                tone={
+                  String(d.status).toLowerCase() === "alert"
+                    ? "danger"
+                    : "success"
+                }
+                icon={
+                  String(d.status).toLowerCase() === "alert" ? (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  )
+                }
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {/* Feature drift */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Feature Drift</CardTitle>
-                <CardDescription>
-                  Data drift scores for key model features
-                </CardDescription>
-              </div>
+              <Activity className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Input data shift</CardTitle>
             </div>
+            <CardDescription>
+              How much each input has drifted from the data the model was
+              trained on · warning above 0.25
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {driftMetrics.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No drift data available
+            {drift.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No shift data available yet.
               </p>
             ) : (
-              <div className="space-y-4">
-                {driftMetrics.map((dm) => {
-                  const key = String(dm.status ?? "ok").toLowerCase();
-                  const style =
-                    DRIFT_STATUS_STYLES[key] ?? DRIFT_STATUS_STYLES.ok;
+              <div className="space-y-3">
+                {drift.map((d) => {
+                  const tone = driftTone(d.psi);
+                  const barTone =
+                    tone === "danger"
+                      ? "bg-red-500"
+                      : tone === "warning"
+                        ? "bg-yellow-500"
+                        : "bg-green-500";
                   return (
-                    <div key={dm.feature} className="space-y-1.5">
+                    <div key={d.feature} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium truncate max-w-[200px]">
-                          {dm.feature}
+                        <span className="font-medium truncate pr-2">
+                          {prettyModelType(d.feature)}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">
-                            {dm.drift_score?.toFixed(4) ?? "—"}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-mono text-xs">
+                            {formatMetric(d.psi, 3)}
                           </span>
                           <Badge
                             variant="outline"
-                            className={`capitalize ${style.className}`}
+                            className={
+                              tone === "danger"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : tone === "warning"
+                                  ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  : "bg-green-50 text-green-700 border-green-200"
+                            }
                           >
-                            {style.icon}
-                            {key}
+                            {tone}
                           </Badge>
                         </div>
                       </div>
-                      <Progress
-                        value={Math.min(
-                          (dm.drift_score ?? 0) * 100,
-                          100,
-                        )}
-                        className="h-1.5"
-                      />
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${barTone}`}
+                          style={{
+                            width: `${Math.min((d.psi / 0.5) * 100, 100)}%`,
+                          }}
+                        />
+                      </div>
                     </div>
                   );
                 })}
@@ -289,67 +362,77 @@ export function ModelOpsTab() {
           </CardContent>
         </Card>
 
-        {/* Retraining History */}
+        {/* Retraining history */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <GitBranch className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Retraining History</CardTitle>
-                <CardDescription>
-                  Recent model retraining events
-                </CardDescription>
-              </div>
+              <GitBranch className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Retraining history</CardTitle>
             </div>
+            <CardDescription>Recent model updates</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Trigger</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>New Version</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {retrainingHistory.length === 0 ? (
-                  <TableEmpty
-                    colSpan={4}
-                    title="No retraining events"
-                    description="No retraining has been triggered in this period."
-                  />
-                ) : (
-                  retrainingHistory.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell className="text-sm">
-                        {event.trigger_reason ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            event.status === "completed"
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : event.status === "failed"
-                                ? "bg-red-50 text-red-700 border-red-200"
-                                : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          }
-                        >
-                          {event.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {event.new_model_version ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {formatDate(event.triggered_at)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Run</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Result</TableHead>
+                    <TableHead className="text-right">Accuracy change</TableHead>
+                    <TableHead>Completed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.length === 0 ? (
+                    <TableEmpty
+                      colSpan={5}
+                      title="No model updates"
+                      description="No retraining happened in this period."
+                    />
+                  ) : (
+                    history.map((ev) => {
+                      const before = ev.metrics_before?.auc;
+                      const after = ev.metrics_after?.auc;
+                      const delta =
+                        before != null && after != null
+                          ? after - before
+                          : null;
+                      return (
+                        <TableRow key={ev.training_id}>
+                          <TableCell className="font-mono text-xs truncate max-w-[120px]">
+                            {ev.training_id}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {prettyModelType(ev.model_type)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                ev.result === "success"
+                                  ? "bg-green-50 text-green-700 border-green-200"
+                                  : "bg-red-50 text-red-700 border-red-200"
+                              }
+                            >
+                              {ev.result}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {delta != null
+                              ? `${delta > 0 ? "+" : ""}${delta.toFixed(3)}`
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatDateTime(ev.completed_at)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

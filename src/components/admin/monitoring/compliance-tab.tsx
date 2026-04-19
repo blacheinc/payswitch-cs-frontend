@@ -3,17 +3,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Loader2,
   AlertTriangle,
-  Shield,
-  FileText,
-  Database,
   CheckCircle,
-  XCircle,
-  AlertCircle,
+  Database,
+  FileText,
+  Loader2,
+  RefreshCcw,
+  Scale,
+  UserCheck,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   Card,
   CardContent,
@@ -28,51 +29,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableEmpty,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
-import { formatPercent } from "@/lib/monitoring-display";
-import { MonitoringTimeseriesChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
+import { formatNumber, formatPct } from "@/lib/monitoring-display";
+import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import type { CompliancePeriod } from "@/types/monitoring-types";
 
-/** GET /v1/monitoring/compliance — period: 7d | 30d | 90d (default 30d) */
-const PERIOD_OPTIONS = [
-  { value: "7d", label: "Last 7 Days" },
-  { value: "30d", label: "Last 30 Days" },
-  { value: "90d", label: "Last 90 Days" },
+const PERIOD_OPTIONS: { value: CompliancePeriod; label: string }[] = [
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
 ];
 
-const FAIRNESS_STYLES: Record<
-  string,
-  { className: string; icon: React.ReactNode }
-> = {
-  pass: {
-    className: "bg-green-50 text-green-700 border-green-200",
-    icon: <CheckCircle className="mr-1 h-3 w-3" />,
-  },
-  warning: {
-    className: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    icon: <AlertCircle className="mr-1 h-3 w-3" />,
-  },
-  fail: {
-    className: "bg-red-50 text-red-700 border-red-200",
-    icon: <XCircle className="mr-1 h-3 w-3" />,
-  },
-};
+const POLL_MS = 10 * 60_000;
 
 export function ComplianceTab() {
-  const [period, setPeriod] = useState("30d");
+  const [period, setPeriod] = useState<CompliancePeriod>("30d");
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: MONITORING_KEYS.compliance({ period }),
     queryFn: () => monitoringService.getCompliance({ period }),
+    refetchInterval: POLL_MS,
+    staleTime: POLL_MS / 2,
   });
 
   if (isLoading) {
@@ -83,29 +62,55 @@ export function ComplianceTab() {
     );
   }
 
-  if (isError) {
+  if (isError || !data) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mb-4" />
         <p className="text-muted-foreground">
-          Failed to load compliance dashboard data.
+          Failed to load compliance data.
         </p>
       </div>
     );
   }
 
-  const summary = data?.summary ?? {};
-  const fairnessMetrics = Array.isArray(data?.fairness_metrics)
-    ? data.fairness_metrics
-    : [];
-  const dqTs = data?.data_quality_timeseries ?? [];
-  const piiCount = summary.pii_incidents ?? 0;
+  const fairness = data.fairness_metrics?.demographic_parity;
+  const ageGroups = fairness?.approval_rate_by_age_group ?? [];
+  const maxDisparity = fairness?.max_disparity_pct ?? 0;
+  const audit = data.audit_log ?? {
+    total_decisions_logged: 0,
+    decisions_with_full_explainability: 0,
+    coverage_pct: 0,
+    error_decisions: 0,
+    avg_data_quality_score: 0,
+    dqs_p25: 0,
+  };
+  const dsr = data.data_subject_requests ?? {
+    total: 0,
+    pending: 0,
+    completed: 0,
+    avg_resolution_days: 0,
+  };
+
+  const maxApproval = Math.max(1, ...ageGroups.map((g) => g.approval_rate_pct));
+
+  const disparityTone =
+    maxDisparity >= 25 ? "danger" : maxDisparity >= 15 ? "warning" : "success";
+  const dqsTone =
+    audit.dqs_p25 < 0.6
+      ? "warning"
+      : audit.dqs_p25 < 0.7
+        ? "default"
+        : "success";
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-44">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <Select
+          value={period}
+          onValueChange={(v) => setPeriod(v as CompliancePeriod)}
+        >
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -116,133 +121,175 @@ export function ComplianceTab() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          <RefreshCcw
+            className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+          />
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Audit Log Volume
-            </CardTitle>
-            <FileText className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {summary.audit_log_count != null
-                ? summary.audit_log_count.toLocaleString()
-                : "—"}
-            </div>
-          </CardContent>
-        </Card>
+      <AlertInlineList alerts={data.alerts} title="Fairness & audit alerts" />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Fairness Score
-            </CardTitle>
-            <Shield className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatPercent(summary.fairness_score ?? null, 1)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Data Quality Avg
-            </CardTitle>
-            <Database className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatPercent(summary.data_quality_avg ?? null, 1)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              PII Incidents
-            </CardTitle>
+      {/* KPI row */}
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+        <StatCard
+          label="Largest group gap"
+          value={formatPct(maxDisparity, 1)}
+          icon={<Scale className="h-4 w-4 text-primary" />}
+          description="warns above 25%"
+          tone={disparityTone}
+        />
+        <StatCard
+          label="Audit trail coverage"
+          value={formatPct(audit.coverage_pct, 1)}
+          icon={<CheckCircle className="h-4 w-4 text-green-500" />}
+          description={`${formatNumber(audit.decisions_with_full_explainability)} of ${formatNumber(audit.total_decisions_logged)} fully logged`}
+          tone={audit.coverage_pct >= 90 ? "success" : "warning"}
+        />
+        <StatCard
+          label="Data quality"
+          value={audit.avg_data_quality_score.toFixed(2)}
+          icon={<Database className="h-4 w-4 text-primary" />}
+          description={`weakest 25% at ${audit.dqs_p25.toFixed(2)}`}
+          tone={dqsTone}
+        />
+        <StatCard
+          label="Failed decisions"
+          value={formatNumber(audit.error_decisions)}
+          icon={
             <AlertTriangle
-              className={`h-4 w-4 ${piiCount > 0 ? "text-destructive" : "text-green-500"}`}
+              className={`h-4 w-4 ${audit.error_decisions > 0 ? "text-destructive" : "text-green-500"}`}
             />
+          }
+          tone={audit.error_decisions > 0 ? "warning" : "success"}
+        />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {/* Fairness by age group */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Approval rate by age group
+            </CardTitle>
+            <CardDescription>
+              Checks that approvals are balanced across age groups · largest
+              gap <strong>{formatPct(maxDisparity, 1)}</strong>
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div
-              className={`text-2xl font-bold ${piiCount > 0 ? "text-destructive" : "text-green-600"}`}
-            >
-              {summary.pii_incidents != null ? summary.pii_incidents : "—"}
+            {ageGroups.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No age-group data for this window.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {ageGroups.map((g) => (
+                  <div key={g.group} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="font-medium">{g.group}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({formatNumber(g.count)})
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs">
+                        {formatPct(g.approval_rate_pct, 1)}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary"
+                        style={{
+                          width: `${(g.approval_rate_pct / maxApproval) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Data subject requests */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Data subject requests
+            </CardTitle>
+            <CardDescription>
+              Requests from customers to access, correct, or delete their data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-xl font-semibold mt-1">
+                  {formatNumber(dsr.total)}
+                </p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-xl font-semibold mt-1 text-yellow-600">
+                  {formatNumber(dsr.pending)}
+                </p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-xl font-semibold mt-1 text-green-600">
+                  {formatNumber(dsr.completed)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Avg resolution time
+              </span>
+              <span className="font-medium">
+                {dsr.avg_resolution_days > 0
+                  ? `${dsr.avg_resolution_days.toFixed(1)} days`
+                  : "—"}
+              </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <MonitoringTimeseriesChart
-        title="Data quality"
-        description="Trend from GET /v1/monitoring/compliance"
-        data={dqTs}
-        valueFormatter={(n) => formatPercent(n, 1)}
-      />
-
+      {/* Audit log card */}
       <Card>
         <CardHeader>
-          <CardTitle>Fairness metrics</CardTitle>
-          <CardDescription>
-            Disparate impact analysis across protected attributes
-          </CardDescription>
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Audit log</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Attribute</TableHead>
-                <TableHead className="text-right">
-                  Disparate Impact
-                </TableHead>
-                <TableHead className="text-right">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fairnessMetrics.length === 0 ? (
-                <TableEmpty
-                  colSpan={3}
-                  title="No fairness rows"
-                  description="The API returned no fairness metric rows for this period."
-                />
-              ) : (
-                fairnessMetrics.map((fm) => {
-                  const key = String(fm.status ?? "pass").toLowerCase();
-                  const style = FAIRNESS_STYLES[key] ?? FAIRNESS_STYLES.pass;
-                  return (
-                    <TableRow key={fm.attribute}>
-                      <TableCell className="font-medium capitalize">
-                        {fm.attribute?.replace(/_/g, " ") ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {fm.disparate_impact != null
-                          ? fm.disparate_impact.toFixed(4)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant="outline"
-                          className={`capitalize ${style.className}`}
-                        >
-                          {style.icon}
-                          {key}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Decisions with a complete audit trail
+              </span>
+              <span className="font-mono">
+                {formatPct(audit.coverage_pct, 1)}
+              </span>
+            </div>
+            <Progress value={audit.coverage_pct} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {formatNumber(audit.decisions_with_full_explainability)} of{" "}
+              {formatNumber(audit.total_decisions_logged)} decisions have a
+              full explanation attached.{" "}
+              {formatNumber(audit.error_decisions)} decisions could not be
+              scored.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

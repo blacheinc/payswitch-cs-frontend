@@ -3,19 +3,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Loader2,
-  Clock,
-  AlertTriangle,
   Activity,
-  Zap,
-  Shield,
+  AlertTriangle,
+  Clock,
   Filter,
+  Loader2,
+  RefreshCcw,
+  Zap,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -43,32 +42,48 @@ import {
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
 import {
   formatMs,
-  formatPercent,
-  toDisplayPercent,
+  formatNumber,
+  formatPct,
+  formatRelative,
 } from "@/lib/monitoring-display";
-import { MonitoringTimeseriesChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
+import { MonitoringChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
+import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import type {
+  InfrastructurePeriod,
+  InfraTimeseriesPoint,
+} from "@/types/monitoring-types";
 
-/** GET /v1/monitoring/infrastructure — period: 1h | 6h | 24h | 7d | 30d (default 24h) */
-const PERIOD_OPTIONS = [
-  { value: "1h", label: "Last 1 Hour" },
-  { value: "6h", label: "Last 6 Hours" },
-  { value: "24h", label: "Last 24 Hours" },
-  { value: "7d", label: "Last 7 Days" },
-  { value: "30d", label: "Last 30 Days" },
+const PERIOD_OPTIONS: { value: InfrastructurePeriod; label: string }[] = [
+  { value: "1h", label: "Last 1 hour" },
+  { value: "6h", label: "Last 6 hours" },
+  { value: "24h", label: "Last 24 hours" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
 ];
 
+const POLL_MS = 30_000; // per integration guide
+
+function statusCodeTone(code: number): "success" | "warning" | "danger" {
+  if (code >= 500) return "danger";
+  if (code >= 400) return "warning";
+  return "success";
+}
+
 export function InfrastructureTab() {
-  const [period, setPeriod] = useState("24h");
+  const [period, setPeriod] = useState<InfrastructurePeriod>("24h");
   const [endpointDraft, setEndpointDraft] = useState("");
   const [endpoint, setEndpoint] = useState<string | undefined>(undefined);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: MONITORING_KEYS.infrastructure({ period, endpoint }),
     queryFn: () =>
       monitoringService.getInfrastructure({
         period,
         endpoint: endpoint?.trim() || undefined,
       }),
+    refetchInterval: POLL_MS,
+    staleTime: POLL_MS / 2,
   });
 
   if (isLoading) {
@@ -79,63 +94,91 @@ export function InfrastructureTab() {
     );
   }
 
-  if (isError) {
+  if (isError || !data) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mb-4" />
         <p className="text-muted-foreground">
-          Failed to load infrastructure data. Please try again.
+          Failed to load infrastructure metrics. Please try again.
         </p>
       </div>
     );
   }
 
-  const summary = data?.summary ?? {};
-  const endpoints = data?.endpoints ?? [];
-  const latencyTs = data?.latency_timeseries ?? [];
-  const errorTs = data?.error_rate_timeseries ?? [];
-  const volumeTs = data?.request_volume_timeseries ?? [];
+  const totalRequests = data.request_volume?.total ?? 0;
+  const latency = data.latency ?? {
+    p50_ms: 0,
+    p95_ms: 0,
+    p99_ms: 0,
+    by_endpoint: [],
+  };
+  const errorRates = data.error_rates ?? { overall_pct: 0, by_status: [] };
+  const timeseries = (data.timeseries ?? []) as InfraTimeseriesPoint[];
+  const latencyByEndpoint = (latency.by_endpoint ?? []).slice(0, 10);
+  const volumeByEndpoint = (data.request_volume?.by_endpoint ?? []).slice(0, 10);
+
+  const errorTone =
+    errorRates.overall_pct >= 1
+      ? "danger"
+      : errorRates.overall_pct >= 0.5
+        ? "warning"
+        : "success";
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2 max-w-md flex-1">
-          <Label htmlFor="infra-endpoint" className="text-muted-foreground">
-            Endpoint path filter
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Optional. Matches GET{" "}
-            <code className="text-xs bg-muted px-1 rounded">endpoint</code>{" "}
-            query per OpenAPI.
-          </p>
-          <div className="flex gap-2">
-            <Input
-              id="infra-endpoint"
-              placeholder="e.g. /v1/score-requests"
-              value={endpointDraft}
-              onChange={(e) => setEndpointDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setEndpoint(endpointDraft.trim() || undefined);
+      {/* Toolbar */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="w-full sm:max-w-sm">
+            <label className="text-xs text-muted-foreground">
+              Filter by endpoint
+            </label>
+            <div className="flex gap-2 mt-1">
+              <Input
+                placeholder="e.g. /v1/score-requests"
+                value={endpointDraft}
+                onChange={(e) => setEndpointDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setEndpoint(endpointDraft.trim() || undefined);
+                  }
+                }}
+                className="h-9 font-mono text-sm"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  setEndpoint(endpointDraft.trim() || undefined)
                 }
-              }}
-              className="font-mono text-sm"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                setEndpoint(endpointDraft.trim() || undefined)
-              }
-            >
-              <Filter className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Apply</span>
-            </Button>
+                className="shrink-0"
+              >
+                <Filter className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Apply</span>
+              </Button>
+              {endpoint && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setEndpoint(undefined);
+                    setEndpointDraft("");
+                  }}
+                  className="shrink-0"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-end gap-2">
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-44">
+
+        <div className="flex items-center gap-2">
+          <Select
+            value={period}
+            onValueChange={(v) => setPeriod(v as InfrastructurePeriod)}
+          >
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -146,174 +189,212 @@ export function InfrastructureTab() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title={`Updated ${formatRelative(data.generated_at)}`}
+          >
+            <RefreshCcw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+            />
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Requests
-            </CardTitle>
-            <Activity className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {summary.total_requests != null
-                ? summary.total_requests.toLocaleString()
-                : "—"}
-            </div>
-          </CardContent>
-        </Card>
+      <AlertInlineList alerts={data.alerts} title="Platform health alerts" />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Latency</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatMs(summary.avg_latency_ms ?? null)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">P95 Latency</CardTitle>
-            <Zap className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatMs(summary.p95_latency_ms ?? null)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">P99 Latency</CardTitle>
-            <Zap className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatMs(summary.p99_latency_ms ?? null)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatPercent(summary.error_rate ?? null, 2)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uptime</CardTitle>
-            <Shield className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatPercent(summary.uptime_percent ?? null, 2)}
-            </div>
-          </CardContent>
-        </Card>
+      {/* KPI cards */}
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard
+          label="Total requests"
+          value={formatNumber(totalRequests)}
+          icon={<Activity className="h-4 w-4 text-primary" />}
+          description={`in the last ${period}`}
+        />
+        <StatCard
+          label="Typical response"
+          value={formatMs(latency.p50_ms)}
+          icon={<Clock className="h-4 w-4 text-muted-foreground" />}
+          description="median"
+        />
+        <StatCard
+          label="Slowest 5%"
+          value={formatMs(latency.p95_ms)}
+          icon={<Zap className="h-4 w-4 text-yellow-500" />}
+          description="95th percentile"
+        />
+        <StatCard
+          label="Slowest 1%"
+          value={formatMs(latency.p99_ms)}
+          icon={<Zap className="h-4 w-4 text-orange-500" />}
+          description="99th percentile"
+          tone={latency.p99_ms >= 1000 ? "danger" : "default"}
+        />
+        <StatCard
+          label="Error rate"
+          value={formatPct(errorRates.overall_pct, 2)}
+          icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
+          tone={errorTone}
+          className="col-span-2 sm:col-span-1"
+        />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <MonitoringTimeseriesChart
-          title="Latency"
-          description="Response time trend"
-          data={latencyTs}
-          valueFormatter={(n) => `${Math.round(n)}ms`}
-        />
-        <MonitoringTimeseriesChart
-          title="Error rate"
-          description="Failed request share over time"
-          data={errorTs}
-          valueFormatter={(n) =>
-            n <= 1 ? `${(n * 100).toFixed(2)}%` : `${n.toFixed(2)}%`
-          }
-        />
-        <MonitoringTimeseriesChart
-          title="Request volume"
-          description="Throughput over time"
-          data={volumeTs}
-        />
+      <MonitoringChart
+        title="Traffic over time"
+        description="Requests, errors, and slowest-1% response time per time slice"
+        data={timeseries}
+        xKey="bucket"
+        series={[
+          {
+            key: "requests",
+            label: "Requests",
+            formatter: (n) => n.toLocaleString(),
+          },
+          {
+            key: "errors",
+            label: "Errors",
+            color: "#ef4444",
+            formatter: (n) => n.toLocaleString(),
+          },
+          {
+            key: "p99_ms",
+            label: "Slowest 1% (ms)",
+            color: "#f59e0b",
+            yAxisId: "right",
+            formatter: (n) => `${Math.round(n)}ms`,
+          },
+        ]}
+      />
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Busiest endpoints</CardTitle>
+            <CardDescription>
+              Routes receiving the most traffic in this window
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Endpoint</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead className="text-right">Requests</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {volumeByEndpoint.length === 0 ? (
+                    <TableEmpty
+                      colSpan={3}
+                      title="No traffic"
+                      description="No endpoint activity for this filter."
+                    />
+                  ) : (
+                    volumeByEndpoint.map((ep, idx) => (
+                      <TableRow key={`${ep.endpoint}-${ep.method}-${idx}`}>
+                        <TableCell className="font-mono text-xs max-w-[240px] truncate">
+                          {ep.endpoint}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="uppercase text-xs">
+                            {ep.method}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {formatNumber(ep.count)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Response times by endpoint</CardTitle>
+            <CardDescription>
+              Typical, slowest 5%, and slowest 1% per route
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Endpoint</TableHead>
+                    <TableHead className="text-right">Typical</TableHead>
+                    <TableHead className="text-right">Slowest 5%</TableHead>
+                    <TableHead className="text-right">Slowest 1%</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {latencyByEndpoint.length === 0 ? (
+                    <TableEmpty
+                      colSpan={4}
+                      title="No response-time data"
+                      description="No response-time data for this filter."
+                    />
+                  ) : (
+                    latencyByEndpoint.map((ep, idx) => (
+                      <TableRow key={`${ep.endpoint}-${idx}`}>
+                        <TableCell className="font-mono text-xs max-w-[240px] truncate">
+                          {ep.endpoint}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {formatMs(ep.p50_ms)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {formatMs(ep.p95_ms)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-mono text-sm ${
+                            ep.p99_ms >= 1000 ? "text-red-600" : ""
+                          }`}
+                        >
+                          {formatMs(ep.p99_ms)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Endpoint metrics</CardTitle>
+          <CardTitle className="text-base">Errors by response code</CardTitle>
           <CardDescription>
-            Per-endpoint latency and error rates for the selected period
+            Failed requests grouped by the status code returned
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Endpoint</TableHead>
-                <TableHead>Method</TableHead>
-                <TableHead className="text-right">Requests</TableHead>
-                <TableHead className="text-right">Avg Latency</TableHead>
-                <TableHead className="text-right">Error Rate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {endpoints.length === 0 ? (
-                <TableEmpty
-                  colSpan={5}
-                  title="No endpoint metrics"
-                  description="The API returned no per-endpoint rows for this filter. Try another period or clear the path filter."
+          {errorRates.by_status.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No errors recorded in this window.
+            </p>
+          ) : (
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
+              {errorRates.by_status.map((row) => (
+                <StatCard
+                  key={row.status_code}
+                  label={`Code ${row.status_code}`}
+                  value={formatNumber(row.count)}
+                  description={`${formatPct(row.pct, 2)} of traffic`}
+                  tone={statusCodeTone(row.status_code)}
                 />
-              ) : (
-                endpoints.map((ep, idx) => (
-                  <TableRow key={`${ep.path}-${ep.method}-${idx}`}>
-                    <TableCell className="font-mono text-xs max-w-[280px] truncate">
-                      {ep.path}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="uppercase text-xs">
-                        {ep.method}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ep.total_requests?.toLocaleString() ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatMs(ep.avg_latency_ms ?? null)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ep.error_rate != null ? (
-                        <span
-                          className={
-                            (() => {
-                              const p = toDisplayPercent(ep.error_rate);
-                              return p != null && p > 5;
-                            })()
-                              ? "text-destructive font-semibold"
-                              : ""
-                          }
-                        >
-                          {formatPercent(ep.error_rate, 2)}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

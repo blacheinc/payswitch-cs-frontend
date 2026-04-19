@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Loader2,
   AlertTriangle,
-  TrendingUp,
   BarChart3,
+  Loader2,
+  RefreshCcw,
+  ShieldCheck,
   Target,
-  Percent,
-  ShieldAlert,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   Card,
@@ -27,30 +30,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
-import { formatPercent } from "@/lib/monitoring-display";
-import { MonitoringTimeseriesChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
+import { formatNumber, formatPct } from "@/lib/monitoring-display";
+import { MonitoringChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
+import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import type { RiskPeriod, ScoreGrade } from "@/types/monitoring-types";
 
-/** GET /v1/monitoring/risk — period: 24h | 7d | 30d | 90d (default 7d) */
-const PERIOD_OPTIONS = [
-  { value: "24h", label: "Last 24 Hours" },
-  { value: "7d", label: "Last 7 Days" },
-  { value: "30d", label: "Last 30 Days" },
-  { value: "90d", label: "Last 90 Days" },
+const PERIOD_OPTIONS: { value: RiskPeriod; label: string }[] = [
+  { value: "24h", label: "Last 24 hours" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
 ];
 
-/** segment: score grade A–F per OpenAPI */
-const GRADE_OPTIONS = [
-  { value: "all", label: "All Grades" },
+const GRADE_OPTIONS: { value: "all" | ScoreGrade; label: string }[] = [
+  { value: "all", label: "All grades" },
   { value: "A", label: "Grade A" },
   { value: "B", label: "Grade B" },
   { value: "C", label: "Grade C" },
@@ -68,11 +64,19 @@ const GRADE_COLORS: Record<string, string> = {
   F: "bg-red-600",
 };
 
-export function RiskTab() {
-  const [period, setPeriod] = useState("7d");
-  const [segment, setSegment] = useState("all");
+const TIER_TONE: Record<string, string> = {
+  LOW: "bg-green-50 text-green-700 border-green-200",
+  MEDIUM: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  HIGH: "bg-red-50 text-red-700 border-red-200",
+};
 
-  const { data, isLoading, isError } = useQuery({
+const POLL_MS = 5 * 60_000;
+
+export function RiskTab() {
+  const [period, setPeriod] = useState<RiskPeriod>("7d");
+  const [segment, setSegment] = useState<"all" | ScoreGrade>("all");
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: MONITORING_KEYS.risk({
       period,
       segment: segment === "all" ? undefined : segment,
@@ -82,6 +86,8 @@ export function RiskTab() {
         period,
         segment: segment === "all" ? undefined : segment,
       }),
+    refetchInterval: POLL_MS,
+    staleTime: POLL_MS / 2,
   });
 
   if (isLoading) {
@@ -92,7 +98,7 @@ export function RiskTab() {
     );
   }
 
-  if (isError) {
+  if (isError || !data) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mb-4" />
@@ -103,18 +109,24 @@ export function RiskTab() {
     );
   }
 
-  const summary = data?.summary ?? {};
-  const distribution = Array.isArray(data?.score_distribution)
-    ? data.score_distribution
-    : [];
-  const approvalTs = data?.approval_rate_timeseries ?? [];
-  const delinqTs = data?.delinquency_timeseries ?? [];
+  const overall = data.approval_rates?.overall;
+  const byGrade = data.approval_rates?.by_grade ?? [];
+  const distribution = data.score_distribution;
+  const buckets = distribution?.buckets ?? [];
+  const tiers = data.risk_tier_breakdown ?? [];
+  const timeseries = data.timeseries ?? [];
+
+  const maxBucketCount = Math.max(1, ...buckets.map((b) => b.count));
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <Select value={segment} onValueChange={setSegment}>
-          <SelectTrigger className="w-36 sm:w-40">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <Select
+          value={segment}
+          onValueChange={(v) => setSegment(v as "all" | ScoreGrade)}
+        >
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -125,8 +137,11 @@ export function RiskTab() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-44">
+        <Select
+          value={period}
+          onValueChange={(v) => setPeriod(v as RiskPeriod)}
+        >
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -137,167 +152,297 @@ export function RiskTab() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          <RefreshCcw
+            className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+          />
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Scored</CardTitle>
-            <BarChart3 className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {summary.total_scored != null
-                ? summary.total_scored.toLocaleString()
-                : "—"}
-            </div>
-          </CardContent>
-        </Card>
+      <AlertInlineList alerts={data.alerts} title="Lending risk alerts" />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Approval Rate
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatPercent(summary.approval_rate ?? null, 1)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg Credit Score
-            </CardTitle>
-            <Target className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {summary.avg_credit_score != null
-                ? Math.round(summary.avg_credit_score)
-                : "—"}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Default Rate</CardTitle>
-            <ShieldAlert className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatPercent(summary.default_rate ?? null, 2)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average PD</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatPercent(summary.avg_pd ?? null, 2)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <MonitoringTimeseriesChart
-          title="Approval rate"
-          description="Trend from GET /v1/monitoring/risk"
-          data={approvalTs}
-          valueFormatter={(n) => formatPercent(n, 1)}
+      {/* KPI cards */}
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard
+          label="Applications scored"
+          value={formatNumber(overall?.total_decisions ?? 0)}
+          icon={<BarChart3 className="h-4 w-4 text-primary" />}
         />
-        <MonitoringTimeseriesChart
-          title="Delinquency"
-          description="Trend from GET /v1/monitoring/risk"
-          data={delinqTs}
+        <StatCard
+          label="Approval rate"
+          value={formatPct(overall?.approve_rate_pct, 1)}
+          icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+          tone="success"
+        />
+        <StatCard
+          label="Conditional approvals"
+          value={formatPct(overall?.conditional_approve_rate_pct, 1)}
+          icon={<ShieldCheck className="h-4 w-4 text-lime-500" />}
+        />
+        <StatCard
+          label="Decline rate"
+          value={formatPct(overall?.decline_rate_pct, 1)}
+          icon={<TrendingDown className="h-4 w-4 text-red-500" />}
+          tone="danger"
+        />
+        <StatCard
+          label="Average score"
+          value={
+            distribution?.mean != null
+              ? Math.round(distribution.mean).toString()
+              : "—"
+          }
+          icon={<Target className="h-4 w-4 text-primary" />}
+          description={
+            distribution?.median != null
+              ? `middle score ${Math.round(distribution.median)}`
+              : undefined
+          }
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 
+      {/* Outcome breakdown */}
+      {overall && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Outcome breakdown</CardTitle>
+            <CardDescription>
+              How the {formatNumber(overall.total_decisions)} scored
+              applications were decided in this window
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            <DecisionCount
+              label="Approved"
+              value={overall.approve}
+              tone="success"
+            />
+            <DecisionCount
+              label="Approved with conditions"
+              value={overall.conditional_approve}
+              tone="default"
+            />
+            <DecisionCount
+              label="Declined"
+              value={overall.decline}
+              tone="danger"
+            />
+            <DecisionCount
+              label="Referred"
+              value={overall.refer}
+              tone="warning"
+            />
+            <DecisionCount
+              label="Could not score"
+              value={overall.error}
+              tone="default"
+              muted
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {/* Approval rate by grade */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Approvals by credit grade</CardTitle>
+            <CardDescription>
+              Share approved (green) vs declined (red) at each grade, A (best)
+              through F (worst)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {byGrade.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No grade breakdown for this window.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {byGrade.map((row) => (
+                  <div key={row.grade} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            GRADE_COLORS[row.grade] ?? "bg-muted"
+                          }`}
+                        />
+                        <span className="font-medium">Grade {row.grade}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({formatNumber(row.total)})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-green-600">
+                          {formatPct(row.approve_rate_pct, 1)}
+                        </span>
+                        <span className="text-red-600">
+                          {formatPct(row.decline_rate_pct, 1)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-muted">
+                      <div
+                        className="bg-green-500"
+                        style={{ width: `${row.approve_rate_pct}%` }}
+                      />
+                      <div
+                        className="bg-red-500"
+                        style={{ width: `${row.decline_rate_pct}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Risk tier breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Risk level</CardTitle>
+            <CardDescription>
+              How applicants split across low, medium, and high risk
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {tiers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No risk-tier data for this window.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {tiers.map((t) => (
+                  <div key={t.tier} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <Badge
+                        variant="outline"
+                        className={TIER_TONE[t.tier] ?? ""}
+                      >
+                        {t.tier}
+                      </Badge>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {formatNumber(t.count)} · {formatPct(t.pct, 1)}
+                      </span>
+                    </div>
+                    <Progress value={t.pct} className="h-2" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Score distribution histogram */}
       <Card>
         <CardHeader>
-          <CardTitle>Score grade distribution</CardTitle>
+          <CardTitle className="text-base">Credit score spread</CardTitle>
           <CardDescription>
-            Breakdown of scored applicants by credit grade (segment filter applies
-            to the whole dashboard per API)
+            {distribution?.std_dev != null
+              ? `Applicants grouped by score · spread ±${distribution.std_dev.toFixed(0)} points`
+              : "Applicants grouped by predicted credit score"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {distribution.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-10">
-              No distribution buckets returned for this period or segment.
+          {buckets.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No distribution buckets returned.
             </p>
           ) : (
-            <div className="space-y-4">
-              {distribution.map((bucket) => (
-                <div key={bucket.grade} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-3 h-3 rounded-full ${GRADE_COLORS[bucket.grade] ?? "bg-muted"}`}
-                      />
-                      <span className="font-medium">Grade {bucket.grade}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-muted-foreground">
-                        {bucket.count?.toLocaleString() ?? "—"}
-                      </span>
-                      <span className="font-semibold w-16 text-right">
-                        {bucket.percentage != null
-                          ? `${bucket.percentage.toFixed(1)}%`
-                          : "—"}
-                      </span>
-                    </div>
+            <div className="flex items-end gap-2 sm:gap-3 h-40">
+              {buckets.map((b) => {
+                const pct = (b.count / maxBucketCount) * 100;
+                return (
+                  <div
+                    key={b.range}
+                    className="flex-1 flex flex-col items-center gap-1 min-w-0"
+                  >
+                    <div
+                      className="w-full bg-primary/80 rounded-t"
+                      style={{ height: `${pct}%`, minHeight: b.count > 0 ? 4 : 0 }}
+                      title={`${b.range}: ${b.count}`}
+                    />
+                    <span className="text-[10px] text-muted-foreground font-mono truncate w-full text-center">
+                      {b.range}
+                    </span>
+                    <span className="text-[10px] font-semibold">
+                      {formatNumber(b.count)}
+                    </span>
                   </div>
-                  <Progress value={bucket.percentage ?? 0} className="h-2" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {distribution.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribution table</CardTitle>
-            <CardDescription>Same data as bars, sortable view</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Grade</TableHead>
-                  <TableHead className="text-right">Count</TableHead>
-                  <TableHead className="text-right">Share</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {distribution.map((b) => (
-                  <TableRow key={b.grade}>
-                    <TableCell className="font-medium">{b.grade}</TableCell>
-                    <TableCell className="text-right">
-                      {b.count?.toLocaleString() ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {b.percentage != null ? `${b.percentage.toFixed(1)}%` : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <MonitoringChart
+        title="Approvals over time"
+        description="Approval rate, decline rate, and average credit score by time slice"
+        data={timeseries}
+        xKey="bucket"
+        series={[
+          {
+            key: "approve_rate_pct",
+            label: "Approval rate",
+            color: "#10b981",
+            formatter: (n) => `${n.toFixed(1)}%`,
+          },
+          {
+            key: "decline_rate_pct",
+            label: "Decline rate",
+            color: "#ef4444",
+            formatter: (n) => `${n.toFixed(1)}%`,
+          },
+          {
+            key: "mean_credit_score",
+            label: "Average score",
+            color: "hsl(var(--primary))",
+            yAxisId: "right",
+            formatter: (n) => Math.round(n).toString(),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+function DecisionCount({
+  label,
+  value,
+  tone,
+  muted,
+}: {
+  label: string;
+  value: number;
+  tone: "success" | "warning" | "danger" | "default";
+  muted?: boolean;
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-green-600"
+      : tone === "danger"
+        ? "text-red-600"
+        : tone === "warning"
+          ? "text-yellow-600"
+          : "";
+  return (
+    <div
+      className={`rounded-md border p-3 ${muted ? "opacity-70" : ""} min-w-0`}
+    >
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-xl font-semibold mt-1 ${toneClass}`}>
+        {formatNumber(value)}
+      </p>
     </div>
   );
 }
