@@ -9,6 +9,7 @@ import {
   Shield,
   Bell,
   BellOff,
+  Footprints,
 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +21,7 @@ import { RiskTab } from "@/components/admin/monitoring/risk-tab";
 import { ModelOpsTab } from "@/components/admin/monitoring/model-ops-tab";
 import { ComplianceTab } from "@/components/admin/monitoring/compliance-tab";
 import { AlertsTab } from "@/components/admin/monitoring/alerts-tab";
+import { ActivityTab } from "@/components/admin/monitoring/activity-tab";
 
 const TABS = [
   {
@@ -31,6 +33,7 @@ const TABS = [
   { value: "model-ops", label: "Model Ops", icon: BrainCircuit },
   { value: "compliance", label: "Compliance", icon: Shield },
   { value: "alerts", label: "Alerts", icon: Bell },
+  { value: "activity", label: "Activity", icon: Footprints },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
@@ -126,6 +129,9 @@ export default function AdminMonitoringPage() {
         </TabsContent>
         <TabsContent value="alerts">
           <AlertsTab />
+        </TabsContent>
+        <TabsContent value="activity">
+          <ActivityTab />
         </TabsContent>
       </Tabs>
     </div>

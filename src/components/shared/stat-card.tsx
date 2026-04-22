@@ -36,7 +36,7 @@ export function StatCard({
           {value}
         </p>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <div className="text-xs text-muted-foreground mt-1">{description}</div>
         )}
       </CardContent>
     </Card>

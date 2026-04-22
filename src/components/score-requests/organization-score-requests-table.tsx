@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   MoreHorizontal,
   Eye,
-  FileText,
   CheckCircle,
   XCircle,
   Clock,
@@ -34,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ROUTES } from "@/lib/constant";
+import { formatDate } from "@/lib/utils";
 import type { ScoreRequestItem } from "@/lib/score-service";
 
 /** Alias for table consumers — rows come from `getScoreRequests` list mapping. */
@@ -173,21 +173,6 @@ export function OrganizationScoreRequestsTable({
     );
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(date);
-    } catch (e) {
-      return dateString;
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -303,10 +288,6 @@ export function OrganizationScoreRequestsTable({
                             View Details
                           </Link>
                         </DropdownMenuItem>
-                        {/* <DropdownMenuItem>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Download PDF
-                        </DropdownMenuItem> */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

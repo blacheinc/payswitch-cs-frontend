@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
+import { formatDate } from "@/lib/utils";
 import {
   BATCH_KEYS,
   scoreService,
@@ -63,21 +64,6 @@ const ITEM_STATUS_OPTIONS: { value: BatchItemStatus | "all"; label: string }[] =
     { value: "processing", label: "Processing" },
     { value: "cancelled", label: "Cancelled" },
   ];
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
 
 export default function BatchJobDetailPage() {
   const params = useParams<{ jobId: string }>();
@@ -201,9 +187,9 @@ export default function BatchJobDetailPage() {
               {getBatchJobStatusBadge(job.status)}
             </div>
             <p className="text-muted-foreground text-sm">
-              Submitted {formatDateTime(job.requestedAt)}
+              Submitted {formatDate(job.requestedAt)}
               {job.completedAt &&
-                ` · Finished ${formatDateTime(job.completedAt)}`}
+                ` · Finished ${formatDate(job.completedAt)}`}
             </p>
           </div>
         </div>

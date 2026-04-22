@@ -245,8 +245,6 @@ export default function LoginPage() {
               height={60}
               className="object-contain"
             />
-
-            {/* <span className="text-xl font-bold tracking-tight">PaySwitch Credit</span> */}
           </div>
 
           {/* Main content */}
@@ -326,10 +324,6 @@ export default function LoginPage() {
                 alt="PaySwitch Logo"
                 className="object-contain h-10 w-auto"
               />
-
-              {/* <span className="text-2xl font-bold tracking-tight text-primary">
-                PaySwitch
-              </span> */}
             </div>
           </div>
 
@@ -428,7 +422,9 @@ export default function LoginPage() {
                         </button>
                       </div>
                       {loginForm.formState.errors.password && (
-                        <FieldError errors={[loginForm.formState.errors.password]} />
+                        <FieldError
+                          errors={[loginForm.formState.errors.password]}
+                        />
                       )}
                     </div>
 
@@ -545,7 +541,9 @@ export default function LoginPage() {
                       )}
                     />
                     {twoFactorForm.formState.errors.code && (
-                      <FieldError errors={[twoFactorForm.formState.errors.code]} />
+                      <FieldError
+                        errors={[twoFactorForm.formState.errors.code]}
+                      />
                     )}
                   </div>
 

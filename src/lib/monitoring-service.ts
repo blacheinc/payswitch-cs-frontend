@@ -1,5 +1,6 @@
 import apiClient from "./api-client";
-import { API_ENDPOINTS } from "@/lib/constant";
+import { API_ENDPOINTS, TABLE_ITEM_PER_PAGE } from "@/lib/constant";
+import type { PaginatedResponse } from "@/types/api-type";
 import type {
   ChampionModelsResponse,
   RuleEvaluateRequest,
@@ -14,7 +15,53 @@ import type {
   ComplianceParams,
   AlertsResponse,
   AlertsParams,
+  PlatformApiLogEntry,
+  PlatformApiLogFilters,
 } from "@/types/monitoring-types";
+
+interface RawPlatformApiLogEntry {
+  id: string;
+  method: string;
+  path: string;
+  status_code: number;
+  response_time_ms: number | null;
+  ip_address: string | null;
+  error_message: string | null;
+  created_at: string;
+  actor?: {
+    id?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+}
+
+interface RawPaginatedPlatformApiLogs {
+  items: RawPlatformApiLogEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+function mapPlatformApiLog(raw: RawPlatformApiLogEntry): PlatformApiLogEntry {
+  return {
+    id: raw.id,
+    method: raw.method,
+    path: raw.path,
+    statusCode: raw.status_code,
+    responseTimeMs: raw.response_time_ms ?? null,
+    ipAddress: raw.ip_address ?? null,
+    errorMessage: raw.error_message ?? null,
+    createdAt: raw.created_at,
+    actor: raw.actor
+      ? {
+          id: raw.actor.id ?? null,
+          name: raw.actor.name ?? null,
+          email: raw.actor.email ?? null,
+        }
+      : null,
+  };
+}
 
 // ---- Query-key factories ----
 
@@ -40,6 +87,8 @@ export const MONITORING_KEYS = {
     [...MONITORING_KEYS.all, "compliance", params] as const,
   alerts: (params?: AlertsParams) =>
     [...MONITORING_KEYS.all, "alerts", params] as const,
+  platformLogs: (filters?: PlatformApiLogFilters) =>
+    [...MONITORING_KEYS.all, "platform-logs", filters] as const,
 };
 
 // ---- Services ----
@@ -115,6 +164,34 @@ export const monitoringService = {
       },
     );
     return response.data;
+  },
+
+  async getPlatformApiLogs(
+    filters?: PlatformApiLogFilters,
+  ): Promise<PaginatedResponse<PlatformApiLogEntry>> {
+    const response = await apiClient.get<RawPaginatedPlatformApiLogs>(
+      API_ENDPOINTS.ADMIN.API_LOGS,
+      {
+        params: {
+          page: filters?.page,
+          per_page: filters?.perPage ?? TABLE_ITEM_PER_PAGE,
+          method: filters?.method || undefined,
+          status_code: filters?.statusCode || undefined,
+          status_class: filters?.statusClass || undefined,
+          path: filters?.path?.trim() || undefined,
+          from_date: filters?.fromDate || undefined,
+          to_date: filters?.toDate || undefined,
+        },
+      },
+    );
+    const data = response.data;
+    return {
+      items: (data?.items ?? []).map(mapPlatformApiLog),
+      total: data?.total ?? 0,
+      page: data?.page ?? 1,
+      perPage: data?.per_page ?? TABLE_ITEM_PER_PAGE,
+      totalPages: data?.total_pages ?? 1,
+    };
   },
 
   async getAlerts(params?: AlertsParams): Promise<AlertsResponse> {

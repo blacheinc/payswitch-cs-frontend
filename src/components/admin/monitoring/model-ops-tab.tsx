@@ -40,12 +40,8 @@ import {
 } from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
-import {
-  formatDateTime,
-  formatMetric,
-  prettyModelType,
-} from "@/lib/monitoring-display";
-import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { formatDate, formatMetric, prettyModelType } from "@/lib/utils";
+import { StatCard } from "@/components/shared/stat-card";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
 import type { ModelOpsPeriod } from "@/types/monitoring-types";
 
@@ -233,7 +229,7 @@ export function ModelOpsTab() {
                     <div>
                       <p className="text-xs text-muted-foreground">Deployed</p>
                       <p className="text-xs mt-1.5">
-                        {formatDateTime(c.created_at)}
+                        {formatDate(c.created_at)}
                       </p>
                     </div>
                   </div>
@@ -424,7 +420,7 @@ export function ModelOpsTab() {
                               : "—"}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {formatDateTime(ev.completed_at)}
+                            {formatDate(ev.completed_at)}
                           </TableCell>
                         </TableRow>
                       );

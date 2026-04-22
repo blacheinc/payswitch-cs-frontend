@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card";
 
 import { modelService, MODEL_KEYS } from "@/lib/monitoring-service";
+import { formatDate } from "@/lib/utils";
 import type { ChampionModelEntry } from "@/types/monitoring-types";
 
 const MODEL_META: Record<
@@ -66,17 +67,6 @@ const METRIC_LABELS: Record<string, string> = {
   fairness_fnr_gap: "Fairness FNR Gap",
   fairness_passed: "Fairness Passed",
 };
-
-function formatDate(dateString?: string | null) {
-  if (!dateString) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(dateString));
-}
 
 function isPercentageMetric(key: string) {
   return ["auc", "f1", "precision", "recall", "fairness_di_ratio"].includes(

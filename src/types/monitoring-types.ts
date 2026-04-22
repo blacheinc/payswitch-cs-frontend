@@ -298,6 +298,37 @@ export interface AlertsResponse {
   };
 }
 
+// ==================== PLATFORM API LOGS (admin) ====================
+
+export interface PlatformApiLogActor {
+  id?: string | null;
+  name?: string | null;
+  email?: string | null;
+}
+
+export interface PlatformApiLogEntry {
+  id: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  responseTimeMs: number | null;
+  ipAddress: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  actor: PlatformApiLogActor | null;
+}
+
+export interface PlatformApiLogFilters {
+  page?: number;
+  perPage?: number;
+  method?: string;
+  statusCode?: number;
+  statusClass?: "1xx" | "2xx" | "3xx" | "4xx" | "5xx";
+  path?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
 // ==================== QUERY PARAMS ====================
 
 export type InfrastructurePeriod = "1h" | "6h" | "24h" | "7d" | "30d";

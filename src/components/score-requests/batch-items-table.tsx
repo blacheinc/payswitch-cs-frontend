@@ -31,6 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ROUTES } from "@/lib/constant";
+import { formatDate } from "@/lib/utils";
 import type { BatchResultItem, BatchItemStatus } from "@/lib/score-service";
 
 interface BatchItemsTableProps {
@@ -210,15 +211,7 @@ export function BatchItemsTable({
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground text-nowrap">
-                      {item.completedAt
-                        ? new Intl.DateTimeFormat("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          }).format(new Date(item.completedAt))
-                        : "—"}
+                      {formatDate(item.completedAt)}
                     </TableCell>
                     <TableCell>
                       {item.scoreTrackingId && (

@@ -31,8 +31,8 @@ import {
 } from "@/components/ui/select";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
-import { formatNumber, formatPct } from "@/lib/monitoring-display";
-import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { formatNumber, formatPct } from "@/lib/utils";
+import { StatCard } from "@/components/shared/stat-card";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
 import type { CompliancePeriod } from "@/types/monitoring-types";
 

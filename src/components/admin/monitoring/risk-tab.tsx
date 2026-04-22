@@ -32,9 +32,9 @@ import {
 } from "@/components/ui/select";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
-import { formatNumber, formatPct } from "@/lib/monitoring-display";
+import { formatNumber, formatPct } from "@/lib/utils";
 import { MonitoringChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
-import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { StatCard } from "@/components/shared/stat-card";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
 import type { RiskPeriod, ScoreGrade } from "@/types/monitoring-types";
 

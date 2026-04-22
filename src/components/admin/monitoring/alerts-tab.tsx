@@ -27,12 +27,8 @@ import {
 } from "@/components/ui/select";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
-import {
-  formatDateTime,
-  formatRelative,
-  prettyModelType,
-} from "@/lib/monitoring-display";
-import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { formatDate, prettyModelType } from "@/lib/utils";
+import { StatCard } from "@/components/shared/stat-card";
 import type {
   AlertDashboard,
   AlertDetail,
@@ -171,7 +167,7 @@ export function AlertsTab() {
           label="Shown below"
           value={allAlerts.length}
           icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-          description={`updated ${formatRelative(data.generated_at)}`}
+          description={`updated ${formatDate(data.generated_at)}`}
         />
       </div>
 
@@ -339,11 +335,11 @@ function AlertRow({ alert }: { alert: AlertDetail }) {
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                <span>Started {formatRelative(alert.created_at)}</span>
+                <span>Started {formatDate(alert.created_at)}</span>
               </div>
               {alert.resolved_at && (
                 <div className="text-green-600">
-                  Cleared {formatDateTime(alert.resolved_at)}
+                  Cleared {formatDate(alert.resolved_at)}
                 </div>
               )}
             </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import {
   FileText,
   ChevronLeft,
@@ -25,6 +24,7 @@ import {
 
 import type { ScoreRequest } from "@/types/models";
 import type { PaginatedResponse } from "@/types/api-type";
+import { formatDate } from "@/lib/utils";
 
 interface AdminScoreRequestsTableProps {
   data: PaginatedResponse<ScoreRequest> | undefined;
@@ -117,17 +117,6 @@ export function AdminScoreRequestsTable({
         {config.label}
       </Badge>
     );
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
   };
 
   if (isLoading) {

@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ROUTES } from "@/lib/constant";
+import { formatDate } from "@/lib/utils";
 import type { BatchJobListItem, BatchJobStatus } from "@/lib/score-service";
 
 interface BatchJobsTableProps {
@@ -78,21 +79,6 @@ export function getBatchJobStatusBadge(status: BatchJobStatus) {
       {cfg.label}
     </Badge>
   );
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(value));
-  } catch {
-    return value;
-  }
 }
 
 export function BatchJobsTable({
@@ -165,10 +151,10 @@ export function BatchJobsTable({
                     {job.failed}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground text-nowrap">
-                    {formatDateTime(job.requestedAt)}
+                    {formatDate(job.requestedAt)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground text-nowrap">
-                    {formatDateTime(job.completedAt)}
+                    {formatDate(job.completedAt)}
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" asChild>

@@ -14,9 +14,6 @@ export const ROUTES = {
     DASHBOARD: "/admin-dashboard",
     ORGANIZATIONS: "/organizations",
     TRAINING: "/training",
-    AI_MONITOR: "/ai-monitor",
-    COMPLIANCE: "/compliance",
-    REPORTS: "/admin-reports",
     SCORE_REQUESTS: "/admin-score-requests",
     SCORING_ENGINE: "/scoring-engine",
     MONITORING: "/admin-monitoring",
@@ -85,6 +82,7 @@ export const API_ENDPOINTS = {
     TRAINING_STATUS: (id: string) => `/admin/training-data/${id}/status`,
 
     UPLOAD_TRAINING: "/admin/training-data/upload",
+    API_LOGS: "/admin/api-logs",
   },
   MODELS: {
     CURRENT: "/v1/models/current",

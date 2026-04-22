@@ -35,6 +35,8 @@ interface MonitoringChartProps<T extends object> {
   series: ChartSeries[];
   emptyMessage?: string;
   height?: number;
+  /** Slot rendered in the card header, e.g. a period selector. */
+  headerAction?: React.ReactNode;
 }
 
 const DEFAULT_COLORS = [
@@ -70,6 +72,7 @@ export function MonitoringChart<T extends object>({
   series,
   emptyMessage = "No data for this period.",
   height = 240,
+  headerAction,
 }: MonitoringChartProps<T>) {
   const rows = data?.length
     ? data.map((d) => ({
@@ -83,10 +86,15 @@ export function MonitoringChart<T extends object>({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        {description ? (
-          <CardDescription>{description}</CardDescription>
-        ) : null}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <CardTitle className="text-base">{title}</CardTitle>
+            {description ? (
+              <CardDescription>{description}</CardDescription>
+            ) : null}
+          </div>
+          {headerAction}
+        </div>
       </CardHeader>
       <CardContent className="pl-0 sm:pl-2">
         {rows.length === 0 ? (

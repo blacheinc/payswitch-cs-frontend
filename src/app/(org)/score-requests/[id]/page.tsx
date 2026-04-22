@@ -561,7 +561,7 @@ export default function ScoreRequestDetailPage() {
           </Button>
 
           {/* Override Decision */}
-          {/* <Dialog
+          <Dialog
             open={overrideDialogOpen}
             onOpenChange={(v) => {
               setOverrideDialogOpen(v);
@@ -669,10 +669,10 @@ export default function ScoreRequestDetailPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog> */}
+          </Dialog>
 
           {/* Record Outcome */}
-          {/* <Dialog
+          <Dialog
             open={outcomeDialogOpen}
             onOpenChange={(v) => {
               setOutcomeDialogOpen(v);
@@ -783,10 +783,10 @@ export default function ScoreRequestDetailPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog> */}
+          </Dialog>
 
           {/* Record Performance */}
-          {/* <Dialog
+          <Dialog
             open={performanceDialogOpen}
             onOpenChange={(v) => {
               setPerformanceDialogOpen(v);
@@ -887,7 +887,7 @@ export default function ScoreRequestDetailPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog> */}
+          </Dialog>
         </div>
       </div>
 

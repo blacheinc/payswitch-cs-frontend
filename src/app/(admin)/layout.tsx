@@ -15,7 +15,6 @@ import {
   Database,
   Activity,
   FileBarChart,
-  Shield,
   LogOut,
   Moon,
   Sun,
@@ -65,9 +64,6 @@ const navItems: NavItem[] = [
   { title: "Scoring Engine", href: ROUTES.ADMIN.SCORING_ENGINE, icon: BrainCircuit },
   { title: "Monitoring", href: ROUTES.ADMIN.MONITORING, icon: MonitorDot },
   { title: "Roles & Permissions", href: ROUTES.ADMIN.ROLES, icon: ShieldCheck },
-  // { title: "AI Monitor", href: ROUTES.ADMIN.AI_MONITOR, icon: Activity },
-  { title: "Compliance", href: ROUTES.ADMIN.COMPLIANCE, icon: Shield },
-  // { title: "Reports", href: ROUTES.ADMIN.REPORTS, icon: FileBarChart },
   { title: "Settings", href: ROUTES.ADMIN.SETTINGS, icon: Settings },
 ];
 
@@ -144,8 +140,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           );
         })}
       </nav>
-
-      {/* No inline collapse button anymore */}
 
       {/* User section */}
       <div className={cn("p-4", collapsed && !isMobile && "px-2")}>

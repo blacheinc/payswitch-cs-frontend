@@ -41,13 +41,13 @@ import {
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
 import {
+  formatDate,
   formatMs,
   formatNumber,
   formatPct,
-  formatRelative,
-} from "@/lib/monitoring-display";
+} from "@/lib/utils";
 import { MonitoringChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
-import { StatCard } from "@/components/admin/monitoring/stat-card";
+import { StatCard } from "@/components/shared/stat-card";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
 import type {
   InfrastructurePeriod,
@@ -194,7 +194,7 @@ export function InfrastructureTab() {
             size="icon"
             onClick={() => refetch()}
             disabled={isFetching}
-            title={`Updated ${formatRelative(data.generated_at)}`}
+            title={`Updated ${formatDate(data.generated_at)}`}
           >
             <RefreshCcw
               className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
