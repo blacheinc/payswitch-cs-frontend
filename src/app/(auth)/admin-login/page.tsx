@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { LoginShell } from "@/components/auth/login-shell";
 
-export default function OrgLoginPage() {
+export default function AdminLoginPage() {
   return (
     <Suspense fallback={null}>
-      <LoginShell audience="org" />
+      <LoginShell audience="admin" />
     </Suspense>
   );
 }

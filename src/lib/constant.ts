@@ -7,6 +7,7 @@ export const TABLE_ITEM_PER_PAGE = 10;
 export const ROUTES = {
   AUTH: {
     LOGIN: "/login",
+    ADMIN_LOGIN: "/admin-login",
     FORGOT_PASSWORD: "/forgot-password",
     RESET_PASSWORD: "/reset-password",
   },
@@ -29,6 +30,16 @@ export const ROUTES = {
     SETTINGS: "/settings",
   },
 };
+
+/**
+ * Route-prefix arrays used by the proxy/middleware to classify every request
+ * into an audience. Keep these in sync with the sidebar navigation — any new
+ * admin or org route must be added here so scope isolation stays enforced.
+ */
+export const ADMIN_ROUTE_PREFIXES: readonly string[] = Object.values(
+  ROUTES.ADMIN,
+);
+export const ORG_ROUTE_PREFIXES: readonly string[] = Object.values(ROUTES.ORG);
 
 // API Endpoints
 export const API_ENDPOINTS = {

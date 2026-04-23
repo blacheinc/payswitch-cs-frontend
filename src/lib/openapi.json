@@ -2722,6 +2722,295 @@
         }
       }
     },
+    "/admin/admins": {
+      "post": {
+        "tags": ["Platform Admin Users"],
+        "summary": "Invite Admin",
+        "description": "Invite a new platform administrator.\n\nCreates an ACTIVE admin with a temp password, assigns the requested\nplatform RBAC role (defaults to SUPER_ADMIN), and emails the invitee.",
+        "operationId": "invite_admin_admin_admins_post",
+        "security": [{ "HTTPBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InviteAdminRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Platform Admin Users"],
+        "summary": "List Admins",
+        "description": "List all platform admins (paginated, newest first).",
+        "operationId": "list_admins_admin_admins_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Per Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/admins/{admin_id}": {
+      "get": {
+        "tags": ["Platform Admin Users"],
+        "summary": "Get Admin",
+        "operationId": "get_admin_admin_admins__admin_id__get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "admin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Admin Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Platform Admin Users"],
+        "summary": "Update Admin",
+        "description": "Update an admin's name and/or RBAC role.\n\nReassigning away from SUPER_ADMIN is blocked if this is the last one.",
+        "operationId": "update_admin_admin_admins__admin_id__patch",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "admin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Admin Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateAdminRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Platform Admin Users"],
+        "summary": "Delete Admin",
+        "description": "Soft-delete an admin (sets status=DEACTIVATED, removes RBAC role).\n\nThe row itself is retained to preserve historical audit links. To fully\nrestore, an invite flow is required.",
+        "operationId": "delete_admin_admin_admins__admin_id__delete",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "admin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Admin Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/admins/{admin_id}/suspend": {
+      "post": {
+        "tags": ["Platform Admin Users"],
+        "summary": "Suspend Admin",
+        "operationId": "suspend_admin_admin_admins__admin_id__suspend_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "admin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Admin Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/admins/{admin_id}/activate": {
+      "post": {
+        "tags": ["Platform Admin Users"],
+        "summary": "Activate Admin",
+        "operationId": "activate_admin_admin_admins__admin_id__activate_post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "admin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Admin Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/org/profile": {
       "get": {
         "tags": ["Org Portal – Profile"],
@@ -3392,6 +3681,66 @@
   },
   "components": {
     "schemas": {
+      "AdminUserDetailResponse": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "email": { "type": "string", "title": "Email" },
+          "name": { "type": "string", "title": "Name" },
+          "status": { "type": "string", "title": "Status" },
+          "role_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Role Id"
+          },
+          "role_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Role Name"
+          },
+          "last_login_at": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Last Login At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "status",
+          "role_id",
+          "role_name",
+          "last_login_at",
+          "created_at"
+        ],
+        "title": "AdminUserDetailResponse",
+        "description": "Full admin profile returned from /admin/admins endpoints.\n\nUnlike the legacy :class:`AdminUserResponse` this includes the resolved\nRBAC role (`role_id`, `role_name`) rather than the retired enum badge."
+      },
+      "AdminUserListResponse": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/AdminUserDetailResponse" },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": { "type": "integer", "title": "Total" },
+          "page": { "type": "integer", "title": "Page" },
+          "per_page": { "type": "integer", "title": "Per Page" },
+          "total_pages": { "type": "integer", "title": "Total Pages" }
+        },
+        "type": "object",
+        "required": ["items", "total", "page", "per_page", "total_pages"],
+        "title": "AdminUserListResponse"
+      },
       "AffordabilityAssessment": {
         "properties": {
           "estimated_monthly_payment": {
@@ -4643,6 +4992,28 @@
         "type": "object",
         "title": "IncomeVerificationResult",
         "description": "Income verification model output from the AI pipeline (Phase 2, nullable)."
+      },
+      "InviteAdminRequest": {
+        "properties": {
+          "email": { "type": "string", "format": "email", "title": "Email" },
+          "name": { "type": "string", "maxLength": 200, "title": "Name" },
+          "role_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Role Id",
+            "description": "Platform-scoped RBAC role to assign. Defaults to the system SUPER_ADMIN role when omitted."
+          },
+          "callback_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Callback Url"
+          }
+        },
+        "type": "object",
+        "required": ["email", "name"],
+        "title": "InviteAdminRequest",
+        "description": "Invite a new platform administrator.\n\nMirrors :class:`InviteUserRequest` but targets the AdminUser table and\nonly accepts platform-scoped RBAC roles. When ``role_id`` is omitted\nthe invitee is assigned the system **SUPER_ADMIN** role by default —\ncallers who want a narrower scope should pass an explicit role_id."
       },
       "InviteUserRequest": {
         "properties": {
@@ -6177,6 +6548,27 @@
           "created_at"
         ],
         "title": "TrainingUploadResponse"
+      },
+      "UpdateAdminRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              { "type": "string", "maxLength": 200 },
+              { "type": "null" }
+            ],
+            "title": "Name"
+          },
+          "role_id": {
+            "anyOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ],
+            "title": "Role Id",
+            "description": "Replace the admin's RBAC role assignment"
+          }
+        },
+        "type": "object",
+        "title": "UpdateAdminRequest"
       },
       "UpdateFieldMappingItem": {
         "properties": {

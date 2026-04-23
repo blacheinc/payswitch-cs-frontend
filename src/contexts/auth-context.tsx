@@ -16,7 +16,7 @@ import {
 } from "@/lib/session-storage";
 import { authService, mergeUserFromMeProfile } from "@/lib/auth-service";
 import { User, Organization, AdminUser, OrgUser } from "@/types/models";
-import { INACTIVITY_TIMEOUT_MS } from "@/lib/constant";
+import { INACTIVITY_TIMEOUT_MS, ROUTES } from "@/lib/constant";
 
 // Auth state interface
 interface AuthState {
@@ -163,17 +163,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [],
   );
 
-  // Logout function
+  // Logout function — sends the user back to the login page for their scope
+  // so an admin doesn't land on the org portal (and vice versa).
   const logout = useCallback(() => {
+    // Snapshot scope before we wipe the session.
+    const wasAdmin = getSession()?.userType === "admin";
     clearSession();
     setState({
       ...initialState,
       isLoading: false,
     });
 
-    // Redirect to login
     if (typeof window !== "undefined") {
-      window.location.href = "/login";
+      window.location.href = wasAdmin
+        ? ROUTES.AUTH.ADMIN_LOGIN
+        : ROUTES.AUTH.LOGIN;
     }
   }, []);
 
@@ -287,8 +291,9 @@ export function useAuth(): AuthContextType {
   return context;
 }
 
-// Hook to require authentication
-export function useRequireAuth(redirectTo: string = "/login") {
+// Hook to require authentication — defaults to the org login. Admin layouts
+// should pass ROUTES.AUTH.ADMIN_LOGIN explicitly.
+export function useRequireAuth(redirectTo: string = ROUTES.AUTH.LOGIN) {
   const auth = useAuth();
 
   useEffect(() => {
@@ -300,9 +305,10 @@ export function useRequireAuth(redirectTo: string = "/login") {
   return auth;
 }
 
-// Hook to require admin access
-export function useRequireAdmin(redirectTo: string = "/dashboard") {
-  const auth = useRequireAuth();
+// Hook to require admin access. Unauthed → admin login. Authed-but-non-admin
+// → their own dashboard, never the admin UI.
+export function useRequireAdmin(redirectTo: string = ROUTES.ORG.DASHBOARD) {
+  const auth = useRequireAuth(ROUTES.AUTH.ADMIN_LOGIN);
 
   useEffect(() => {
     if (!auth.isLoading && auth.isAuthenticated && !auth.isAdmin) {
