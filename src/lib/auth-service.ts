@@ -43,7 +43,9 @@ export function mergeUserFromMeProfile(
 
   if ("isAdmin" in next && (next as AdminUser).isAdmin) {
     const asAdmin = next as AdminUser;
-    const { isAdmin: _a, adminRole: _r, ...orgShape } = asAdmin;
+    const { isAdmin, adminRole, ...orgShape } = asAdmin;
+    void isAdmin;
+    void adminRole;
     return orgShape as User;
   }
 

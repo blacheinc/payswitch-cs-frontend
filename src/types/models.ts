@@ -85,7 +85,7 @@ export interface AuthResponse {
   userType?: string;
 }
 
-export interface LoginResponse extends AuthResponse {}
+export type LoginResponse = AuthResponse;
 
 // ==================== API KEYS ====================
 

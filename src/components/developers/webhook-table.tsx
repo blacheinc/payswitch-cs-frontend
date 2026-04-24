@@ -63,7 +63,7 @@ export function WebhookTable({
     },
   });
 
-  const handleTest = (id: string) => {
+  const handleTest = () => {
     toast.success(
       "Test event sent! Check your endpoint for a score.completed payload.",
     );
@@ -163,7 +163,7 @@ export function WebhookTable({
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleTest(wh.id)}>
+                  <DropdownMenuItem onClick={() => handleTest()}>
                     <Send className="mr-2 h-4 w-4" />
                     Test
                   </DropdownMenuItem>

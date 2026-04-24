@@ -1,118 +1,145 @@
-# PaySwitch Credit Scoring Platform
+# PaySwitch Credit Scoring — Frontend
 
-An AI-powered credit scoring and risk assessment platform for financial institutions in Ghana. This frontend application provides an enterprise-grade interface for managing credit requests, organizations, and scoring models.
+The web client for the PaySwitch credit-scoring platform: an AI-powered credit-risk assessment system for financial institutions in Ghana. This repository contains the Next.js application that powers both the **organization portal** (used by lenders) and the **admin portal** (used by platform operators).
 
-## 🚀 Key Features
+The backend service is a separate repository.
 
-### Organization Portal
+---
 
-- **Dashboard**: Real-time overview of scoring requests and risk distribution.
-- **Score Requests**: Single and Bulk (CSV/Excel) upload capabilities.
-- **Reports**: Interactive analytics with exportable data (CSV/PDF).
-- **Developers**: API Key management, Webhook configuration, and IP Whitelisting.
-- **Team**: Role-based access control and user management.
+## Documentation
 
-### Admin Portal
+Detailed docs live under [`docs/`](./docs/).
 
-- **System Overview**: Platform-wide health and usage metrics.
-- **Organization Management**: Onboard and manage financial institutions.
-- **Model Registry**: Champion/Challenger model comparison and fairness reports.
-- **Compliance**: Audit logs and data retention policies.
+| Doc | Purpose |
+|---|---|
+| [Architecture](./docs/architecture.md) | Tech stack, folder layout, request lifecycle, system context. |
+| [Auth & RBAC](./docs/auth-and-rbac.md) | Login, 2FA, session, token refresh, permission gating. |
+| [Data flow](./docs/data-flow.md) | Service layer convention, TanStack Query patterns, snake/camel mapping. |
+| [Feature map](./docs/feature-map.md) | Every route → endpoints consumed → permission gates. |
+| [Integrations](./docs/integrations.md) | How the FE consumes each backend integration guide. |
+| [Security](./docs/security.md) | Token storage posture, threat model, hardening recommendations. |
+| [Known issues](./docs/known-issues.md) | Tracked follow-ups (lint debt, set-state-in-effect, etc.). |
 
-## 🛠️ Technology Stack
+A deployment guide will be added separately.
 
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Components**: shadcn/ui (Radix UI)
-- **Charts**: Recharts
-- **State Management**: React Context + TanStack Query
-- **Forms**: React Hook Form + Zod
+---
 
-## 🏁 Getting Started
+## Tech stack
 
-### Prerequisites
+- **Framework**: [Next.js 16](https://nextjs.org/docs) (App Router) on [React 19](https://react.dev/)
+- **Language**: TypeScript (strict mode)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) (Radix primitives)
+- **Server state**: [TanStack Query 5](https://tanstack.com/query/latest)
+- **Client state**: React Context (auth, theme)
+- **Forms**: [react-hook-form](https://react-hook-form.com/) + [zod](https://zod.dev/)
+- **HTTP**: [axios](https://axios-http.com/) (interceptors handle bearer-token attach + 401 refresh)
+- **Icons**: [lucide-react](https://lucide.dev/)
+- **Toasts**: [sonner](https://sonner.emilkowal.ski/)
+- **Theme**: [next-themes](https://github.com/pacocoursey/next-themes) (light / dark / system)
 
-- Node.js 18+
-- npm or yarn
+---
 
-### Installation
+## Prerequisites
 
-1. Clone the repository:
+- **Node.js ≥ 20** (required by Next 16 / React 19)
+- **npm** (comes with Node)
+- A running backend API, or set `NEXT_PUBLIC_MOCK_AUTH=true` to develop the UI standalone.
 
-   ```bash
-   git clone https://github.com/payswitch/credit-scoring-frontend.git
-   cd credit-scoring-frontend
-   ```
+---
 
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Configure Environment:
-   Create a `.env.local` file in the root directory:
-
-   ```env
-   # Backend API URL (default to localhost for dev)
-   NEXT_PUBLIC_API_URL=http://localhost:3000/api
-
-   # Enable Mock Authentication (set to 'true' for standalone frontend dev)
-   NEXT_PUBLIC_MOCK_AUTH=true
-   ```
-
-4. Run the development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 🔐 Authentication (Dev Mode)
-
-By default, the application runs in **Mock Auth Mode** (`NEXT_PUBLIC_MOCK_AUTH=true`).
-This allows you to verify the UI without a running backend.
-
-- **Admin Portal**: Login with any email containing "admin" (e.g., `admin@payswitch.com`).
-- **Org Portal**: Login with any other email (e.g., `user@ecobank.com`).
-- **Password**: Any value (e.g., `password`).
-- **2FA**: If email contains "2fa", the UI will simulate a 2FA challenge.
-
-To disable this and connect to a real backend, set `NEXT_PUBLIC_MOCK_AUTH=false`.
-
-## 📦 Deployment
-
-### Production Build
-
-To build the application for production locally:
+## Getting started
 
 ```bash
-npm run build
-npm start
+# 1. Install
+npm install
+
+# 2. Configure environment
+cp .env.example .env.local
+# Edit .env.local with your API URL and a fresh session secret:
+#   openssl rand -hex 64
+
+# 3. Run the dev server
+npm run dev
 ```
 
-## 📂 Project Structure
+The app is served at [http://localhost:3000](http://localhost:3000).
+
+### Available scripts
+
+| Script | Purpose |
+|---|---|
+| `npm run dev` | Start the dev server with hot reload (Turbopack). |
+| `npm run build` | Production build to `.next/`. |
+| `npm start` | Run the production build (after `npm run build`). |
+| `npm run lint` | Run ESLint. See [`docs/known-issues.md`](./docs/known-issues.md) for the current backlog. |
+
+---
+
+## Mock auth (UI-only development)
+
+When `NEXT_PUBLIC_MOCK_AUTH=true`, the login screen does **not** call the backend. It seeds a local session so the UI can be exercised standalone.
+
+| Sign-in email contains | Result |
+|---|---|
+| `admin` | Admin portal session |
+| anything else | Org portal session |
+| `2fa` | Triggers a simulated 2FA challenge |
+
+Password is ignored. Use any non-empty value.
+
+**Mock auth must be `false` in any deployed environment.**
+
+---
+
+## Environment variables
+
+Three variables are read at build/runtime — see [`.env.example`](./.env.example) for details.
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Base URL of the backend API. |
+| `NEXT_PUBLIC_SESSION_SECRET` | AES key used to encrypt the session cookie payload (see [security doc](./docs/security.md)). |
+| `NEXT_PUBLIC_MOCK_AUTH` | `true` enables UI-only mock auth. Default: `false`. |
+
+---
+
+## Project layout
 
 ```
 src/
-├── app/                  # Next.js App Router pages
-│   ├── (auth)/           # Authentication routes (login, reset)
-│   ├── (admin)/          # Admin Portal routes (/admin/...)
-│   ├── (org)/            # Organization Portal routes (dashboard, requests...)
-│   └── api/              # API routes (if any mock handlers used)
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Login, 2FA, password recovery (unauthenticated)
+│   ├── (admin)/                  # Platform-admin portal
+│   ├── (org)/                    # Organization portal
+│   └── layout.tsx                # Root layout (providers, theme, fonts)
 ├── components/
-│   ├── ui/               # Reusable UI components (shadcn/ui)
-│   └── ...               # Feature-specific components
-├── lib/                  # Utilities, API client, helpers
-├── contexts/             # React Context Providers (Auth, Theme)
-└── types/                # TypeScript definitions
+│   ├── ui/                       # shadcn/ui primitives (button, dialog, ...)
+│   ├── shared/                   # Cross-cutting components (StatCard, EmptyState, ...)
+│   └── <feature>/                # Feature-scoped components
+├── contexts/                     # AuthContext, ThemeContext
+├── hooks/                        # usePermissions, useDebounce, ...
+├── lib/                          # Services, API client, query client, utils, schemas
+│   ├── api-client.ts             # axios instance + interceptors
+│   ├── *-service.ts              # One service per backend domain
+│   ├── schemas/                  # zod validation schemas
+│   └── constant.ts               # Routes, permission codes, API endpoints
+├── proxy.ts                      # Next middleware: route classification + RBAC gate
+└── types/                        # Shared TypeScript types
 ```
 
-## 🤝 Contribution
+See [`docs/architecture.md`](./docs/architecture.md) for a deeper tour.
 
-1. Create a feature branch (`git checkout -b feature/amazing-feature`)
-2. Commit your changes (`git commit -m 'Add amazing feature'`)
-3. Push to the branch (`git push origin feature/amazing-feature`)
-4. Open a Pull Request
+---
+
+## Contributing
+
+1. Create a feature branch from `develop` (`feat/<short-description>` or `fix/<short-description>`).
+2. Run `npm run lint` and `npx tsc --noEmit` before opening a PR.
+3. PR title follows [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `style:`, `refactor:`, `docs:`, `chore:`.
+4. Reference the issue or backend integration guide in the PR description.
+
+---
+
+## License
+
+Proprietary — © PaySwitch. All rights reserved.

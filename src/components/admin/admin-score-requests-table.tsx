@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  FileText,
   ChevronLeft,
   ChevronRight,
   Loader2,

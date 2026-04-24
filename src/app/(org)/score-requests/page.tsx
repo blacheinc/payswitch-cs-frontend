@@ -2,28 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  Plus,
-  Search,
-  Filter,
-  Download,
-  UploadCloud,
-  MoreHorizontal,
-  Eye,
-  FileText,
-  CheckCircle,
-  XCircle,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { Plus, Search, Download, UploadCloud } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/lib/constant";
+import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -32,36 +16,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { scoreService, SCORE_KEYS } from "@/lib/score-service";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
-import { PERMISSION_CODES } from "@/lib/constant";
-
-// Mock data removed - now fetched from API
-
 import { OrganizationScoreRequestsTable } from "@/components/score-requests/organization-score-requests-table";
 
 export default function ScoreRequestsPage() {

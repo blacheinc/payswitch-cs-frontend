@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Controller, useForm } from "react-hook-form";
@@ -17,9 +17,7 @@ import {
   Sparkles,
   Loader2,
   Search,
-  Shield,
   AlertTriangle,
-  Building2,
   ChevronDown,
   ChevronUp,
   RefreshCw,
@@ -83,11 +81,6 @@ function safeParseDateStr(value: string): Date | undefined {
 function safeFormatDate(value: string, displayFormat = "PPP"): string {
   const d = safeParseDateStr(value);
   return d ? format(d, displayFormat) : value;
-}
-
-function safeNormalizeDateStr(value: string): string {
-  const d = safeParseDateStr(value);
-  return d ? format(d, "yyyy-MM-dd") : value;
 }
 
 // =============================================================================
