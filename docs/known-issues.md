@@ -99,17 +99,20 @@ The legacy `queryKeys` factory is kept for backward compatibility but every new 
 
 ## Testing
 
-### 🔴 No tests
+The Vitest unit/integration suite (100 tests across services, hooks, contexts, schemas, and the proxy middleware) and the Playwright E2E suite (8 specs covering login, portal isolation, and security headers) are now in place. See [testing.md](./testing.md) for how to run and extend them.
 
-There is no Jest, Vitest, or Playwright setup. Critical flows that need coverage before launch:
+### 🟡 Mutation coverage missing
 
-- Login + 2FA + token refresh.
-- `usePermissions().can()` returns the correct value for `"*"` super-admins and per-code users.
-- Score-request override happy path + 403 path.
+These flows are exercised only by smoke E2E or not at all:
+
+- Login + 2FA + token refresh — currently relies on mock auth in E2E. Add live-API E2E once staging credentials exist.
+- Score-request override / outcome / performance reporting.
 - Batch upload submission + cancel.
-- Admin / org route isolation (proxy redirects, not-found rewrites).
+- Invite/edit/suspend org users + admins.
 
-Recommendation: Vitest for unit (services, hooks, mappers) + Playwright for the auth + RBAC E2E. See the deployment guide (separate document) for how tests should integrate with CI.
+### 🟢 Service-level mutation tests
+
+`auth-service.ts`, `developer-service.ts`, `organization-service.ts`, `training-service.ts`, `admin-management-service.ts`, `user-management-service.ts`, `rbac-service.ts` have no unit tests yet. Each is a thin pass-through; coverage cost is low. Pick the ones touched most often by ongoing work first.
 
 ---
 

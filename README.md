@@ -18,6 +18,7 @@ Detailed docs live under [`docs/`](./docs/).
 | [Feature map](./docs/feature-map.md) | Every route → endpoints consumed → permission gates. |
 | [Integrations](./docs/integrations.md) | How the FE consumes each backend integration guide. |
 | [Security](./docs/security.md) | Token storage posture, threat model, hardening recommendations. |
+| [Testing](./docs/testing.md) | Vitest + MSW + Playwright — how to run, write, and extend tests. |
 | [Known issues](./docs/known-issues.md) | Tracked follow-ups (lint debt, set-state-in-effect, etc.). |
 
 A deployment guide will be added separately.
@@ -72,6 +73,10 @@ The app is served at [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build to `.next/`. |
 | `npm start` | Run the production build (after `npm run build`). |
 | `npm run lint` | Run ESLint. See [`docs/known-issues.md`](./docs/known-issues.md) for the current backlog. |
+| `npm run typecheck` | TypeScript compile check (`tsc --noEmit`). |
+| `npm test` | Run the Vitest unit + integration suite. |
+| `npm run test:coverage` | Same, with V8 coverage and the configured thresholds. |
+| `npm run test:e2e` | Run the Playwright end-to-end suite (auto-starts a prod build on port 3100). |
 
 ---
 
