@@ -64,28 +64,36 @@ interface OrgLayoutProps {
   children: React.ReactNode;
 }
 
-export default function OrgLayout({ children }: OrgLayoutProps) {
-  const pathname = usePathname();
-  const { organization, logout } = useAuth();
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
-  const { data: userProfile } = useQuery({
-    queryKey: ["auth-me"],
-    queryFn: () => authService.getMe(),
-  });
+// See admin/layout.tsx — hoisted for the same "sidebar logo flash on nav"
+// fix. A component defined inside its parent's body is a fresh type on every
+// render, forcing React to unmount + remount the whole sidebar subtree.
+interface SidebarContentProps {
+  isMobile?: boolean;
+  collapsed: boolean;
+  resolvedTheme: "light" | "dark";
+  pathname: string;
+  organization?: { name?: string } | null;
+  userProfile?: { name?: string; email?: string } | null;
+}
 
-  const { resolvedTheme, toggleTheme } = useTheme();
-  const [collapsed, setCollapsed] = useState(false);
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+function SidebarContent({
+  isMobile = false,
+  collapsed,
+  resolvedTheme,
+  pathname,
+  organization,
+  userProfile,
+}: SidebarContentProps) {
+  return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div
@@ -104,6 +112,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
           width={128}
           height={128}
           className="object-contain"
+          priority
           unoptimized
         />
       </div>
@@ -133,6 +142,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 isActive
@@ -155,8 +165,6 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
           );
         })}
       </nav>
-
-      {/* No inline collapse button anymore */}
 
       {/* User section */}
       <div className={cn("p-4", collapsed && !isMobile && "px-2")}>
@@ -185,6 +193,27 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
       </div>
     </div>
   );
+}
+
+export default function OrgLayout({ children }: OrgLayoutProps) {
+  const pathname = usePathname();
+  const { organization, logout } = useAuth();
+
+  const { data: userProfile } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => authService.getMe(),
+  });
+
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const sidebarProps = {
+    collapsed,
+    resolvedTheme,
+    pathname,
+    organization,
+    userProfile,
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -195,7 +224,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
           collapsed ? "w-16" : "w-64",
         )}
       >
-        <SidebarContent />
+        <SidebarContent {...sidebarProps} />
         <Button
           variant="outline"
           size="icon"
@@ -228,7 +257,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
-              <SidebarContent isMobile />
+              <SidebarContent {...sidebarProps} isMobile />
             </SheetContent>
           </Sheet>
 

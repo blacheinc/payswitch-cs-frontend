@@ -8,17 +8,11 @@ import {
   LayoutDashboard,
   Building2,
   Settings,
-  ChevronLeft,
   Menu,
-  TrendingUp,
-  Bot,
   Database,
-  Activity,
-  FileBarChart,
   LogOut,
   Moon,
   Sun,
-  User,
   FileText,
   PanelLeftClose,
   PanelRightClose,
@@ -61,9 +55,17 @@ const navItems: NavItem[] = [
     icon: FileText,
   },
   { title: "Training", href: ROUTES.ADMIN.TRAINING, icon: Database },
-  { title: "Scoring Engine", href: ROUTES.ADMIN.SCORING_ENGINE, icon: BrainCircuit },
+  {
+    title: "Scoring Engine",
+    href: ROUTES.ADMIN.SCORING_ENGINE,
+    icon: BrainCircuit,
+  },
   { title: "Monitoring", href: ROUTES.ADMIN.MONITORING, icon: MonitorDot },
-  { title: "Access Control", href: ROUTES.ADMIN.ACCESS_CONTROL, icon: ShieldCheck },
+  {
+    title: "Access Control",
+    href: ROUTES.ADMIN.ACCESS_CONTROL,
+    icon: ShieldCheck,
+  },
   { title: "Settings", href: ROUTES.ADMIN.SETTINGS, icon: Settings },
 ];
 
@@ -71,28 +73,35 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  const pathname = usePathname();
-  const { logout } = useAuth();
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
-  const { data: userProfile } = useQuery({
-    queryKey: ["auth-me"],
-    queryFn: () => authService.getMe(),
-  });
+// Hoisted out of AdminLayout so React treats it as a stable component type
+// across renders. Declaring it inside the parent would re-create the type on
+// every render, forcing the <Image /> logo (and everything else) to remount
+// and causing a brief empty-sidebar flash during navigation.
+interface SidebarContentProps {
+  isMobile?: boolean;
+  collapsed: boolean;
+  resolvedTheme: "light" | "dark";
+  pathname: string;
+  userProfile?: { name?: string; email?: string } | null;
+}
 
-  const { resolvedTheme, toggleTheme } = useTheme();
-  const [collapsed, setCollapsed] = useState(false);
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+function SidebarContent({
+  isMobile = false,
+  collapsed,
+  resolvedTheme,
+  pathname,
+  userProfile,
+}: SidebarContentProps) {
+  return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div
@@ -110,7 +119,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           alt="PaySwitch Logo"
           width={128}
           height={128}
-          className="xobject-contain"
+          className="object-contain"
+          priority
           unoptimized
         />
       </div>
@@ -125,6 +135,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 isActive
@@ -168,6 +179,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
     </div>
   );
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const pathname = usePathname();
+  const { logout } = useAuth();
+
+  const { data: userProfile } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => authService.getMe(),
+  });
+
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const sidebarProps = {
+    collapsed,
+    resolvedTheme,
+    pathname,
+    userProfile,
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -178,7 +209,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           collapsed ? "w-16" : "w-64",
         )}
       >
-        <SidebarContent />
+        <SidebarContent {...sidebarProps} />
         <Button
           variant="outline"
           size="icon"
@@ -211,7 +242,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
-              <SidebarContent isMobile />
+              <SidebarContent {...sidebarProps} isMobile />
             </SheetContent>
           </Sheet>
 
