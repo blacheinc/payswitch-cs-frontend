@@ -12,8 +12,12 @@ import {
   Building2,
   Eye,
   EyeOff,
+  Lock,
   Loader2,
+  Radar,
   Shield,
+  ShieldAlert,
+  Terminal,
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -51,6 +55,12 @@ import {
 
 export type LoginAudience = "org" | "admin";
 
+interface HeroFeature {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}
+
 interface AudienceCopy {
   cardTitle: string;
   cardSubtitle: string;
@@ -58,6 +68,16 @@ interface AudienceCopy {
   heroHeadline: string;
   heroSubhead: string;
   heroDescription: string;
+  heroFeatures: [HeroFeature, HeroFeature, HeroFeature];
+  /** TailwindCSS class applied to the left brand panel. Drives the overall
+   *  mood — warm/aspirational for org, darker/operational for admin. */
+  heroPanelClass: string;
+  /** Optional restricted-access strip rendered above the login card. */
+  restrictedNotice?: string;
+  /** Optional accent class applied to the login card (e.g. top border). */
+  cardAccentClass?: string;
+  /** Optional little pill rendered next to the logo word-mark. */
+  logoBadge?: string;
   dashboardRoute: string;
   expectedUserType: "admin" | "org_user";
   /** Icon shown in the card header next to the title. */
@@ -76,6 +96,24 @@ const AUDIENCE: Record<LoginAudience, AudienceCopy> = {
     heroSubhead: "Institutional Lending",
     heroDescription:
       "Make data-driven lending decisions with Ghana's most advanced credit scoring platform.",
+    heroFeatures: [
+      {
+        icon: Shield,
+        title: "Bank-Grade Security",
+        description: "ISO-certified data protection protocols",
+      },
+      {
+        icon: TrendingUp,
+        title: "Alternative Data Insights",
+        description: "Scoring beyond traditional credit bureau data",
+      },
+      {
+        icon: Building2,
+        title: "Trusted Nationwide",
+        description: "The backbone for Ghana's leading institutions",
+      },
+    ],
+    heroPanelClass: "gradient-primary",
     dashboardRoute: ROUTES.ORG.DASHBOARD,
     expectedUserType: "org_user",
     Icon: Building2,
@@ -84,12 +122,42 @@ const AUDIENCE: Record<LoginAudience, AudienceCopy> = {
   },
   admin: {
     cardTitle: "Admin Portal",
-    cardSubtitle: "Sign in as a platform administrator",
+    cardSubtitle: "Operational access for PaySwitch staff",
     submitLabel: "Sign in to Admin",
-    heroHeadline: "Platform Governance",
-    heroSubhead: "Operations & Oversight",
+    heroHeadline: "Platform Operations & Oversight",
+    heroSubhead: "Staff-only access",
     heroDescription:
-      "Manage organizations, oversee model performance, and keep the platform running smoothly.",
+      "Monitor platform health, govern organizations, and keep the scoring pipeline running.",
+    heroFeatures: [
+      {
+        icon: Radar,
+        title: "Platform-wide telemetry",
+        description: "Live risk, model-ops, and infrastructure dashboards",
+      },
+      {
+        icon: ShieldAlert,
+        title: "Break-glass controls",
+        description: "Provision, suspend, and re-role organizations on demand",
+      },
+      {
+        icon: Terminal,
+        title: "Audit-logged activity",
+        description: "Every admin action is timestamped and attributed",
+      },
+    ],
+    heroPanelClass:
+      // Base (light theme): dark slate gives strong contrast against the
+      // light form side. In dark theme the app background is already near-
+      // black, so we *elevate* slightly (slate-800) and strengthen the
+      // colored glows so the panel stays visually distinct from the form.
+      "bg-slate-900 dark:bg-slate-800 " +
+      "bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.08),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(248,113,113,0.08),transparent_40%)] " +
+      "dark:bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.18),transparent_45%),radial-gradient(circle_at_80%_80%,rgba(248,113,113,0.16),transparent_45%)] " +
+      "border-r border-white/5 dark:border-white/10",
+    restrictedNotice:
+      "Restricted access · All activity on this portal is logged.",
+    cardAccentClass: "border-t-4 border-t-amber-500",
+    logoBadge: "Admin",
     dashboardRoute: ROUTES.ADMIN.DASHBOARD,
     expectedUserType: "admin",
     Icon: Shield,
@@ -321,7 +389,9 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
   return (
     <div className="min-h-screen flex">
       {/* Left side — brand panel */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-primary relative overflow-hidden">
+      <div
+        className={`hidden lg:flex lg:w-1/2 relative overflow-hidden ${copy.heroPanelClass}`}
+      >
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-white/20 blur-3xl" />
@@ -337,6 +407,11 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
               height={60}
               className="object-contain"
             />
+            {copy.logoBadge && (
+              <span className="rounded-md border border-white/40 bg-white/10 backdrop-blur-sm px-2 py-0.5 text-xs font-semibold uppercase tracking-wider">
+                {copy.logoBadge}
+              </span>
+            )}
           </div>
 
           <div className="space-y-8">
@@ -353,43 +428,22 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-lg">Bank-Grade Security</p>
-                  <p className="text-sm text-white/70">
-                    ISO-certified data protection protocols
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-lg">
-                    Alternative Data Insights
-                  </p>
-                  <p className="text-sm text-white/70">
-                    Scoring beyond traditional credit bureau data
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <Building2 className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-lg">Trusted Nationwide</p>
-                  <p className="text-sm text-white/70">
-                    The backbone for Ghana&apos;s leading institutions
-                  </p>
-                </div>
-              </div>
+              {copy.heroFeatures.map((feature) => {
+                const FeatureIcon = feature.icon;
+                return (
+                  <div key={feature.title} className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
+                      <FeatureIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg">{feature.title}</p>
+                      <p className="text-sm text-white/70">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -410,10 +464,27 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
                 alt="PaySwitch Logo"
                 className="object-contain h-10 w-auto"
               />
+              {copy.logoBadge && (
+                <span className="rounded-md border border-amber-500/60 bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider">
+                  {copy.logoBadge}
+                </span>
+              )}
             </div>
           </div>
 
-          <Card className="border-0 shadow-xl">
+          {copy.restrictedNotice && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-200">
+              <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold leading-tight">Staff access only</p>
+                <p className="mt-0.5 leading-snug">{copy.restrictedNotice}</p>
+              </div>
+            </div>
+          )}
+
+          <Card
+            className={`border-0 shadow-xl overflow-hidden ${copy.cardAccentClass ?? ""}`}
+          >
             <CardHeader className="space-y-1 text-center">
               <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
                 <Icon className="h-6 w-6 text-primary" />
