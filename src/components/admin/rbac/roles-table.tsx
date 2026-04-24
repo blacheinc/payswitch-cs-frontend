@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import type { RoleResponse } from "@/types/rbac-types";
+import { prettyPlatformRoleName } from "@/lib/constant";
 
 interface RolesTableProps {
   roles: RoleResponse[] | undefined;
@@ -83,7 +84,7 @@ export function RolesTable({
               <TableCell>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    {role?.name?.replace(/_/g, " ")}
+                    {prettyPlatformRoleName(role?.name)}
                   </span>
 
                   {role.is_system && (

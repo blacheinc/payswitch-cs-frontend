@@ -8,12 +8,18 @@ import type {
   UpdateRoleRequest,
 } from "@/types/rbac-types";
 
+/** Scope filter for `GET /v1/roles?scope=…`. */
+export type RoleScope = "platform" | "organization";
+
 // ---- Query key factories ----
 
 export const RBAC_KEYS = {
   all: ["rbac"] as const,
   permissions: () => [...RBAC_KEYS.all, "permissions"] as const,
-  roles: () => [...RBAC_KEYS.all, "roles"] as const,
+  roles: (scope?: RoleScope) =>
+    scope
+      ? ([...RBAC_KEYS.all, "roles", scope] as const)
+      : ([...RBAC_KEYS.all, "roles"] as const),
   role: (id: string) => [...RBAC_KEYS.all, "role", id] as const,
 };
 
@@ -27,9 +33,16 @@ export const rbacService = {
     return response.data;
   },
 
-  async listRoles(): Promise<RoleListResponse> {
+  /**
+   * GET /v1/roles — optionally filtered by scope.
+   * - `platform` → seed roles + custom platform roles (admin side)
+   * - `organization` → org-scoped system role + custom org roles
+   * Omit to use whatever the backend returns for the caller's audience.
+   */
+  async listRoles(scope?: RoleScope): Promise<RoleListResponse> {
     const response = await apiClient.get<RoleListResponse>(
       API_ENDPOINTS.RBAC.ROLES,
+      { params: scope ? { scope } : undefined },
     );
     return response.data;
   },

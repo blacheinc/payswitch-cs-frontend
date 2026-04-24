@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
   { title: "Training", href: ROUTES.ADMIN.TRAINING, icon: Database },
   { title: "Scoring Engine", href: ROUTES.ADMIN.SCORING_ENGINE, icon: BrainCircuit },
   { title: "Monitoring", href: ROUTES.ADMIN.MONITORING, icon: MonitorDot },
-  { title: "Roles & Permissions", href: ROUTES.ADMIN.ROLES, icon: ShieldCheck },
+  { title: "Access Control", href: ROUTES.ADMIN.ACCESS_CONTROL, icon: ShieldCheck },
   { title: "Settings", href: ROUTES.ADMIN.SETTINGS, icon: Settings },
 ];
 

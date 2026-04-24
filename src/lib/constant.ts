@@ -18,7 +18,7 @@ export const ROUTES = {
     SCORE_REQUESTS: "/admin-score-requests",
     SCORING_ENGINE: "/scoring-engine",
     MONITORING: "/admin-monitoring",
-    ROLES: "/admin-roles",
+    ACCESS_CONTROL: "/admin-access-control",
     SETTINGS: "/admin-settings",
   },
   ORG: {
@@ -94,6 +94,10 @@ export const API_ENDPOINTS = {
 
     UPLOAD_TRAINING: "/admin/training-data/upload",
     API_LOGS: "/admin/api-logs",
+    ADMINS: "/admin/admins",
+    ADMIN_BY_ID: (id: string) => `/admin/admins/${id}`,
+    SUSPEND_ADMIN: (id: string) => `/admin/admins/${id}/suspend`,
+    ACTIVATE_ADMIN: (id: string) => `/admin/admins/${id}/activate`,
   },
   MODELS: {
     CURRENT: "/v1/models/current",
@@ -195,6 +199,14 @@ export const PERMISSION_CODES = {
     ROLES_READ: "admin.roles.read",
     ROLES_MANAGE: "admin.roles.manage",
     ROLES_ASSIGN: "admin.roles.assign",
+    // Platform-admin member management
+    ADMINS_INVITE: "admin.admins.invite",
+    ADMINS_LIST: "admin.admins.list",
+    ADMINS_READ: "admin.admins.read",
+    ADMINS_UPDATE: "admin.admins.update",
+    ADMINS_SUSPEND: "admin.admins.suspend",
+    ADMINS_DELETE: "admin.admins.delete",
+    API_LOGS_READ: "admin.api_logs.read",
   },
   MONITORING: {
     RISK: "monitoring.risk",
@@ -255,6 +267,66 @@ type NestedValues<T> = T extends string
   : { [K in keyof T]: NestedValues<T[K]> }[keyof T];
 
 export type PermissionCode = NestedValues<typeof PERMISSION_CODES>;
+
+/**
+ * Seeded system platform roles (as documented in the Admin RBAC integration
+ * guide). These can't be edited or deleted. Used for grouping + labelling in
+ * the role picker and admin list.
+ */
+export const PLATFORM_SYSTEM_ROLES = {
+  SUPER_ADMIN: {
+    name: "SUPER_ADMIN",
+    label: "Super Admin",
+    description: "Full platform access · break-glass tier",
+  },
+  RISK_ANALYST: {
+    name: "RISK_ANALYST",
+    label: "Risk Analyst",
+    description: "Portfolio risk oversight",
+  },
+  MODEL_OPS_ENGINEER: {
+    name: "MODEL_OPS_ENGINEER",
+    label: "Model Ops Engineer",
+    description: "Data science & model operations",
+  },
+  COMPLIANCE_OFFICER: {
+    name: "COMPLIANCE_OFFICER",
+    label: "Compliance Officer",
+    description: "Audit & compliance reviews",
+  },
+  INFRASTRUCTURE_ENGINEER: {
+    name: "INFRASTRUCTURE_ENGINEER",
+    label: "Infrastructure Engineer",
+    description: "SRE & platform infrastructure",
+  },
+} as const;
+
+/**
+ * Format any RBAC role name for display.
+ *
+ *   1. Known seeded system roles (SUPER_ADMIN, RISK_ANALYST, …) → friendly label
+ *      from PLATFORM_SYSTEM_ROLES ("Super Admin", "Risk Analyst").
+ *   2. Other snake_case / UPPER_CASE strings → replace underscores with spaces
+ *      and title-case each word ("CREDIT_ANALYST" → "Credit Analyst").
+ *   3. Names that already look human ("Credit analyst", "admin") → returned
+ *      unchanged.
+ */
+export function prettyPlatformRoleName(name?: string | null): string {
+  if (!name) return "—";
+  const match = Object.values(PLATFORM_SYSTEM_ROLES).find(
+    (r) => r.name === name,
+  );
+  if (match) return match.label;
+
+  const hasUnderscore = name.includes("_");
+  const isAllUpper = name === name.toUpperCase();
+  if (!hasUnderscore && !isAllUpper) return name;
+
+  return name
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export const ROLE_LABELS_ENUM = {
   ADMIN: {

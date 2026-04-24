@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
+import { rbacService, RBAC_KEYS, type RoleScope } from "@/lib/rbac-service";
+import { prettyPlatformRoleName } from "@/lib/constant";
 import type { RoleResponse } from "@/types/rbac-types";
 
 interface RolePickerProps {
@@ -30,6 +31,12 @@ interface RolePickerProps {
    * @default true
    */
   allowNone?: boolean;
+  /**
+   * Restrict the fetched roles by scope. Platform-admin forms should pass
+   * `"platform"`; org-side forms can omit it (the backend filters by the
+   * caller's audience).
+   */
+  scope?: RoleScope;
 }
 
 const NONE_VALUE = "__none__";
@@ -46,10 +53,11 @@ export function RolePicker({
   description,
   placeholder = "System default",
   allowNone = true,
+  scope,
 }: RolePickerProps) {
   const { data, isLoading } = useQuery({
-    queryKey: RBAC_KEYS.roles(),
-    queryFn: () => rbacService.listRoles(),
+    queryKey: RBAC_KEYS.roles(scope),
+    queryFn: () => rbacService.listRoles(scope),
   });
 
   const roles = data?.items ?? [];
@@ -103,7 +111,14 @@ export function RolePicker({
             {roles.map((role) => (
               <SelectItem key={role.id} value={role.id}>
                 <div className="flex flex-col items-start">
-                  <span className="font-medium">{role.name}</span>
+                  <span className="font-medium">
+                    {prettyPlatformRoleName(role.name)}
+                    {role.is_system && (
+                      <span className="ml-2 text-[10px] font-medium text-muted-foreground align-middle">
+                        system
+                      </span>
+                    )}
+                  </span>
                   {role.description && (
                     <span className="text-xs text-muted-foreground">
                       {role.description}
