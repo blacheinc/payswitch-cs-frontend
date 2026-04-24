@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Save, Globe, Shield } from "lucide-react";
 import { toast } from "sonner";
 
+import { authService } from "@/lib/auth-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,17 +20,30 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ChangePasswordDialog } from "@/components/settings/change-password-dialog";
 import { TwoFactorSetupDialog } from "@/components/settings/two-factor-setup-dialog";
+import { RemoveTwoFactorDialog } from "@/components/settings/remove-two-factor-dialog";
 
 export default function AdminSettingsPage() {
+  const { data: userProfile } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => authService.getMe(),
+  });
+
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false);
+  const [removeTwoFactorOpen, setRemoveTwoFactorOpen] = useState(false);
+
+  useEffect(() => {
+    if (userProfile !== undefined) {
+      setTwoFactorEnabled(userProfile.totp_enabled);
+    }
+  }, [userProfile]);
 
   const handleTwoFactorToggle = (checked: boolean) => {
     if (checked) {
       setTwoFactorSetupOpen(true);
     } else {
-      setTwoFactorEnabled(false);
+      setRemoveTwoFactorOpen(true);
     }
   };
 
@@ -47,7 +62,7 @@ export default function AdminSettingsPage() {
 
       <div className="grid gap-6">
         {/* Personal Security */}
-        {/* <Card>
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
@@ -78,7 +93,7 @@ export default function AdminSettingsPage() {
               />
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
 
         {/* General Configuration */}
         <Card>
@@ -121,6 +136,12 @@ export default function AdminSettingsPage() {
         open={twoFactorSetupOpen}
         onOpenChange={setTwoFactorSetupOpen}
         onEnabled={() => setTwoFactorEnabled(true)}
+      />
+
+      <RemoveTwoFactorDialog
+        open={removeTwoFactorOpen}
+        onOpenChange={setRemoveTwoFactorOpen}
+        onDisabled={() => setTwoFactorEnabled(false)}
       />
     </div>
   );

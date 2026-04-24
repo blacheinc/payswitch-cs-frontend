@@ -1588,7 +1588,7 @@
       "get": {
         "tags": ["Scoring API"],
         "summary": "List Score Requests",
-        "description": "List all score requests for the authenticated organization.",
+        "description": "List all score requests for the authenticated organization.\n\nSupports two filter axes:\n\n* ``status`` — ScoreRequest lifecycle state (pre-scoring).\n* ``decision`` — ScoringResult outcome (post-scoring). Joins to the\n  ``scoring_results`` table, so requests that never produced a result\n  are excluded when this filter is active.",
         "operationId": "list_score_requests_v1_score_requests_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -1621,8 +1621,24 @@
             "required": false,
             "schema": {
               "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "pending | processing | completed | failed",
               "title": "Status"
-            }
+            },
+            "description": "pending | processing | completed | failed"
+          },
+          {
+            "name": "decision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "array", "items": { "type": "string" } },
+                { "type": "null" }
+              ],
+              "description": "Filter by scoring decision. Repeat the query param to OR multiple values, e.g. ?decision=REFER&decision=DECLINE. Allowed: APPROVE, CONDITIONAL_APPROVE, DECLINE, REFER, FRAUD_HOLD, ERROR.",
+              "title": "Decision"
+            },
+            "description": "Filter by scoring decision. Repeat the query param to OR multiple values, e.g. ?decision=REFER&decision=DECLINE. Allowed: APPROVE, CONDITIONAL_APPROVE, DECLINE, REFER, FRAUD_HOLD, ERROR."
           }
         ],
         "responses": {
@@ -1632,6 +1648,50 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_ScoreRequestSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/score-requests/stats": {
+      "get": {
+        "tags": ["Scoring API"],
+        "summary": "Get Score Request Stats",
+        "description": "Aggregated dashboard stats for the authenticated organisation.\n\nReturns everything the org-side overview needs:\n\n* ``current``  — totals, decision mix, score distribution for the window.\n* ``previous`` — same-length window immediately prior, for trend.\n* ``trend``    — pre-computed deltas (``None`` when previous is empty).\n* ``needs_attention`` — referral / in-flight / failed counts.\n\nAggregation happens server-side in two ``GROUP BY`` queries so the FE\ndoesn't need to fetch thousands of rows and misreport at scale.",
+        "operationId": "get_score_request_stats_v1_score_requests_stats_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(today|7d|30d|90d)$",
+              "description": "Window anchored at 'now'. 'today' is from start-of-day UTC.",
+              "default": "7d",
+              "title": "Period"
+            },
+            "description": "Window anchored at 'now'. 'today' is from start-of-day UTC."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreRequestStatsResponse"
                 }
               }
             }
@@ -6026,6 +6086,16 @@
         "type": "object",
         "title": "ScoreComponents"
       },
+      "ScoreDistributionBucket": {
+        "properties": {
+          "range": { "type": "string", "title": "Range" },
+          "count": { "type": "integer", "title": "Count" }
+        },
+        "type": "object",
+        "required": ["range", "count"],
+        "title": "ScoreDistributionBucket",
+        "description": "One row of the FICO-style score histogram."
+      },
       "ScoreError": {
         "properties": {
           "code": { "type": "string", "title": "Code" },
@@ -6129,6 +6199,33 @@
         "required": ["request_id", "status", "timestamps"],
         "title": "ScoreRequestResponse",
         "description": "Full score response – matches PRD Section 7.2."
+      },
+      "ScoreRequestStatsResponse": {
+        "properties": {
+          "period": { "type": "string", "title": "Period" },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "current": { "$ref": "#/components/schemas/StatsCurrent" },
+          "previous": { "$ref": "#/components/schemas/StatsPrevious" },
+          "trend": { "$ref": "#/components/schemas/StatsTrend" },
+          "needs_attention": {
+            "$ref": "#/components/schemas/StatsNeedsAttention"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "generated_at",
+          "current",
+          "previous",
+          "trend",
+          "needs_attention"
+        ],
+        "title": "ScoreRequestStatsResponse",
+        "description": "Response body for ``GET /v1/score-requests/stats``."
       },
       "ScoreRequestSummary": {
         "properties": {
@@ -6403,6 +6500,114 @@
         "required": ["feature", "value", "direction"],
         "title": "ShapContribution",
         "description": "A single SHAP feature contribution from the AI pipeline."
+      },
+      "StatsCurrent": {
+        "properties": {
+          "total_requests": { "type": "integer", "title": "Total Requests" },
+          "decided": { "type": "integer", "title": "Decided" },
+          "avg_credit_score": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Avg Credit Score"
+          },
+          "median_credit_score": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Median Credit Score"
+          },
+          "approval_rate_pct": {
+            "type": "number",
+            "title": "Approval Rate Pct"
+          },
+          "decision_counts": {
+            "$ref": "#/components/schemas/StatsDecisionCounts"
+          },
+          "score_distribution": {
+            "items": { "$ref": "#/components/schemas/ScoreDistributionBucket" },
+            "type": "array",
+            "title": "Score Distribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_requests",
+          "decided",
+          "approval_rate_pct",
+          "decision_counts",
+          "score_distribution"
+        ],
+        "title": "StatsCurrent",
+        "description": "Aggregates over the current window."
+      },
+      "StatsDecisionCounts": {
+        "properties": {
+          "APPROVE": { "type": "integer", "title": "Approve", "default": 0 },
+          "CONDITIONAL_APPROVE": {
+            "type": "integer",
+            "title": "Conditional Approve",
+            "default": 0
+          },
+          "DECLINE": { "type": "integer", "title": "Decline", "default": 0 },
+          "REFER": { "type": "integer", "title": "Refer", "default": 0 },
+          "ERROR": { "type": "integer", "title": "Error", "default": 0 },
+          "FRAUD_HOLD": {
+            "type": "integer",
+            "title": "Fraud Hold",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "StatsDecisionCounts",
+        "description": "Decision mix for the current window.\n\nKeys are the authoritative ``ScoringDecision`` enum values. ``ERROR``\ncovers pipeline failures and is rendered as \"Could not score\" on the FE."
+      },
+      "StatsNeedsAttention": {
+        "properties": {
+          "referred": { "type": "integer", "title": "Referred", "default": 0 },
+          "pending_or_processing": {
+            "type": "integer",
+            "title": "Pending Or Processing",
+            "default": 0
+          },
+          "failed": { "type": "integer", "title": "Failed", "default": 0 }
+        },
+        "type": "object",
+        "title": "StatsNeedsAttention",
+        "description": "Counts powering the action-queue card.\n\n``pending_or_processing`` is an instantaneous count (not period-scoped)\nbecause the card's job is to surface in-flight work right now.\n``referred`` and ``failed`` are scoped to the current window."
+      },
+      "StatsPrevious": {
+        "properties": {
+          "total_requests": { "type": "integer", "title": "Total Requests" },
+          "decided": { "type": "integer", "title": "Decided" },
+          "avg_credit_score": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Avg Credit Score"
+          },
+          "approval_rate_pct": {
+            "type": "number",
+            "title": "Approval Rate Pct"
+          }
+        },
+        "type": "object",
+        "required": ["total_requests", "decided", "approval_rate_pct"],
+        "title": "StatsPrevious",
+        "description": "Aggregates over the immediately-prior window of the same length.\n\nEmpty when the org has no history in that range — the FE uses ``null``\ntrend fields as a signal to suppress trend-pill rendering."
+      },
+      "StatsTrend": {
+        "properties": {
+          "total_delta_pct": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Total Delta Pct"
+          },
+          "approval_delta_pp": {
+            "anyOf": [{ "type": "number" }, { "type": "null" }],
+            "title": "Approval Delta Pp"
+          },
+          "score_delta": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Score Delta"
+          }
+        },
+        "type": "object",
+        "title": "StatsTrend",
+        "description": "Pre-computed deltas.\n\nEvery field is ``None`` when the previous window had no activity —\ndeltas against an empty baseline are misleading and the FE hides the\npill entirely rather than showing a bogus \"↑ 0%\"."
       },
       "SuccessResponse": {
         "properties": {
