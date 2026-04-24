@@ -24,4 +24,6 @@ export interface PaginationParams {
   search?: string;
   status?: string;
   risk?: string;
+  /** Scoring decision filter — single value or list (comma-joined on the wire). */
+  decision?: string | string[];
 }

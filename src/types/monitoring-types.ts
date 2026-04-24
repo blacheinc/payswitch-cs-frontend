@@ -185,11 +185,12 @@ export interface ChampionSummary {
   registry_name: string;
   version: string;
   status: string;
-  created_at?: string;
+  created_at?: string | null;
+  promoted_at?: string | null;
   current_metrics: Record<string, number>;
-  live_auc?: number;
-  auc_change_pct?: number;
-  auc_alert?: boolean;
+  live_auc?: number | null;
+  auc_change_pct?: number | null;
+  auc_alert?: boolean | null;
 }
 
 export type DriftStatus = "ok" | "alert";

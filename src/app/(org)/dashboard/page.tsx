@@ -37,7 +37,14 @@ import {
 } from "@/components/ui/select";
 
 import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
-import { scoreService, SCORE_KEYS, BATCH_KEYS } from "@/lib/score-service";
+import {
+  scoreService,
+  SCORE_KEYS,
+  BATCH_KEYS,
+  type ScoreDashboardPeriod,
+  type StatsDecisionCounts,
+  type ScoreDistributionBucket,
+} from "@/lib/score-service";
 import { formatNumber, formatPct } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { authService } from "@/lib/auth-service";
@@ -45,84 +52,61 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { OrganizationScoreRequestsTable } from "@/components/score-requests/organization-score-requests-table";
-import type { ScoreRequestItem } from "@/lib/score-service";
 
-const SAMPLE_SIZE = 200;
 const ACTIVE_BATCH_STATUSES = new Set(["queued", "processing"]);
+const REFERRAL_QUEUE_SIZE = 6;
 
-const SCORE_BUCKETS: { range: string; min: number; max: number }[] = [
-  { range: "300–499", min: 300, max: 500 },
-  { range: "500–579", min: 500, max: 580 },
-  { range: "580–669", min: 580, max: 670 },
-  { range: "670–739", min: 670, max: 740 },
-  { range: "740–850", min: 740, max: 851 },
-];
-
-type Period = "today" | "7d" | "30d";
-
-const PERIOD_OPTIONS: { value: Period; label: string; short: string }[] = [
+const PERIOD_OPTIONS: {
+  value: ScoreDashboardPeriod;
+  label: string;
+  short: string;
+}[] = [
   { value: "today", label: "Today", short: "today" },
   { value: "7d", label: "Last 7 days", short: "last 7 days" },
   { value: "30d", label: "Last 30 days", short: "last 30 days" },
+  { value: "90d", label: "Last 90 days", short: "last 90 days" },
 ];
-
-function periodWindowMs(p: Period): number {
-  const DAY = 24 * 60 * 60 * 1000;
-  switch (p) {
-    case "today":
-      return DAY;
-    case "7d":
-      return 7 * DAY;
-    case "30d":
-      return 30 * DAY;
-  }
-}
 
 function firstName(fullName?: string | null): string {
   if (!fullName) return "there";
   return fullName.trim().split(/\s+/)[0] ?? "there";
 }
 
-function inWindow(iso: string, from: number, to: number): boolean {
-  try {
-    const t = new Date(iso).getTime();
-    return t >= from && t < to;
-  } catch {
-    return false;
-  }
-}
-
-function isStartOfToday(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function needsReview(r: ScoreRequestItem): boolean {
-  const d = (r.decision ?? "").toUpperCase();
-  return (
-    d === "REFER" ||
-    r.status === "pending" ||
-    r.status === "processing" ||
-    r.status === "failed"
-  );
-}
-
 export default function DashboardPage() {
   const { organization } = useAuth();
   const { can } = usePermissions();
 
-  const [period, setPeriod] = useState<Period>("7d");
+  const [period, setPeriod] = useState<ScoreDashboardPeriod>("7d");
 
   const profileQuery = useQuery({
     queryKey: ["auth", "me"],
     queryFn: () => authService.getMe(),
   });
 
-  const recentQuery = useQuery({
-    queryKey: SCORE_KEYS.list({ page: 1, perPage: SAMPLE_SIZE }),
+  // Server-aggregated KPIs — replaces the old client-side 200-row pass.
+  const statsQuery = useQuery({
+    queryKey: SCORE_KEYS.stats(period),
+    queryFn: () => scoreService.getScoreRequestsStats(period),
+    refetchInterval: period === "today" ? 60_000 : 5 * 60_000,
+    staleTime: period === "today" ? 30_000 : 2 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Referral queue — server-side filter rather than client-side slicing.
+  const referralQueueQuery = useQuery({
+    queryKey: SCORE_KEYS.list({
+      page: 1,
+      perPage: REFERRAL_QUEUE_SIZE,
+      decision: "REFER",
+    }),
     queryFn: () =>
-      scoreService.getScoreRequests({ page: 1, perPage: SAMPLE_SIZE }),
+      scoreService.getScoreRequests({
+        page: 1,
+        perPage: REFERRAL_QUEUE_SIZE,
+        decision: "REFER",
+      }),
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const canListBatches = can(PERMISSION_CODES.BATCH_SCORING.LIST);
@@ -134,106 +118,7 @@ export default function DashboardPage() {
     refetchInterval: 10_000,
   });
 
-  const items = useMemo(
-    () => recentQuery.data?.items ?? [],
-    [recentQuery.data?.items],
-  );
-  const totalAllTime = recentQuery.data?.total ?? items.length;
-
-  // Partition items into current and previous windows so we can show trend deltas.
-  const stats = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity
-    const now = Date.now();
-    const windowMs = periodWindowMs(period);
-    const currentFrom = period === "today" ? isStartOfToday() : now - windowMs;
-    const currentTo = now;
-    const previousFrom =
-      period === "today"
-        ? currentFrom - windowMs
-        : currentFrom - windowMs;
-    const previousTo = currentFrom;
-
-    const current = items.filter((r) =>
-      inWindow(r.createdAt, currentFrom, currentTo),
-    );
-    const previous = items.filter((r) =>
-      inWindow(r.createdAt, previousFrom, previousTo),
-    );
-
-    function summarise(list: ScoreRequestItem[]) {
-      const scores = list
-        .map((r) => r.scoreValue)
-        .filter((v): v is number => typeof v === "number");
-      const counts = {
-        APPROVE: 0,
-        CONDITIONAL_APPROVE: 0,
-        DECLINE: 0,
-        REFER: 0,
-        OTHER: 0,
-      };
-      list.forEach((r) => {
-        const d = (r.decision ?? "").toUpperCase();
-        if (d in counts) {
-          (counts as Record<string, number>)[d] += 1;
-        } else if (r.decision) {
-          counts.OTHER += 1;
-        }
-      });
-      const decided =
-        counts.APPROVE +
-        counts.CONDITIONAL_APPROVE +
-        counts.DECLINE +
-        counts.REFER +
-        counts.OTHER;
-      const approvalRate =
-        decided > 0
-          ? ((counts.APPROVE + counts.CONDITIONAL_APPROVE) / decided) * 100
-          : null;
-      const avgScore =
-        scores.length > 0
-          ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-          : null;
-      return {
-        total: list.length,
-        decided,
-        counts,
-        approvalRate,
-        avgScore,
-        scores,
-      };
-    }
-
-    const cur = summarise(current);
-    const prev = summarise(previous);
-
-    const approvalDelta =
-      cur.approvalRate != null && prev.approvalRate != null
-        ? cur.approvalRate - prev.approvalRate
-        : null;
-    const scoreDelta =
-      cur.avgScore != null && prev.avgScore != null
-        ? cur.avgScore - prev.avgScore
-        : null;
-    const requestDelta =
-      prev.total > 0 ? ((cur.total - prev.total) / prev.total) * 100 : null;
-
-    const needsAttention = items.filter(needsReview).length;
-
-    const histogram = SCORE_BUCKETS.map((b) => ({
-      range: b.range,
-      count: cur.scores.filter((s) => s >= b.min && s < b.max).length,
-    }));
-
-    return {
-      current: cur,
-      previous: prev,
-      approvalDelta,
-      scoreDelta,
-      requestDelta,
-      needsAttention,
-      histogram,
-    };
-  }, [items, period]);
+  const stats = statsQuery.data;
 
   const activeBatches = useMemo(
     () =>
@@ -243,16 +128,13 @@ export default function DashboardPage() {
     [batchQuery.data?.items],
   );
 
-  const reviewQueue = useMemo(
-    () => items.filter(needsReview).slice(0, 6),
-    [items],
-  );
+  const reviewQueue = referralQueueQuery.data?.items ?? [];
 
   const welcomeName = profileQuery.data?.name
     ? firstName(profileQuery.data.name)
     : "there";
 
-  const loading = recentQuery.isLoading;
+  const loading = statsQuery.isLoading;
   const canCreate = can(PERMISSION_CODES.SCORE_REQUESTS.CREATE);
   const periodShort =
     PERIOD_OPTIONS.find((o) => o.value === period)?.short ?? period;
@@ -358,7 +240,7 @@ export default function DashboardPage() {
           </div>
           <Select
             value={period}
-            onValueChange={(v) => setPeriod(v as Period)}
+            onValueChange={(v) => setPeriod(v as ScoreDashboardPeriod)}
           >
             <SelectTrigger className="w-36 sm:w-44">
               <SelectValue />
@@ -374,7 +256,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {loading ? (
+          {loading || !stats ? (
             <>
               <KpiSkeleton />
               <KpiSkeleton />
@@ -385,28 +267,31 @@ export default function DashboardPage() {
             <>
               <StatCard
                 label={`Requests · ${periodShort}`}
-                value={formatNumber(stats.current.total)}
+                value={formatNumber(stats.current.total_requests)}
                 icon={<Sparkles className="h-4 w-4 text-primary" />}
                 description={
-                  stats.requestDelta != null ? (
-                    <TrendPill delta={stats.requestDelta} suffix="%" />
+                  stats.trend.total_delta_pct != null ? (
+                    <TrendPill
+                      delta={stats.trend.total_delta_pct}
+                      suffix="%"
+                    />
                   ) : (
-                    `${formatNumber(totalAllTime)} all-time`
+                    `${formatNumber(stats.previous.total_requests)} previous`
                   )
                 }
               />
               <StatCard
                 label="Approval rate"
                 value={
-                  stats.current.approvalRate != null
-                    ? formatPct(stats.current.approvalRate, 1)
+                  stats.current.decided > 0
+                    ? formatPct(stats.current.approval_rate_pct, 1)
                     : "—"
                 }
                 icon={<TrendingUp className="h-4 w-4 text-green-500" />}
                 description={
-                  stats.approvalDelta != null ? (
+                  stats.trend.approval_delta_pp != null ? (
                     <TrendPill
-                      delta={stats.approvalDelta}
+                      delta={stats.trend.approval_delta_pp}
                       suffix="pp"
                       digits={1}
                     />
@@ -416,37 +301,55 @@ export default function DashboardPage() {
                     "no decisions yet"
                   )
                 }
-                tone={
-                  stats.current.approvalRate != null ? "success" : "default"
-                }
+                tone={stats.current.decided > 0 ? "success" : "default"}
               />
               <StatCard
                 label="Average credit score"
-                value={stats.current.avgScore ?? "—"}
+                value={stats.current.avg_credit_score ?? "—"}
                 icon={<BarChart3 className="h-4 w-4 text-primary" />}
                 description={
-                  stats.scoreDelta != null ? (
+                  stats.trend.score_delta != null ? (
                     <TrendPill
-                      delta={stats.scoreDelta}
+                      delta={stats.trend.score_delta}
                       suffix=""
                       digits={0}
                       invertTone={false}
                     />
+                  ) : stats.current.median_credit_score != null ? (
+                    `median ${stats.current.median_credit_score}`
                   ) : (
-                    `from ${stats.current.scores.length} scored`
+                    "no scored requests"
                   )
                 }
               />
               <StatCard
                 label="Needs your review"
-                value={formatNumber(stats.needsAttention)}
+                value={formatNumber(
+                  stats.needs_attention.referred +
+                    stats.needs_attention.pending_or_processing +
+                    stats.needs_attention.failed,
+                )}
                 icon={
                   <ShieldCheck
-                    className={`h-4 w-4 ${stats.needsAttention > 0 ? "text-yellow-500" : "text-green-500"}`}
+                    className={`h-4 w-4 ${
+                      stats.needs_attention.referred +
+                        stats.needs_attention.pending_or_processing +
+                        stats.needs_attention.failed >
+                      0
+                        ? "text-yellow-500"
+                        : "text-green-500"
+                    }`}
                   />
                 }
-                description="REFER, pending, or failed"
-                tone={stats.needsAttention > 0 ? "warning" : "success"}
+                description={`${stats.needs_attention.referred} referred · ${stats.needs_attention.pending_or_processing} in flight · ${stats.needs_attention.failed} failed`}
+                tone={
+                  stats.needs_attention.referred +
+                    stats.needs_attention.pending_or_processing +
+                    stats.needs_attention.failed >
+                  0
+                    ? "warning"
+                    : "success"
+                }
               />
             </>
           )}
@@ -459,13 +362,13 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Outcome breakdown</CardTitle>
             <CardDescription>
-              {stats.current.decided > 0
+              {stats && stats.current.decided > 0
                 ? `How ${stats.current.decided} applications resolved ${periodShort}`
                 : `No decisions ${periodShort}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading || !stats ? (
               <Skeleton className="h-32 w-full" />
             ) : stats.current.decided === 0 ? (
               <EmptyState
@@ -485,7 +388,7 @@ export default function DashboardPage() {
               />
             ) : (
               <OutcomeBar
-                counts={stats.current.counts}
+                counts={stats.current.decision_counts}
                 total={stats.current.decided}
               />
             )}
@@ -500,29 +403,28 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading || !stats ? (
               <Skeleton className="h-32 w-full" />
-            ) : stats.histogram.every((b) => b.count === 0) ? (
+            ) : stats.current.score_distribution.every((b) => b.count === 0) ? (
               <EmptyState
                 icon={<BarChart3 className="h-8 w-8" />}
                 title={`No scored applicants ${periodShort}`}
                 description="Once applications are scored in this window, the spread across credit-score bands will appear here."
               />
             ) : (
-              <ScoreHistogram buckets={stats.histogram} />
+              <ScoreHistogram buckets={stats.current.score_distribution} />
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* 5. Your queue */}
+      {/* 5. Your queue — server-filtered to decision=REFER */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base">Your queue</CardTitle>
             <CardDescription>
-              Applications that are referred, pending, or failed and may need
-              action.
+              Applications referred for manual review.
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" asChild>
@@ -533,13 +435,13 @@ export default function DashboardPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {referralQueueQuery.isLoading ? (
             <Skeleton className="h-32 w-full" />
           ) : reviewQueue.length === 0 ? (
             <EmptyState
               icon={<ShieldCheck className="h-8 w-8" />}
               title="Nothing needs your attention"
-              description="When an application is referred, pending, or fails, it'll show up here."
+              description="When an application is referred for manual review, it'll show up here."
               action={
                 <Button variant="outline" size="sm" asChild>
                   <Link href={ROUTES.ORG.SCORE_REQUESTS}>
@@ -553,7 +455,7 @@ export default function DashboardPage() {
             <OrganizationScoreRequestsTable
               requests={reviewQueue}
               isLoading={false}
-              isError={false}
+              isError={referralQueueQuery.isError}
               isCompact
             />
           )}
@@ -605,13 +507,7 @@ function OutcomeBar({
   counts,
   total,
 }: {
-  counts: {
-    APPROVE: number;
-    CONDITIONAL_APPROVE: number;
-    DECLINE: number;
-    REFER: number;
-    OTHER: number;
-  };
+  counts: StatsDecisionCounts;
   total: number;
 }) {
   const rows = [
@@ -643,32 +539,37 @@ function OutcomeBar({
       color: "bg-red-500",
       tone: "text-red-600",
     },
-    ...(counts.OTHER > 0
+    {
+      key: "ERROR",
+      label: "Could not score",
+      count: counts.ERROR,
+      color: "bg-muted-foreground/40",
+      tone: "text-muted-foreground",
+    },
+    ...(counts.FRAUD_HOLD > 0
       ? [
           {
-            key: "OTHER",
-            label: "Other",
-            count: counts.OTHER,
-            color: "bg-muted-foreground/40",
-            tone: "text-muted-foreground",
+            key: "FRAUD_HOLD",
+            label: "Fraud hold",
+            count: counts.FRAUD_HOLD,
+            color: "bg-purple-500",
+            tone: "text-purple-600",
           },
         ]
       : []),
-  ];
+  ].filter((r) => r.count > 0);
 
   return (
     <div className="space-y-4">
       <div className="flex h-2.5 rounded-full overflow-hidden bg-muted">
-        {rows.map((r) =>
-          r.count > 0 ? (
-            <div
-              key={r.key}
-              className={r.color}
-              style={{ width: `${(r.count / total) * 100}%` }}
-              title={`${r.label}: ${r.count}`}
-            />
-          ) : null,
-        )}
+        {rows.map((r) => (
+          <div
+            key={r.key}
+            className={r.color}
+            style={{ width: `${(r.count / total) * 100}%` }}
+            title={`${r.label}: ${r.count}`}
+          />
+        ))}
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         {rows.map((r) => (
@@ -698,7 +599,7 @@ function OutcomeBar({
 function ScoreHistogram({
   buckets,
 }: {
-  buckets: { range: string; count: number }[];
+  buckets: ScoreDistributionBucket[];
 }) {
   const max = Math.max(1, ...buckets.map((b) => b.count));
   return (

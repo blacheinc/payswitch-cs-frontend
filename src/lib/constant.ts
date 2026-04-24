@@ -59,6 +59,7 @@ export const API_ENDPOINTS = {
   },
   SCORE_REQUESTS: {
     BASE: "/v1/score-requests",
+    STATS: "/v1/score-requests/stats",
     BY_ID: (id: string) => `/v1/score-requests/${id}`,
     SCORING_RESULT: (id: string) => `/v1/score-requests/${id}/scoring-result`,
     OVERRIDE: (id: string) => `/v1/score-requests/${id}/override`,

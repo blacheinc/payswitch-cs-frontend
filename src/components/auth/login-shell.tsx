@@ -701,15 +701,6 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
                 {copy.switchLabel}
               </Link>
             </p>
-            <p>
-              Need help?{" "}
-              <Link
-                href="mailto:support@payswitch.com.gh"
-                className="text-primary hover:underline"
-              >
-                Contact support
-              </Link>
-            </p>
           </div>
         </div>
       </div>

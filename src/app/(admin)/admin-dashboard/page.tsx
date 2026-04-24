@@ -454,6 +454,15 @@ export default function AdminDashboardPage() {
                         ? `${change > 0 ? "+" : ""}${change.toFixed(2)}% vs baseline`
                         : "no baseline yet"}
                     </p>
+                    {c.promoted_at ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        Promoted {formatDate(c.promoted_at)}
+                      </p>
+                    ) : c.created_at ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        Deployed {formatDate(c.created_at)}
+                      </p>
+                    ) : null}
                   </div>
                 );
               })}

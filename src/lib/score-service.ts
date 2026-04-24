@@ -358,6 +358,70 @@ function mapBureauLookup(raw: ApiRawBureauLookupResponse): BureauLookupResult {
   };
 }
 
+// ===================== SCORE REQUESTS STATS =====================
+
+export type ScoreDashboardPeriod = "today" | "7d" | "30d" | "90d";
+
+export type ScoreDecision =
+  | "APPROVE"
+  | "CONDITIONAL_APPROVE"
+  | "DECLINE"
+  | "REFER"
+  | "FRAUD_HOLD"
+  | "ERROR";
+
+export interface ScoreDistributionBucket {
+  range: "300-499" | "500-579" | "580-669" | "670-739" | "740-850";
+  count: number;
+}
+
+export interface StatsDecisionCounts {
+  APPROVE: number;
+  CONDITIONAL_APPROVE: number;
+  DECLINE: number;
+  REFER: number;
+  ERROR: number;
+  FRAUD_HOLD: number;
+}
+
+export interface StatsCurrent {
+  total_requests: number;
+  decided: number;
+  avg_credit_score: number | null;
+  median_credit_score: number | null;
+  approval_rate_pct: number;
+  decision_counts: StatsDecisionCounts;
+  score_distribution: ScoreDistributionBucket[];
+}
+
+export interface StatsPrevious {
+  total_requests: number;
+  decided: number;
+  avg_credit_score: number | null;
+  approval_rate_pct: number;
+}
+
+export interface StatsTrend {
+  total_delta_pct: number | null;
+  approval_delta_pp: number | null;
+  score_delta: number | null;
+}
+
+export interface StatsNeedsAttention {
+  referred: number;
+  pending_or_processing: number;
+  failed: number;
+}
+
+export interface ScoreRequestStatsResponse {
+  period: ScoreDashboardPeriod;
+  generated_at: string;
+  current: StatsCurrent;
+  previous: StatsPrevious;
+  trend: StatsTrend;
+  needs_attention: StatsNeedsAttention;
+}
+
 // ===================== BATCH SCORING TYPES =====================
 
 export type BatchJobStatus =
@@ -564,6 +628,8 @@ export const SCORE_KEYS = {
   detail: (id: string) => [...SCORE_KEYS.details(), id] as const,
   scoringResult: (id: string) =>
     [...SCORE_KEYS.all, "scoring-result", id] as const,
+  stats: (period: ScoreDashboardPeriod) =>
+    [...SCORE_KEYS.all, "stats", period] as const,
 };
 
 export const BATCH_KEYS = {
@@ -590,6 +656,11 @@ export const scoreService = {
   async getScoreRequests(
     params?: PaginationParams,
   ): Promise<PaginatedResponse<ScoreRequestItem>> {
+    const decision = Array.isArray(params?.decision)
+      ? params.decision.length
+        ? params.decision.join(",")
+        : undefined
+      : params?.decision || undefined;
     const response = await apiClient.get<ApiPaginatedScoreRequests>(
       API_ENDPOINTS.SCORE_REQUESTS.BASE,
       {
@@ -598,6 +669,7 @@ export const scoreService = {
           per_page: params?.perPage || TABLE_ITEM_PER_PAGE,
           search: params?.search || undefined,
           status: params?.status || undefined,
+          decision,
         },
       },
     );
@@ -609,6 +681,17 @@ export const scoreService = {
       perPage: data?.per_page,
       totalPages: data?.total_pages,
     };
+  },
+
+  /** GET /v1/score-requests/stats — aggregated KPIs for the org dashboard. */
+  async getScoreRequestsStats(
+    period: ScoreDashboardPeriod,
+  ): Promise<ScoreRequestStatsResponse> {
+    const response = await apiClient.get<ScoreRequestStatsResponse>(
+      API_ENDPOINTS.SCORE_REQUESTS.STATS,
+      { params: { period } },
+    );
+    return response.data;
   },
 
   /** GET /v1/score-requests/{id} — full detail */

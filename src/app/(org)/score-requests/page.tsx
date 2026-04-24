@@ -70,25 +70,22 @@ export default function ScoreRequestsPage() {
   const [perPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [riskFilter, setRiskFilter] = useState<string>("all");
+  const [decisionFilter, setDecisionFilter] = useState<string>("all");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const debouncedSearch = useDebounce(searchQuery, 400);
 
+  const listParams = {
+    page,
+    perPage,
+    search: debouncedSearch,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    decision: decisionFilter !== "all" ? decisionFilter : undefined,
+  };
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: SCORE_KEYS.list({ 
-      page, 
-      perPage, 
-      search: debouncedSearch,
-      status: statusFilter !== "all" ? statusFilter : undefined,
-      risk: riskFilter !== "all" ? riskFilter : undefined,
-    }),
-    queryFn: () => scoreService.getScoreRequests({ 
-      page, 
-      perPage, 
-      search: debouncedSearch,
-      // Note: we might need to update scoreService to support status/risk if not already
-    }),
+    queryKey: SCORE_KEYS.list(listParams),
+    queryFn: () => scoreService.getScoreRequests(listParams),
   });
 
   const scoreRequests = data?.items || [];
@@ -166,17 +163,20 @@ export default function ScoreRequestsPage() {
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={riskFilter} onValueChange={setRiskFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Risk Level" />
+            <Select value={decisionFilter} onValueChange={setDecisionFilter}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue placeholder="Decision" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Risks</SelectItem>
-                <SelectItem value="very_low">Very Low</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="very_high">Very High</SelectItem>
+                <SelectItem value="all">All Decisions</SelectItem>
+                <SelectItem value="APPROVE">Approved</SelectItem>
+                <SelectItem value="CONDITIONAL_APPROVE">
+                  Conditionally Approved
+                </SelectItem>
+                <SelectItem value="REFER">Referred</SelectItem>
+                <SelectItem value="DECLINE">Declined</SelectItem>
+                <SelectItem value="FRAUD_HOLD">Fraud Hold</SelectItem>
+                <SelectItem value="ERROR">Could Not Score</SelectItem>
               </SelectContent>
             </Select>
           </div>
