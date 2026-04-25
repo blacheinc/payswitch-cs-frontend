@@ -238,25 +238,11 @@ Both pages are unauthenticated and live under `(auth)`.
 
 ---
 
-## 8. Mock authentication (development only)
-
-Setting `NEXT_PUBLIC_MOCK_AUTH=true` causes the login page to short-circuit the real backend and seed a fake session:
-
-- `email` containing `admin` → admin portal session (`mock-admin` user)
-- any other email → org portal session (`mock-user` in `Mock Organization`)
-- `email` containing `2fa` → simulated 2FA challenge
-
-`usePermissions()` returns `true` from `can()` for any mock user, so all UI is exercisable.
-
-**This must be `false` in any deployed environment.** It is a developer convenience, not an auth fallback.
-
----
-
-## 9. Summary of files to read
+## 8. Summary of files to read
 
 | File | What it owns |
 |---|---|
-| [`src/components/auth/login-shell.tsx`](../src/components/auth/login-shell.tsx) | Login form, 2FA challenge UI, mock-auth seeding |
+| [`src/components/auth/login-shell.tsx`](../src/components/auth/login-shell.tsx) | Login form, 2FA challenge UI |
 | [`src/lib/auth-service.ts`](../src/lib/auth-service.ts) | All `/auth/*` calls + the `mergeUserFromMeProfile` helper |
 | [`src/lib/api-client.ts`](../src/lib/api-client.ts) | Bearer attach, 401 refresh, error normalization |
 | [`src/lib/session-storage.ts`](../src/lib/session-storage.ts) | Cookie/localStorage persistence + AES envelope |

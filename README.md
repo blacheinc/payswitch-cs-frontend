@@ -44,7 +44,7 @@ A deployment guide will be added separately.
 
 - **Node.js ≥ 20** (required by Next 16 / React 19)
 - **npm** (comes with Node)
-- A running backend API, or set `NEXT_PUBLIC_MOCK_AUTH=true` to develop the UI standalone.
+- A running backend API at `NEXT_PUBLIC_API_URL` (see [`.env.example`](./.env.example)).
 
 ---
 
@@ -80,31 +80,14 @@ The app is served at [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## Mock auth (UI-only development)
-
-When `NEXT_PUBLIC_MOCK_AUTH=true`, the login screen does **not** call the backend. It seeds a local session so the UI can be exercised standalone.
-
-| Sign-in email contains | Result |
-|---|---|
-| `admin` | Admin portal session |
-| anything else | Org portal session |
-| `2fa` | Triggers a simulated 2FA challenge |
-
-Password is ignored. Use any non-empty value.
-
-**Mock auth must be `false` in any deployed environment.**
-
----
-
 ## Environment variables
 
-Three variables are read at build/runtime — see [`.env.example`](./.env.example) for details.
+Two variables are read at build/runtime — see [`.env.example`](./.env.example) for details.
 
 | Variable | Purpose |
 |---|---|
 | `NEXT_PUBLIC_API_URL` | Base URL of the backend API. |
 | `NEXT_PUBLIC_SESSION_SECRET` | AES key used to encrypt the session cookie payload (see [security doc](./docs/security.md)). |
-| `NEXT_PUBLIC_MOCK_AUTH` | `true` enables UI-only mock auth. Default: `false`. |
 
 ---
 

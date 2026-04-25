@@ -1,18 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * E2E configuration. The web server runs the Next dev build in mock-auth mode
- * so we don't need a real backend. Tests assert auth, portal isolation, and
- * permission-gated UI without depending on staging credentials.
+ * E2E configuration. Specs seed the session cookie directly (see
+ * tests/e2e/auth.spec.ts) so they exercise the FE proxy + RBAC routing
+ * without depending on a real backend.
  *
- * To target a real backend, set PLAYWRIGHT_BASE_URL and PLAYWRIGHT_USE_MOCK=false
- * before invoking `npm run test:e2e`.
+ * To target a deployed environment, set PLAYWRIGHT_BASE_URL before invoking
+ * `npm run test:e2e`.
  */
 
 // Use a dedicated port so we never collide with a developer's `npm run dev`.
 const PORT = process.env.PLAYWRIGHT_PORT || "3100";
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${PORT}`;
-const USE_MOCK_AUTH = process.env.PLAYWRIGHT_USE_MOCK !== "false";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -27,9 +26,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-  ],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
@@ -40,7 +37,6 @@ export default defineConfig({
         reuseExistingServer: false,
         timeout: 240_000,
         env: {
-          NEXT_PUBLIC_MOCK_AUTH: USE_MOCK_AUTH ? "true" : "false",
           NEXT_PUBLIC_API_URL:
             process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
           NEXT_PUBLIC_SESSION_SECRET:

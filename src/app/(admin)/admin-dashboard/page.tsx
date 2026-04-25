@@ -55,26 +55,38 @@ const INFRA_POLL_MS = 60_000;
 const RISK_POLL_MS = 5 * 60_000;
 const MODEL_OPS_POLL_MS = 10 * 60_000;
 
-const INFRA_PERIOD_OPTIONS: { value: InfrastructurePeriod; label: string }[] = [
-  { value: "1h", label: "Last 1 hour" },
-  { value: "6h", label: "Last 6 hours" },
-  { value: "24h", label: "Last 24 hours" },
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-];
+// =============================================================================
+// Single global time-range selector for the whole admin overview.
+//
+// Each backend endpoint supports a slightly different set of period values
+// (infra: 1h..30d · risk: 24h..90d · model-ops: 7d..90d). We expose the union
+// of values that every section can render meaningfully and map "non-native"
+// periods to the closest supported value per endpoint.
+// =============================================================================
 
-const RISK_PERIOD_OPTIONS: { value: RiskPeriod; label: string }[] = [
+type DashboardPeriod = "24h" | "7d" | "30d" | "90d";
+
+const DASHBOARD_PERIOD_OPTIONS: { value: DashboardPeriod; label: string }[] = [
   { value: "24h", label: "Last 24 hours" },
   { value: "7d", label: "Last 7 days" },
   { value: "30d", label: "Last 30 days" },
   { value: "90d", label: "Last 90 days" },
 ];
 
-const MODEL_OPS_PERIOD_OPTIONS: { value: ModelOpsPeriod; label: string }[] = [
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" },
-];
+function toInfraPeriod(p: DashboardPeriod): InfrastructurePeriod {
+  // Infra goes up to 30d; 90d collapses to 30d (closest supported).
+  return p === "90d" ? "30d" : (p as InfrastructurePeriod);
+}
+
+function toRiskPeriod(p: DashboardPeriod): RiskPeriod {
+  // Risk supports every dashboard period directly.
+  return p as RiskPeriod;
+}
+
+function toModelOpsPeriod(p: DashboardPeriod): ModelOpsPeriod {
+  // Model-ops starts at 7d; 24h falls back to 7d (closest supported).
+  return p === "24h" ? "7d" : (p as ModelOpsPeriod);
+}
 
 function periodLabel(value: string): string {
   switch (value) {
@@ -96,11 +108,11 @@ function periodLabel(value: string): string {
 }
 
 export default function AdminDashboardPage() {
-  const [infraPeriod, setInfraPeriod] =
-    useState<InfrastructurePeriod>("24h");
-  const [riskPeriod, setRiskPeriod] = useState<RiskPeriod>("7d");
-  const [modelOpsPeriod, setModelOpsPeriod] =
-    useState<ModelOpsPeriod>("30d");
+  const [period, setPeriod] = useState<DashboardPeriod>("7d");
+
+  const infraPeriod = toInfraPeriod(period);
+  const riskPeriod = toRiskPeriod(period);
+  const modelOpsPeriod = toModelOpsPeriod(period);
 
   const infraQuery = useQuery({
     queryKey: MONITORING_KEYS.infrastructure({ period: infraPeriod }),
@@ -175,33 +187,52 @@ export default function AdminDashboardPage() {
             </p>
           )}
         </div>
-        <Link
-          href={ROUTES.ADMIN.MONITORING}
-          className="inline-flex items-center"
-          aria-label={
-            isHealthy ? "All systems healthy" : `${firingCount} active alerts`
-          }
-        >
-          {isHealthy ? (
-            <Badge
-              variant="outline"
-              className="px-3 py-1.5 text-sm gap-2 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-900/50"
-            >
-              <BellOff className="h-3.5 w-3.5" />
-              All systems healthy
-            </Badge>
-          ) : (
-            <Badge variant="destructive" className="px-3 py-1.5 text-sm gap-2">
-              <Bell className="h-3.5 w-3.5" />
-              {firingCount} need{firingCount === 1 ? "s" : ""} attention
-              {criticalCount > 0 && (
-                <span className="ml-1 rounded-full bg-white/20 px-1.5 text-[10px]">
-                  {criticalCount} urgent
-                </span>
-              )}
-            </Badge>
-          )}
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={period}
+            onValueChange={(v) => setPeriod(v as DashboardPeriod)}
+          >
+            <SelectTrigger className="w-full sm:w-44" aria-label="Time range">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DASHBOARD_PERIOD_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Link
+            href={ROUTES.ADMIN.MONITORING}
+            className="inline-flex items-center"
+            aria-label={
+              isHealthy
+                ? "All systems healthy"
+                : `${firingCount} active alerts`
+            }
+          >
+            {isHealthy ? (
+              <Badge
+                variant="outline"
+                className="px-3 py-1.5 text-sm gap-2 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-900/50"
+              >
+                <BellOff className="h-3.5 w-3.5" />
+                All systems healthy
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="px-3 py-1.5 text-sm gap-2">
+                <Bell className="h-3.5 w-3.5" />
+                {firingCount} need{firingCount === 1 ? "s" : ""} attention
+                {criticalCount > 0 && (
+                  <span className="ml-1 rounded-full bg-white/20 px-1.5 text-[10px]">
+                    {criticalCount} urgent
+                  </span>
+                )}
+              </Badge>
+            )}
+          </Link>
+        </div>
       </div>
 
       {/* 2. KPI row */}
@@ -273,25 +304,6 @@ export default function AdminDashboardPage() {
               data={infra?.timeseries ?? []}
               xKey="bucket"
               height={260}
-              headerAction={
-                <Select
-                  value={infraPeriod}
-                  onValueChange={(v) =>
-                    setInfraPeriod(v as InfrastructurePeriod)
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-44">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INFRA_PERIOD_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              }
               series={[
                 {
                   key: "requests",
@@ -318,29 +330,10 @@ export default function AdminDashboardPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <CardTitle className="text-base">Decisions</CardTitle>
-                <CardDescription>
-                  How {formatNumber(totalDecisions)} applications resolved
-                </CardDescription>
-              </div>
-              <Select
-                value={riskPeriod}
-                onValueChange={(v) => setRiskPeriod(v as RiskPeriod)}
-              >
-                <SelectTrigger className="w-full sm:w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RISK_PERIOD_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <CardTitle className="text-base">Decisions</CardTitle>
+            <CardDescription>
+              How {formatNumber(totalDecisions)} applications resolved
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {riskLoading ? (
@@ -372,31 +365,12 @@ export default function AdminDashboardPage() {
               <Trophy className="h-4 w-4 text-yellow-500" />
               <CardTitle className="text-base">Champion models</CardTitle>
             </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={modelOpsPeriod}
-                onValueChange={(v) =>
-                  setModelOpsPeriod(v as ModelOpsPeriod)
-                }
-              >
-                <SelectTrigger className="w-full sm:w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODEL_OPS_PERIOD_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={ROUTES.ADMIN.MONITORING}>
-                  Model ops
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Link>
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={ROUTES.ADMIN.MONITORING}>
+                Model ops
+                <ArrowRight className="ml-1 h-3 w-3" />
+              </Link>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

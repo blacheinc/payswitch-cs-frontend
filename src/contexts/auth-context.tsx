@@ -39,7 +39,6 @@ interface AuthContextType extends AuthState {
   ) => void;
   logout: () => void;
   refreshSession: () => Promise<void>;
-  setMockAuthenticated: (isAdmin?: boolean) => void;
 }
 
 // Initial state
@@ -181,45 +180,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  // Set mock authenticated state (for mock auth flow)
-  const setMockAuthenticated = useCallback((isAdmin: boolean = false) => {
-    const mockUser: User = isAdmin
-      ? ({
-          id: "mock-admin",
-          email: "admin@payswitch.com",
-          name: "Admin User",
-          isAdmin: true,
-          adminRole: "super_admin",
-          roleLabel: "Super Admin",
-          status: "active",
-          createdAt: new Date().toISOString(),
-        } as unknown as AdminUser)
-      : ({
-          id: "mock-user",
-          email: "user@org.com",
-          name: "Org User",
-          roleLabel: "User",
-          status: "active",
-          createdAt: new Date().toISOString(),
-          organizationId: "mock-org",
-          organization: {
-            id: "mock-org",
-            name: "Mock Organization",
-            slug: "mock-org",
-          },
-        } as unknown as OrgUser);
-
-    setState({
-      user: mockUser,
-      organization: isAdmin ? null : (mockUser as OrgUser).organization || null,
-      isAuthenticated: true,
-      isLoading: false,
-      isAdmin,
-      requires2FA: false,
-      pendingEmail: null,
-    });
-  }, []);
-
   // Inactivity auto-logout timer
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -274,7 +234,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setSession,
     logout,
     refreshSession,
-    setMockAuthenticated,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

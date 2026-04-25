@@ -7,14 +7,13 @@ import {
   Loader2,
   XCircle,
   Ban,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   AlertCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TablePagination } from "@/components/shared/table-pagination";
 import {
   Table,
   TableBody,
@@ -232,32 +231,14 @@ export function BatchItemsTable({
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4">
-          <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages} ({total} items)
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(Math.max(1, page - 1))}
-              disabled={page <= 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      {onPageChange && (
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onPageChange={onPageChange}
+          unitLabel="items"
+        />
       )}
     </TooltipProvider>
   );

@@ -57,15 +57,6 @@ describe("usePermissions", () => {
     expect(result.current.can("monitoring.compliance")).toBe(true);
   });
 
-  it("grants every permission to mock-prefixed users", () => {
-    authState.user = { id: "mock-admin", permissions: undefined };
-    authState.isAuthenticated = true;
-
-    const { result } = renderHook(() => usePermissions());
-    expect(result.current.can("score_requests.list")).toBe(true);
-    expect(result.current.can("admin.organizations.create")).toBe(true);
-  });
-
   it("isLoading=true when authenticated but permissions are still undefined", () => {
     authState.user = { id: "u-1" };
     authState.isAuthenticated = true;

@@ -30,7 +30,6 @@ import {
   ADMIN_ROUTE_PREFIXES,
   ORG_ROUTE_PREFIXES,
 } from "@/lib/constant";
-import { saveSession } from "@/lib/session-storage";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -224,7 +223,7 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { setSession, setMockAuthenticated } = useAuth();
+  const { setSession } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [is2FAStep, setIs2FAStep] = useState(false);
   const [tempToken, setTempToken] = useState("");
@@ -348,34 +347,6 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
 
   // ── Submit handlers ─────────────────────────────────────────────────────
   const handleLoginSubmit = (data: LoginFormData) => {
-    const useMockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
-
-    if (useMockAuth) {
-      if (data.email.includes("2fa")) {
-        toast.info("Please enter your 2FA code");
-        return;
-      }
-
-      const mockUserType = copy.expectedUserType;
-      saveSession({
-        accessToken: "mock-token",
-        refreshToken: "mock-refresh-token",
-        userType: mockUserType,
-        user: {
-          id: audience === "admin" ? "mock-admin" : "mock-user",
-          email: data.email,
-          name: audience === "admin" ? "Admin User" : "Org User",
-          roleLabel: audience === "admin" ? "admin" : "viewer",
-          status: "active",
-          createdAt: new Date().toISOString(),
-        },
-      });
-      setMockAuthenticated(audience === "admin");
-      toast.success("Welcome back!");
-      router.push(redirectAfterLogin);
-      return;
-    }
-
     loginMutation.mutate({ email: data.email, password: data.password });
   };
 

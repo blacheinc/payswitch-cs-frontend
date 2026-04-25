@@ -17,9 +17,6 @@ import type { PermissionCode } from "@/lib/constant";
 export function usePermissions() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const isMockUser =
-    typeof user?.id === "string" && user.id.startsWith("mock-");
-
   const permissionSet = useMemo(() => {
     const list = user?.permissions;
     if (!list?.length) return new Set<string>();
@@ -28,16 +25,13 @@ export function usePermissions() {
 
   const can = useMemo(() => {
     return (code: PermissionCode) => {
-      // return true;
-      if (isMockUser) return true;
       if (permissionSet.has("*")) return true;
       return permissionSet.has(code);
     };
-  }, [isMockUser, permissionSet]);
+  }, [permissionSet]);
 
   const isLoading =
-    authLoading ||
-    (isAuthenticated && !isMockUser && user?.permissions === undefined);
+    authLoading || (isAuthenticated && user?.permissions === undefined);
 
   return {
     permissions: permissionSet,

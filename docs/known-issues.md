@@ -33,12 +33,6 @@ This is the largest single hardening item. Tracked in code at `src/proxy.ts:21-2
 
 The current CSP is `frame-ancestors 'none'` only — anti-clickjacking but no script restrictions. Adding `'unsafe-inline'` / `'unsafe-eval'` to make Next 16 work as-is would defeat the purpose. Pattern to adopt: per-request nonce in the proxy → injected into Next's script tags → `script-src 'self' 'nonce-XXX'`.
 
-### 🟡 Mock-auth guard rail
-
-**Where:** [`.env.example`](../.env.example), [`src/components/auth/login-shell.tsx`](../src/components/auth/login-shell.tsx)
-
-`NEXT_PUBLIC_MOCK_AUTH=true` bypasses real authentication and gives the user every permission. There's a visible "Mock Auth ENABLED" banner on the login page when on, but no build-time check that prevents shipping with the flag truthy. Add a `next.config.ts` assertion: when `NODE_ENV === "production"` and `NEXT_PUBLIC_MOCK_AUTH === "true"`, throw at build time.
-
 ---
 
 ## Code quality
@@ -103,9 +97,9 @@ The Vitest unit/integration suite (100 tests across services, hooks, contexts, s
 
 ### 🟡 Mutation coverage missing
 
-These flows are exercised only by smoke E2E or not at all:
+These flows need real-backend E2E once staging credentials exist:
 
-- Login + 2FA + token refresh — currently relies on mock auth in E2E. Add live-API E2E once staging credentials exist.
+- Login + 2FA + token refresh.
 - Score-request override / outcome / performance reporting.
 - Batch upload submission + cancel.
 - Invite/edit/suspend org users + admins.
@@ -136,10 +130,6 @@ Some empty states still read like dev placeholders ("No data yet"). Pass over th
 ---
 
 ## Build & DX
-
-### 🟢 Move `MOCK_AUTH` banner to a dedicated component
-
-Currently the dev-mode disclosure is inlined in the login shell. Extracting into a `<DevModeBanner />` makes it easier to reuse on the admin login.
 
 ### 🟢 Split `admin-monitoring/page.tsx`
 

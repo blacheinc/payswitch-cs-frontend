@@ -110,7 +110,6 @@ A full nonce-based CSP (`script-src 'self' 'nonce-...'`) is **not** yet in place
 | Variable | Sensitivity | Notes |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | Public | Reaches the browser. |
-| `NEXT_PUBLIC_MOCK_AUTH` | Public | Must be `false` in production — `true` short-circuits real auth. |
 | `NEXT_PUBLIC_SESSION_SECRET` | Public, but rotate per env | Reaches the browser. Treat rotation as part of every credential incident response. Generate with `openssl rand -hex 64`. |
 
 There are **no server-only secrets** in the frontend today — every variable is `NEXT_PUBLIC_*`. The backend is the keeper of all real secrets (DB credentials, ML model keys, signing keys for JWTs).
@@ -136,31 +135,13 @@ When the `HttpOnly` cookie hardening (§3) lands, expect to introduce server-onl
 
 ---
 
-## 8. Mock auth — production hazard
-
-`NEXT_PUBLIC_MOCK_AUTH=true` short-circuits the real backend and seeds a session locally. It exists for UI-only development and is a **critical hazard** if accidentally enabled in any deployed environment:
-
-- Anyone can log in.
-- `usePermissions().can()` returns `true` for everything.
-- The session is "real" enough to navigate the entire admin and org surface.
-
-Mitigations:
-
-- Default in [`.env.example`](../.env.example) is `false`.
-- The login page renders an inline disclosure "Mock Auth ENABLED" when the flag is on, so anyone QA-ing a deploy notices.
-- The deployment guide must explicitly assert `NEXT_PUBLIC_MOCK_AUTH=false` for staging and production environments.
-
-If you're triaging an incident and see odd auth behaviour, check this flag first.
-
----
-
-## 9. Reporting issues
+## 8. Reporting issues
 
 Security issues should not be reported via GitHub Issues. Contact the platform-security lead at PaySwitch directly. A formal disclosure policy will accompany the deployment guide.
 
 ---
 
-## 10. Related docs
+## 9. Related docs
 
 - [auth-and-rbac.md](./auth-and-rbac.md) — runtime authentication, refresh, RBAC.
 - [data-flow.md](./data-flow.md) — how data flows between FE and BE.

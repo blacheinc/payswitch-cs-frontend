@@ -138,41 +138,38 @@ The `include` list scopes coverage to the surfaces that benefit most from unit t
 
 - **[Playwright 1.59](https://playwright.dev/)** — single browser project (Chromium) by default.
 - Runs against a **production build** of the Next app on a dedicated port (`3100`) to avoid colliding with `npm run dev`.
-- Uses `NEXT_PUBLIC_MOCK_AUTH=true` by default — tests don't depend on a live backend.
+- Specs **seed the session cookie directly** (AES-encrypted with the same secret as the proxy) so they exercise the FE proxy + RBAC routing without depending on a backend.
 
 ### Layout
 
 ```
 tests/e2e/
-└── auth.spec.ts          # login, portal isolation, security headers
+└── auth.spec.ts          # portal isolation, security headers
 ```
 
 ### What's covered today
 
-- Org user can sign in and reach `/dashboard`.
-- Admin user can sign in and reach `/admin-dashboard`.
 - Unauthenticated `/dashboard` redirects to `/login` with `?next=...`.
 - Unauthenticated `/admin-dashboard` redirects to `/admin-login` with `?next=...`.
 - An org user hitting `/admin-dashboard` is shown the not-found page **with the URL preserved** (no path leak).
 - An admin hitting `/dashboard` gets the same wrong-scope rewrite.
-- A logged-in user revisiting `/login` is bounced to their dashboard.
+- A logged-in org user revisiting `/login` is bounced to `/dashboard`.
+- A logged-in admin revisiting `/admin-login` is bounced to `/admin-dashboard`.
 - The proxy attaches `X-Frame-Options`, `X-Content-Type-Options`, `Strict-Transport-Security`, and `Referrer-Policy` on every response.
 
-**Total: 8 E2E specs.**
+**Total: 7 E2E specs.**
 
 ### Running against a deployed backend
 
-The default config uses the bundled mock-auth path so the E2E suite never depends on staging being up. To run the same specs against a real environment:
+To run the same specs against a real environment:
 
 ```bash
-PLAYWRIGHT_BASE_URL=https://staging.example.com \
-PLAYWRIGHT_USE_MOCK=false \
-npm run test:e2e
+PLAYWRIGHT_BASE_URL=https://staging.example.com npm run test:e2e
 ```
 
 The webServer block is skipped when `PLAYWRIGHT_BASE_URL` is set; Playwright assumes the URL is already serving and runs the specs against it.
 
-> **Note:** A handful of behaviours can only be exercised against a live backend — most notably the **2FA challenge** rendering, the **token-refresh-on-401** retry as observed by the user, and **role-aware UI gating** that depends on real `permissions[]` from `GET /auth/me`. Those gaps are tracked in [known-issues.md](./known-issues.md) and will be filled when staging credentials are available.
+> **Note:** Login-form flows (real credentials, 2FA challenge UI, token-refresh-on-401) and **role-aware UI gating** that depends on real `permissions[]` from `GET /auth/me` need a live backend. Those will be added when staging credentials are available — tracked in [known-issues.md](./known-issues.md).
 
 ### Why prod build?
 
@@ -239,7 +236,6 @@ The unit suite must stay green to merge. The E2E suite should be required for `m
 - **shadcn/ui primitives** — vendored, upstream coverage; testing them adds no value.
 - **Static layout JSX** — covered by the E2E navigation specs.
 - **Recharts internals** — third-party.
-- **Mock-only branches** that don't exist in production code paths (e.g. mock-auth login is exercised by E2E only — the source path is dev-mode-gated).
 
 ---
 

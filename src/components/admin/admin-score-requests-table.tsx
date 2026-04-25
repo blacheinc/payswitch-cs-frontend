@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  CheckCircle,
-  Clock,
-  XCircle,
-} from "lucide-react";
+import { Loader2, CheckCircle, Clock, XCircle } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TablePagination } from "@/components/shared/table-pagination";
 import {
   Table,
   TableBody,
@@ -200,32 +193,12 @@ export function AdminScoreRequestsTable({
         </TableBody>
       </Table>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4">
-          <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages} ({data?.total ?? 0} total)
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(Math.max(1, page - 1))}
-              disabled={page <= 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={data?.total ?? 0}
+        onPageChange={onPageChange}
+      />
     </>
   );
 }

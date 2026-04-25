@@ -147,25 +147,4 @@ describe("AuthContext — session mutations", () => {
     expect(getSession()).toBeNull();
   });
 
-  it("setMockAuthenticated seeds an admin mock user", async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    act(() => result.current.setMockAuthenticated(true));
-
-    expect(result.current.isAuthenticated).toBe(true);
-    expect(result.current.isAdmin).toBe(true);
-    expect(result.current.user?.id).toBe("mock-admin");
-  });
-
-  it("setMockAuthenticated seeds an org mock user with organization", async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    act(() => result.current.setMockAuthenticated(false));
-
-    expect(result.current.isAuthenticated).toBe(true);
-    expect(result.current.isAdmin).toBe(false);
-    expect(result.current.organization).not.toBeNull();
-  });
 });
