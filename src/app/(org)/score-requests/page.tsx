@@ -34,7 +34,6 @@ export default function ScoreRequestsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [decisionFilter, setDecisionFilter] = useState<string>("all");
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const debouncedSearch = useDebounce(searchQuery, 400);
 
@@ -52,22 +51,6 @@ export default function ScoreRequestsPage() {
   });
 
   const scoreRequests = data?.items || [];
-
-  const toggleSelectAll = () => {
-    if (selectedRows.length === scoreRequests.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(scoreRequests.map((r) => r.id));
-    }
-  };
-
-  const toggleSelectRow = (id: string) => {
-    if (selectedRows.includes(id)) {
-      setSelectedRows(selectedRows.filter((r) => r !== id));
-    } else {
-      setSelectedRows([...selectedRows, id]);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -149,28 +132,14 @@ export default function ScoreRequestsPage() {
       {/* Results table */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Results</CardTitle>
-              <CardDescription>
-                {data?.total ?? 0} request
-                {(data?.total ?? 0) !== 1 ? "s" : ""} found
-              </CardDescription>
-            </div>
-            {selectedRows.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {selectedRows.length} selected
-                </span>
-                <Button variant="outline" size="sm">
-                  Export Selected
-                </Button>
-              </div>
-            )}
-          </div>
+          <CardTitle className="text-lg">Results</CardTitle>
+          <CardDescription>
+            {data?.total ?? 0} request
+            {(data?.total ?? 0) !== 1 ? "s" : ""} found
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <OrganizationScoreRequestsTable 
+          <OrganizationScoreRequestsTable
             requests={scoreRequests}
             total={data?.total}
             page={page}
@@ -178,9 +147,6 @@ export default function ScoreRequestsPage() {
             onPageChange={setPage}
             isLoading={isLoading}
             isError={isError}
-            selectedRows={selectedRows}
-            onSelectRow={toggleSelectRow}
-            onSelectAll={toggleSelectAll}
           />
         </CardContent>
       </Card>

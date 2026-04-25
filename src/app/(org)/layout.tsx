@@ -7,9 +7,8 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   FileText,
-  Key,
+  // Key — restore when the Developers module is brought back.
   Users,
-  BarChart3,
   Settings,
   Menu,
   LogOut,
@@ -51,9 +50,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: "Dashboard", href: ROUTES.ORG.DASHBOARD, icon: LayoutDashboard },
   { title: "Score Requests", href: ROUTES.ORG.SCORE_REQUESTS, icon: FileText },
-  { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Key },
+  // Developers module is intentionally hidden until we revert it.
+  // { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Key },
   { title: "Teams", href: ROUTES.ORG.TEAMS, icon: Users },
-  { title: "Reports", href: ROUTES.ORG.REPORTS, icon: BarChart3 },
   { title: "Settings", href: ROUTES.ORG.SETTINGS, icon: Settings },
 ];
 

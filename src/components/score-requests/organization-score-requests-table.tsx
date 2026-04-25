@@ -28,7 +28,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ROUTES } from "@/lib/constant";
 import { formatDate } from "@/lib/utils";
 import type { ScoreRequestItem } from "@/lib/score-service";
@@ -45,10 +44,6 @@ interface OrganizationScoreRequestsTableProps {
   totalPages?: number;
   total?: number;
   onPageChange?: (page: number) => void;
-  // Selection props
-  selectedRows?: string[];
-  onSelectRow?: (id: string) => void;
-  onSelectAll?: () => void;
   // View mode
   isCompact?: boolean; // For dashboard view
 }
@@ -61,9 +56,6 @@ export function OrganizationScoreRequestsTable({
   totalPages = 1,
   total = 0,
   onPageChange,
-  selectedRows = [],
-  onSelectRow,
-  onSelectAll,
   isCompact = false,
 }: OrganizationScoreRequestsTableProps) {
   const getStatusBadge = (status: string) => {
@@ -192,17 +184,6 @@ export function OrganizationScoreRequestsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              {!isCompact && onSelectAll && (
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={
-                      selectedRows.length === requests.length &&
-                      requests.length > 0
-                    }
-                    onCheckedChange={onSelectAll}
-                  />
-                </TableHead>
-              )}
               <TableHead>Request ID</TableHead>
               <TableHead>Applicant</TableHead>
               <TableHead>Status</TableHead>
@@ -216,7 +197,7 @@ export function OrganizationScoreRequestsTable({
           <TableBody>
             {requests.length === 0 ? (
               <TableEmpty
-                colSpan={isCompact ? 7 : 9}
+                colSpan={isCompact ? 7 : 8}
                 title="No score requests found"
                 description="There are no score requests to display."
               />
@@ -228,14 +209,6 @@ export function OrganizationScoreRequestsTable({
 
                 return (
                 <TableRow key={request.id}>
-                  {!isCompact && onSelectRow && (
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedRows.includes(request.id)}
-                        onCheckedChange={() => onSelectRow(request.id)}
-                      />
-                    </TableCell>
-                  )}
                   <TableCell>
                     <Link
                       href={`${ROUTES.ORG.SCORE_REQUESTS}/${request.id}`}

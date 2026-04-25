@@ -24,9 +24,10 @@ export const ROUTES = {
   ORG: {
     DASHBOARD: "/dashboard",
     SCORE_REQUESTS: "/score-requests",
-    DEVELOPERS: "/developers",
+    // DEVELOPERS module is temporarily hidden. To restore: rename the folder
+    // src/app/(org)/_developers → developers and uncomment the route below.
+    // DEVELOPERS: "/developers",
     TEAMS: "/teams",
-    REPORTS: "/reports",
     SETTINGS: "/settings",
   },
 };

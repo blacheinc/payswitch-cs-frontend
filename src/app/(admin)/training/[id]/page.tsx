@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  Loader2,
   AlertCircle,
   Clock,
   FileSpreadsheet,
@@ -18,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
 
 export default function TrainingDetailPage() {
@@ -70,8 +70,85 @@ export default function TrainingDetailPage() {
 
   if (isLoadingUpload) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        {/* Back button + header — same vertical rhythm as the loaded view */}
+        <div className="flex flex-col gap-4">
+          <Button
+            variant="ghost"
+            className="w-fit"
+            onClick={() => router.push("/training")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Training Data
+          </Button>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-64" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-56" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Dataset Info card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded-sm" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[0, 1, 2, 3, 4, 5].map((row) => (
+                <div key={row}>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  {row < 5 && <Separator className="mt-4" />}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Data Quality Report card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded-sm" />
+                <Skeleton className="h-5 w-44" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="text-center space-y-3">
+                  <Skeleton className="mx-auto h-16 w-32" />
+                  <Skeleton className="mx-auto h-4 w-40" />
+                  <Skeleton className="h-2 w-full mt-4" />
+                </div>
+                <div className="space-y-3">
+                  <Skeleton className="h-3 w-32" />
+                  {[0, 1, 2, 3].map((row) => (
+                    <div
+                      key={row}
+                      className="flex items-center justify-between"
+                    >
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-12" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -174,7 +251,7 @@ export default function TrainingDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-center">
               <div className="text-center space-y-2">
                 <div
                   className={`text-6xl font-black ${
@@ -192,40 +269,38 @@ export default function TrainingDetailPage() {
               </div>
 
               <div className="space-y-4">
-                {upload.qualityReport &&
-                Object.entries(upload.qualityReport).length > 0 ? (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Detailed Metrics
-                    </p>
-                    <div className="space-y-2">
-                      {Object.entries(upload.qualityReport).map(
-                        ([key, value]) => (
+                {(() => {
+                  const metrics = buildQualityMetrics(upload.qualityReport);
+                  return metrics.length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider">
+                        Detailed Metrics
+                      </p>
+                      <div className="space-y-4">
+                        {metrics.map(({ label, value }) => (
                           <div
-                            key={key}
-                            className="flex justify-between items-center text-sm"
+                            key={label}
+                            className="flex justify-between items-center gap-3 text-sm"
                           >
-                            <span className="capitalize text-muted-foreground">
-                              {key.replace(/_/g, " ")}
+                            <span className="text-muted-foreground">
+                              {label}
                             </span>
-                            <span className="font-medium">
-                              {typeof value === "number"
-                                ? `${(value * 100).toFixed(1)}%`
-                                : String(value)}
+                            <span className="font-medium text-right break-words">
+                              {value}
                             </span>
                           </div>
-                        ),
-                      )}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-6 bg-muted/30 rounded-lg text-center">
-                    <Clock className="h-8 w-8 text-muted-foreground mb-2 animate-pulse" />
-                    <p className="text-sm text-muted-foreground">
-                      Quality analysis in progress...
-                    </p>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 bg-muted/30 rounded-lg text-center">
+                      <Clock className="h-8 w-8 text-muted-foreground mb-2 animate-pulse" />
+                      <p className="text-sm text-muted-foreground">
+                        Quality analysis in progress...
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -287,4 +362,126 @@ function DetailRow({
       </span>
     </div>
   );
+}
+
+// =============================================================================
+// Quality-report formatter
+//
+// `quality_report` is a heterogeneous payload from the backend — top-level
+// values include scalars (`timestamp`, `quality_score`) AND nested objects
+// (`pii_quality`, `data_quality`, `file_quality`, `schema_quality`). The
+// previous loop printed every value via `String(value)`, which produced
+// "[object Object]" for the nested sections.
+//
+// This formatter walks the known shape and produces a flat list of human-
+// readable {label, value} pairs, summarising each nested section.
+// =============================================================================
+
+interface QualityMetric {
+  label: string;
+  value: string;
+}
+
+function prettifyKey(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\bpii\b/i, "PII")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatRatio(value: number): string {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function summarizeSection(
+  key: string,
+  obj: Record<string, unknown>,
+): string | null {
+  if (key === "pii_quality") {
+    const fields = Number(obj.pii_fields_detected ?? 0);
+    const anon = Boolean(obj.anonymization_applied);
+    return `${fields} field${fields === 1 ? "" : "s"} · ${
+      anon ? "anonymized" : "raw"
+    }`;
+  }
+  if (key === "data_quality") {
+    const cols = Number(obj.total_columns ?? 0);
+    const completeness = Number(obj.overall_completeness_score ?? 0);
+    return `${cols} column${cols === 1 ? "" : "s"} · ${formatRatio(
+      completeness,
+    )} complete`;
+  }
+  if (key === "file_quality") {
+    const encoding = String(obj.encoding ?? "—");
+    const size = Number(obj.file_size_bytes ?? 0);
+    return `${encoding} · ${formatBytes(size)}`;
+  }
+  if (key === "schema_quality") {
+    const fmt = String(obj.format ?? "—");
+    const cols = Number(obj.column_count ?? 0);
+    return `${fmt} · ${cols} column${cols === 1 ? "" : "s"}`;
+  }
+  return null;
+}
+
+export function buildQualityMetrics(
+  report: Record<string, unknown> | null | undefined,
+): QualityMetric[] {
+  if (!report) return [];
+
+  const out: QualityMetric[] = [];
+
+  for (const [key, value] of Object.entries(report)) {
+    // Skip the duplicated quality_score scalar — the big % already shows it.
+    if (key === "quality_score") continue;
+
+    if (value == null) {
+      out.push({ label: prettifyKey(key), value: "—" });
+      continue;
+    }
+
+    if (key === "timestamp" && typeof value === "string") {
+      const d = new Date(value);
+      out.push({
+        label: "Generated",
+        value: Number.isNaN(d.getTime())
+          ? value
+          : format(d, "MMM d, yyyy HH:mm"),
+      });
+      continue;
+    }
+
+    if (typeof value === "boolean") {
+      out.push({ label: prettifyKey(key), value: value ? "Yes" : "No" });
+      continue;
+    }
+
+    if (typeof value === "number") {
+      const isRatio = value >= 0 && value <= 1;
+      out.push({
+        label: prettifyKey(key),
+        value: isRatio ? formatRatio(value) : value.toLocaleString(),
+      });
+      continue;
+    }
+
+    if (typeof value === "string") {
+      out.push({ label: prettifyKey(key), value });
+      continue;
+    }
+
+    if (typeof value === "object") {
+      const summary = summarizeSection(key, value as Record<string, unknown>);
+      out.push({ label: prettifyKey(key), value: summary ?? "—" });
+    }
+  }
+
+  return out;
 }

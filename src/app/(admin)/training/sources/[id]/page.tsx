@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Building2, Search, Layers } from "lucide-react";
+import { ArrowLeft, Building2, Search, Layers } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
 import { TrainingUploadTable } from "@/components/training/training-upload-table";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -44,8 +45,72 @@ export default function DataSourceDetailPage() {
 
   if (isLoadingSource) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        {/* Back button + header — same vertical rhythm as the loaded view */}
+        <div className="flex flex-col gap-4">
+          <Button
+            variant="ghost"
+            className="w-fit"
+            onClick={() => router.push("/training")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Training Data
+          </Button>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-56" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-48" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Source Information card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded-sm" />
+                <Skeleton className="h-5 w-40" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[0, 1, 2, 3, 4].map((row) => (
+                <div key={row}>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-36" />
+                  </div>
+                  {row < 4 && <Separator className="mt-4" />}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Upload History table — spans both columns */}
+          <Card className="col-span-2">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded-sm" />
+                  <Skeleton className="h-5 w-56" />
+                </div>
+                <Skeleton className="h-9 w-full sm:w-64" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[0, 1, 2, 3, 4].map((row) => (
+                <Skeleton key={row} className="h-10 w-full" />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
