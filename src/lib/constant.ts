@@ -100,6 +100,9 @@ export const API_ENDPOINTS = {
     ADMIN_BY_ID: (id: string) => `/admin/admins/${id}`,
     SUSPEND_ADMIN: (id: string) => `/admin/admins/${id}/suspend`,
     ACTIVATE_ADMIN: (id: string) => `/admin/admins/${id}/activate`,
+    // Cross-org platform stats. Returns the org-side `/v1/score-requests/stats`
+    // shape with an additional `by_org[]` breakdown when scoped to all orgs.
+    SCORE_REQUESTS_STATS: "/admin/score-requests/stats",
   },
   MODELS: {
     CURRENT: "/v1/models/current",
@@ -209,6 +212,9 @@ export const PERMISSION_CODES = {
     ADMINS_SUSPEND: "admin.admins.suspend",
     ADMINS_DELETE: "admin.admins.delete",
     API_LOGS_READ: "admin.api_logs.read",
+    // Cross-org reads — admin pulls any org's score requests / batch jobs.
+    SCORE_REQUESTS_READ: "admin.score_requests.read",
+    BATCH_SCORING_READ: "admin.batch_scoring.read",
   },
   MONITORING: {
     RISK: "monitoring.risk",

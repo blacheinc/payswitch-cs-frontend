@@ -45,6 +45,7 @@ import { rulesService } from "@/lib/monitoring-service";
 import type {
   RuleEvaluateRequest,
   RuleEvaluateResponse,
+  TriggeredRule,
 } from "@/types/monitoring-types";
 
 // ── Feature schema grouped by category ──
@@ -260,6 +261,70 @@ const FEATURE_GROUPS: FeatureGroup[] = [
 const SCORE_GRADES = ["A", "B", "C", "D", "E", "F"] as const;
 const FRAUD_FLAGS = ["LOW", "MEDIUM", "HIGH"] as const;
 
+const SCORE_GRADE_DESCRIPTIONS: Record<string, string> = {
+  A: "Excellent — lowest risk",
+  B: "Good — low risk",
+  C: "Fair — moderate risk",
+  D: "Subprime — elevated risk",
+  E: "High risk",
+  F: "Very high risk — likely decline",
+};
+
+/** Decisions a Data Engineer pre-emptively assigned before the rules engine ran. */
+const DECISION_LABELS = [
+  "APPROVE",
+  "CONDITIONAL_APPROVE",
+  "DECLINE",
+  "REFER",
+] as const;
+
+const DECISION_LABEL_COPY: Record<string, string> = {
+  APPROVE: "Approve",
+  CONDITIONAL_APPROVE: "Conditional Approve",
+  DECLINE: "Decline",
+  REFER: "Refer",
+};
+
+function getRiskTierBadge(tier: string) {
+  const upper = tier.toUpperCase();
+  if (upper === "LOW")
+    return (
+      <Badge
+        variant="outline"
+        className="bg-green-50 text-green-700 border-green-200"
+      >
+        Low risk
+      </Badge>
+    );
+  if (upper === "MEDIUM")
+    return (
+      <Badge
+        variant="outline"
+        className="bg-yellow-50 text-yellow-700 border-yellow-200"
+      >
+        Medium risk
+      </Badge>
+    );
+  if (upper === "HIGH")
+    return (
+      <Badge
+        variant="outline"
+        className="bg-red-50 text-red-700 border-red-200"
+      >
+        High risk
+      </Badge>
+    );
+  return (
+    <Badge variant="outline" className="capitalize">
+      {tier}
+    </Badge>
+  );
+}
+
+function isRulePassed(rule: TriggeredRule): boolean {
+  return (rule.result || "").toLowerCase() === "pass";
+}
+
 const DEFAULT_FORM: RuleEvaluateRequest = {
   probability_of_default: 0.15,
   score_grade: "B",
@@ -471,10 +536,15 @@ export function RulesSandboxTab() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="pd">
-                  Probability of Default{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pd">
+                    Probability of Default{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {(form.probability_of_default * 100).toFixed(1)}%
+                  </span>
+                </div>
                 <Input
                   id="pd"
                   type="number"
@@ -482,16 +552,20 @@ export function RulesSandboxTab() {
                   min="0"
                   max="1"
                   value={form.probability_of_default}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const raw = parseFloat(e.target.value);
+                    const clamped = Number.isNaN(raw)
+                      ? 0
+                      : Math.max(0, Math.min(1, raw));
                     setForm((f) => ({
                       ...f,
-                      probability_of_default: parseFloat(e.target.value) || 0,
-                    }))
-                  }
+                      probability_of_default: clamped,
+                    }));
+                  }}
                   placeholder="0.00 – 1.00"
                 />
                 <p className="text-xs text-muted-foreground">
-                  PD value between 0 and 1
+                  Decimal between 0 (no risk) and 1 (certain default).
                 </p>
               </div>
 
@@ -511,7 +585,10 @@ export function RulesSandboxTab() {
                   <SelectContent>
                     {SCORE_GRADES.map((g) => (
                       <SelectItem key={g} value={g}>
-                        Grade {g}
+                        <span className="font-medium">Grade {g}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {SCORE_GRADE_DESCRIPTIONS[g]}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -522,22 +599,36 @@ export function RulesSandboxTab() {
 
               <div className="space-y-2">
                 <Label htmlFor="decision_label">
-                  DE Decision Label{" "}
+                  Pre-decision label{" "}
                   <span className="text-muted-foreground text-xs">
                     (optional)
                   </span>
                 </Label>
-                <Input
-                  id="decision_label"
-                  value={form.data_engineer_decision_label ?? ""}
-                  onChange={(e) =>
+                <Select
+                  value={form.data_engineer_decision_label ?? "none"}
+                  onValueChange={(v) =>
                     setForm((f) => ({
                       ...f,
-                      data_engineer_decision_label: e.target.value || null,
+                      data_engineer_decision_label: v === "none" ? null : v,
                     }))
                   }
-                  placeholder="e.g. APPROVE, DECLINE"
-                />
+                >
+                  <SelectTrigger id="decision_label">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {DECISION_LABELS.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {DECISION_LABEL_COPY[d]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Decision the data-engineering pipeline assigned before the
+                  rules engine ran. Leave blank to evaluate from scratch.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -725,64 +816,122 @@ export function RulesSandboxTab() {
               </div>
             )}
 
-            {result && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Decision
-                  </span>
-                  {getDecisionBadge(result.decision)}
-                </div>
+            {result && (() => {
+              // Backend has used both `rules_applied` (current) and
+              // `triggered_rules` (legacy). Same for conditions. Always read
+              // the canonical field first; fall back to the legacy one.
+              const rules =
+                result.rules_applied ?? result.triggered_rules ?? [];
+              const passedRules = rules.filter(isRulePassed).length;
+              const failedRules = rules.length - passedRules;
+              const conditions =
+                result.conditions ?? result.conditions_applied ?? [];
 
-                {result.triggered_rules &&
-                  result.triggered_rules.length > 0 && (
+              return (
+                <div className="space-y-6">
+                  {/* Decision + risk tier headline row */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Decision
+                      </span>
+                      {getDecisionBadge(result.decision)}
+                    </div>
+                    {result.risk_tier && (
+                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Risk tier
+                        </span>
+                        {getRiskTierBadge(result.risk_tier)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Rules applied — pass/fail summary then a colour-coded list */}
+                  {rules.length > 0 && (
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold">
-                        Triggered Rules ({result.triggered_rules.length})
-                      </h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold">
+                          Rules applied
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="inline-flex items-center gap-1 text-green-700">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            {passedRules} pass
+                          </span>
+                          {failedRules > 0 && (
+                            <span className="inline-flex items-center gap-1 text-red-700">
+                              <XCircle className="h-3.5 w-3.5" />
+                              {failedRules} fail
+                            </span>
+                          )}
+                        </div>
+                      </div>
                       <div className="space-y-2">
-                        {result.triggered_rules.map((rule, idx) => (
-                          <div
-                            key={rule.rule_id ?? idx}
-                            className="flex items-start gap-3 p-3 border rounded-lg"
-                          >
-                            <Gavel className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium">
-                                {rule.rule_name ??
-                                  rule.rule_id ??
-                                  `Rule ${idx + 1}`}
-                              </p>
-                              {rule.details && (
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {rule.details}
+                        {rules.map((rule, idx) => {
+                          const passed = isRulePassed(rule);
+                          const ruleName =
+                            rule.rule ??
+                            rule.rule_name ??
+                            rule.rule_id ??
+                            `Rule ${idx + 1}`;
+                          return (
+                            <div
+                              key={rule.rule_id ?? `${ruleName}-${idx}`}
+                              className={`flex items-start gap-3 p-3 border rounded-lg ${
+                                passed
+                                  ? "bg-green-50/40 border-green-100 dark:bg-green-900/10 dark:border-green-900/40"
+                                  : rule.result
+                                    ? "bg-red-50/40 border-red-100 dark:bg-red-900/10 dark:border-red-900/40"
+                                    : ""
+                              }`}
+                            >
+                              {passed ? (
+                                <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 shrink-0" />
+                              ) : rule.result ? (
+                                <XCircle className="h-4 w-4 mt-0.5 text-red-600 shrink-0" />
+                              ) : (
+                                <Gavel className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">
+                                  {ruleName}
                                 </p>
+                                {rule.details && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {rule.details}
+                                  </p>
+                                )}
+                              </div>
+                              {rule.result && (
+                                <Badge
+                                  variant="outline"
+                                  className={`capitalize shrink-0 ${
+                                    passed
+                                      ? "bg-green-50 text-green-700 border-green-200"
+                                      : "bg-red-50 text-red-700 border-red-200"
+                                  }`}
+                                >
+                                  {rule.result}
+                                </Badge>
                               )}
                             </div>
-                            {rule.result && (
-                              <Badge
-                                variant="outline"
-                                className="capitalize shrink-0"
-                              >
-                                {rule.result}
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
-                {result.conditions_applied &&
-                  result.conditions_applied.length > 0 && (
+                  {/* Conditions attached to a (conditional) approve */}
+                  {conditions.length > 0 && (
                     <>
                       <Separator />
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold">
-                          Conditions Applied
+                          Conditions
                         </h3>
                         <ul className="space-y-1.5">
-                          {result.conditions_applied.map((cond, idx) => (
+                          {conditions.map((cond, idx) => (
                             <li
                               key={idx}
                               className="flex items-start gap-2 text-sm"
@@ -798,32 +947,33 @@ export function RulesSandboxTab() {
                     </>
                   )}
 
-                {result.decline_reasons &&
-                  result.decline_reasons.length > 0 && (
-                    <>
-                      <Separator />
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-destructive">
-                          Decline Reasons
-                        </h3>
-                        <ul className="space-y-1.5">
-                          {result.decline_reasons.map((reason, idx) => (
-                            <li
-                              key={idx}
-                              className="flex items-start gap-2 text-sm"
-                            >
-                              <XCircle className="h-3.5 w-3.5 mt-0.5 text-destructive shrink-0" />
-                              <span className="text-muted-foreground">
-                                {reason}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </>
-                  )}
-              </div>
-            )}
+                  {result.decline_reasons &&
+                    result.decline_reasons.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-semibold text-destructive">
+                            Decline reasons
+                          </h3>
+                          <ul className="space-y-1.5">
+                            {result.decline_reasons.map((reason, idx) => (
+                              <li
+                                key={idx}
+                                className="flex items-start gap-2 text-sm"
+                              >
+                                <XCircle className="h-3.5 w-3.5 mt-0.5 text-destructive shrink-0" />
+                                <span className="text-muted-foreground">
+                                  {reason}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

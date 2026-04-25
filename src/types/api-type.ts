@@ -26,4 +26,10 @@ export interface PaginationParams {
   risk?: string;
   /** Scoring decision filter — single value or list (comma-joined on the wire). */
   decision?: string | string[];
+  /**
+   * Optional cross-org scoping for admin callers (see the admin cross-org
+   * reads guide). Org users either omit this or pass their own org id; admins
+   * with `admin.<resource>.read` may pass any org id, or omit for cross-org.
+   */
+  organizationId?: string;
 }

@@ -422,6 +422,30 @@ export interface ScoreRequestStatsResponse {
   needs_attention: StatsNeedsAttention;
 }
 
+/** Per-org row returned by the platform stats endpoint when not scoped. */
+export interface OrgBreakdownEntry {
+  organization_id: string;
+  name: string;
+  short_name: string | null;
+  total_requests: number;
+  decided: number;
+  /** 0.0 (not null) when the org has zero decided requests in the window. */
+  approval_rate_pct: number;
+}
+
+/**
+ * Response for `GET /admin/score-requests/stats`.
+ *
+ * Strictly extends the org-side response — the FE can pipe it through the
+ * same StatCard / OutcomeBar / ScoreHistogram primitives the org dashboard
+ * already uses, then optionally render the `by_org` breakdown alongside.
+ */
+export interface PlatformScoreRequestStatsResponse
+  extends ScoreRequestStatsResponse {
+  /** Empty array when the request was scoped via `organization_id`. */
+  by_org: OrgBreakdownEntry[];
+}
+
 // ===================== BATCH SCORING TYPES =====================
 
 export type BatchJobStatus =
@@ -628,8 +652,22 @@ export const SCORE_KEYS = {
   detail: (id: string) => [...SCORE_KEYS.details(), id] as const,
   scoringResult: (id: string) =>
     [...SCORE_KEYS.all, "scoring-result", id] as const,
-  stats: (period: ScoreDashboardPeriod) =>
-    [...SCORE_KEYS.all, "stats", period] as const,
+  stats: (period: ScoreDashboardPeriod, organizationId?: string) =>
+    [
+      ...SCORE_KEYS.all,
+      "stats",
+      period,
+      organizationId ?? null,
+    ] as const,
+  /** Platform-wide stats key — separate from per-org so caches don't collide. */
+  platformStats: (period: ScoreDashboardPeriod, organizationId?: string) =>
+    [
+      "admin",
+      "score-requests",
+      "stats",
+      period,
+      organizationId ?? null,
+    ] as const,
 };
 
 export const BATCH_KEYS = {
@@ -652,7 +690,13 @@ export const BUREAU_KEYS = {
 // ===================== SERVICE =====================
 
 export const scoreService = {
-  /** GET /v1/score-requests — paginated list */
+  /**
+   * GET /v1/score-requests — paginated list.
+   *
+   * Admins holding `admin.score_requests.read` may pass `organizationId` to
+   * scope to a specific org, or omit it to read across all orgs. Org users
+   * either omit it or pass their own — see the admin cross-org reads guide.
+   */
   async getScoreRequests(
     params?: PaginationParams,
   ): Promise<PaginatedResponse<ScoreRequestItem>> {
@@ -670,6 +714,7 @@ export const scoreService = {
           search: params?.search || undefined,
           status: params?.status || undefined,
           decision,
+          organization_id: params?.organizationId || undefined,
         },
       },
     );
@@ -683,13 +728,45 @@ export const scoreService = {
     };
   },
 
-  /** GET /v1/score-requests/stats — aggregated KPIs for the org dashboard. */
+  /**
+   * GET /v1/score-requests/stats — aggregated KPIs for the org dashboard.
+   * Admins may pass `organizationId` to read another org's stats.
+   */
   async getScoreRequestsStats(
     period: ScoreDashboardPeriod,
+    organizationId?: string,
   ): Promise<ScoreRequestStatsResponse> {
     const response = await apiClient.get<ScoreRequestStatsResponse>(
       API_ENDPOINTS.SCORE_REQUESTS.STATS,
-      { params: { period } },
+      {
+        params: {
+          period,
+          organization_id: organizationId || undefined,
+        },
+      },
+    );
+    return response.data;
+  },
+
+  /**
+   * GET /admin/score-requests/stats — platform-wide stats with `by_org[]`.
+   *
+   * Returns the same shape as the org `/stats` call plus a per-org breakdown.
+   * When `organizationId` is provided the response is scoped to that org and
+   * `by_org` is `[]`. Requires `admin.score_requests.read`.
+   */
+  async getPlatformScoreRequestsStats(
+    period: ScoreDashboardPeriod,
+    organizationId?: string,
+  ): Promise<PlatformScoreRequestStatsResponse> {
+    const response = await apiClient.get<PlatformScoreRequestStatsResponse>(
+      API_ENDPOINTS.ADMIN.SCORE_REQUESTS_STATS,
+      {
+        params: {
+          period,
+          organization_id: organizationId || undefined,
+        },
+      },
     );
     return response.data;
   },

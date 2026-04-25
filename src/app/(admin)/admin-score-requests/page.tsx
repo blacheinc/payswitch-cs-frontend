@@ -1,8 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Search, FileText, Activity, CheckCircle } from "lucide-react";
+import {
+  Search,
+  FileText,
+  TrendingUp,
+  ShieldCheck,
+  Sparkles,
+  ArrowRight,
+  Building2,
+} from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -12,18 +21,68 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { scoreService, SCORE_KEYS } from "@/lib/score-service";
+import {
+  scoreService,
+  SCORE_KEYS,
+  type ScoreDashboardPeriod,
+  type OrgBreakdownEntry,
+} from "@/lib/score-service";
 import { AdminScoreRequestsTable } from "@/components/admin/admin-score-requests-table";
+import { StatCard } from "@/components/shared/stat-card";
 import { useDebounce } from "@/hooks/use-debounce";
+import { formatNumber, formatPct } from "@/lib/utils";
+import { ROUTES } from "@/lib/constant";
+
+const PERIOD_OPTIONS: {
+  value: ScoreDashboardPeriod;
+  label: string;
+  short: string;
+}[] = [
+  { value: "today", label: "Today", short: "today" },
+  { value: "7d", label: "Last 7 days", short: "last 7 days" },
+  { value: "30d", label: "Last 30 days", short: "last 30 days" },
+  { value: "90d", label: "Last 90 days", short: "last 90 days" },
+];
 
 export default function AdminScoreRequestsPage() {
+  const [period, setPeriod] = useState<ScoreDashboardPeriod>("30d");
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: SCORE_KEYS.list({ page, perPage: 10, search: debouncedSearch }),
+  // Platform-wide stats (cross-org). per integration guide §5
+  const statsQuery = useQuery({
+    queryKey: SCORE_KEYS.platformStats(period),
+    queryFn: () => scoreService.getPlatformScoreRequestsStats(period),
+    refetchInterval: period === "today" ? 60_000 : 5 * 60_000,
+    staleTime: period === "today" ? 30_000 : 2 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Cross-org list — admins reading every org's score requests.
+  const listQuery = useQuery({
+    queryKey: SCORE_KEYS.list({
+      page,
+      perPage: 10,
+      search: debouncedSearch,
+    }),
     queryFn: () =>
       scoreService.getScoreRequests({
         page,
@@ -32,78 +91,185 @@ export default function AdminScoreRequestsPage() {
       }),
   });
 
+  const stats = statsQuery.data;
+  const periodShort =
+    PERIOD_OPTIONS.find((o) => o.value === period)?.short ?? period;
+  const statsLoading = statsQuery.isLoading;
+
+  const needsAttention = stats
+    ? stats.needs_attention.referred +
+      stats.needs_attention.pending_or_processing +
+      stats.needs_attention.failed
+    : 0;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Score Requests</h1>
           <p className="text-muted-foreground">
-            Platform-wide credit score requests overview
+            Platform-wide credit score activity across all organisations.
           </p>
         </div>
+        <Select
+          value={period}
+          onValueChange={(v) => setPeriod(v as ScoreDashboardPeriod)}
+        >
+          <SelectTrigger className="w-full sm:w-44" aria-label="Time range">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PERIOD_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Platform KPI tiles */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {statsLoading || !stats ? (
+          <>
+            <KpiSkeleton />
+            <KpiSkeleton />
+            <KpiSkeleton />
+            <KpiSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label={`Requests · ${periodShort}`}
+              value={formatNumber(stats.current.total_requests)}
+              icon={<Sparkles className="h-4 w-4 text-primary" />}
+              description={
+                stats.trend.total_delta_pct != null
+                  ? `${stats.trend.total_delta_pct >= 0 ? "+" : ""}${stats.trend.total_delta_pct.toFixed(1)}% vs previous`
+                  : `${formatNumber(stats.previous.total_requests)} previous`
+              }
+            />
+            <StatCard
+              label="Approval rate"
+              value={
+                stats.current.decided > 0
+                  ? formatPct(stats.current.approval_rate_pct, 1)
+                  : "—"
+              }
+              icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+              description={
+                stats.trend.approval_delta_pp != null
+                  ? `${stats.trend.approval_delta_pp >= 0 ? "+" : ""}${stats.trend.approval_delta_pp.toFixed(1)}pp vs previous`
+                  : stats.current.decided > 0
+                    ? `across ${formatNumber(stats.current.decided)} decisions`
+                    : "no decisions yet"
+              }
+              tone={stats.current.decided > 0 ? "success" : "default"}
+            />
+            <StatCard
+              label="Average credit score"
+              value={stats.current.avg_credit_score ?? "—"}
+              icon={<FileText className="h-4 w-4 text-primary" />}
+              description={
+                stats.current.median_credit_score != null
+                  ? `median ${stats.current.median_credit_score}`
+                  : "no scored requests"
+              }
+            />
+            <StatCard
+              label="Needs attention"
+              value={formatNumber(needsAttention)}
+              icon={
+                <ShieldCheck
+                  className={`h-4 w-4 ${needsAttention > 0 ? "text-yellow-500" : "text-green-500"}`}
+                />
+              }
+              description={`${stats.needs_attention.referred} referred · ${stats.needs_attention.pending_or_processing} in flight · ${stats.needs_attention.failed} failed`}
+              tone={needsAttention > 0 ? "warning" : "success"}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Per-org breakdown — only present on cross-org calls */}
+      {stats && stats.by_org.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Requests
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg">By organisation</CardTitle>
+                <CardDescription>
+                  Top contributors {periodShort}. Click an org to drill into
+                  its profile.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.total ?? "—"}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {data?.items?.some(
-                (r) => r.scoring_result?.scoring_metadata?.credit_score != null,
-              )
-                ? Math.round(
-                    data.items.reduce(
-                      (acc, r) =>
-                        acc +
-                        (r.scoring_result?.scoring_metadata?.credit_score ?? 0),
-                      0,
-                    ) /
-                      data.items.filter(
-                        (r) =>
-                          r.scoring_result?.scoring_metadata?.credit_score !=
-                          null,
-                      ).length,
-                  )
-                : "—"}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Organisation</TableHead>
+                    <TableHead className="text-right">Requests</TableHead>
+                    <TableHead className="text-right">Decided</TableHead>
+                    <TableHead className="text-right">Approval rate</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.by_org.map((row: OrgBreakdownEntry) => (
+                    <TableRow key={row.organization_id}>
+                      <TableCell>
+                        <Link
+                          href={`${ROUTES.ADMIN.ORGANIZATIONS}/${row.organization_id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {row.name}
+                        </Link>
+                        {row.short_name && (
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {row.short_name}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatNumber(row.total_requests)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatNumber(row.decided)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {row.decided > 0
+                          ? formatPct(row.approval_rate_pct, 1)
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={`${ROUTES.ADMIN.ORGANIZATIONS}/${row.organization_id}`}
+                          aria-label={`Open ${row.name}`}
+                        >
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {data?.items
-                ? data?.items?.filter((r) => r.status === "completed").length
-                : "—"}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
+      {/* Cross-org list */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <CardTitle>All Score Requests</CardTitle>
               <CardDescription>
-                Credit score evaluations submitted by registered organizations.
+                Credit score evaluations submitted by registered organisations.
               </CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
@@ -122,14 +288,26 @@ export default function AdminScoreRequestsPage() {
         </CardHeader>
         <CardContent>
           <AdminScoreRequestsTable
-            data={data}
-            isLoading={isLoading}
-            isError={isError}
+            data={listQuery.data}
+            isLoading={listQuery.isLoading}
+            isError={listQuery.isError}
             page={page}
             onPageChange={setPage}
           />
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function KpiSkeleton() {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-7 w-16 mt-3" />
+        <Skeleton className="h-3 w-32 mt-2" />
+      </CardContent>
+    </Card>
   );
 }

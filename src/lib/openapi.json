@@ -1588,7 +1588,7 @@
       "get": {
         "tags": ["Scoring API"],
         "summary": "List Score Requests",
-        "description": "List all score requests for the authenticated organization.\n\nSupports two filter axes:\n\n* ``status`` — ScoreRequest lifecycle state (pre-scoring).\n* ``decision`` — ScoringResult outcome (post-scoring). Joins to the\n  ``scoring_results`` table, so requests that never produced a result\n  are excluded when this filter is active.",
+        "description": "List score requests with optional cross-org admin scoping.\n\nFilters:\n    * ``status`` — ScoreRequest lifecycle state (pre-scoring).\n    * ``decision`` — ScoringResult outcome (post-scoring). Joins to\n      ``scoring_results``; requests without a result are excluded\n      when this filter is active.\n    * ``organization_id`` — admin-only narrow / cross-org wide.",
         "operationId": "list_score_requests_v1_score_requests_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -1639,6 +1639,17 @@
               "title": "Decision"
             },
             "description": "Filter by scoring decision. Repeat the query param to OR multiple values, e.g. ?decision=REFER&decision=DECLINE. Allowed: APPROVE, CONDITIONAL_APPROVE, DECLINE, REFER, FRAUD_HOLD, ERROR."
+          },
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Admin-only: scope to a specific organisation. Org users and API keys must omit or pass their own org id; cross-org reads by non-admins are rejected as unauthorised.",
+              "title": "Organization Id"
+            },
+            "description": "Admin-only: scope to a specific organisation. Org users and API keys must omit or pass their own org id; cross-org reads by non-admins are rejected as unauthorised."
           }
         ],
         "responses": {
@@ -1667,7 +1678,7 @@
       "get": {
         "tags": ["Scoring API"],
         "summary": "Get Score Request Stats",
-        "description": "Aggregated dashboard stats for the authenticated organisation.\n\nReturns everything the org-side overview needs:\n\n* ``current``  — totals, decision mix, score distribution for the window.\n* ``previous`` — same-length window immediately prior, for trend.\n* ``trend``    — pre-computed deltas (``None`` when previous is empty).\n* ``needs_attention`` — referral / in-flight / failed counts.\n\nAggregation happens server-side in two ``GROUP BY`` queries so the FE\ndoesn't need to fetch thousands of rows and misreport at scale.",
+        "description": "Aggregated dashboard stats.\n\nFor org callers this is scoped to their own organisation. For platform\nadmins holding ``admin.score_requests.read`` it accepts an optional\n``organization_id`` to scope to a specific org; omitting it returns\nplatform-wide stats across every org.\n\nReturns:\n    * ``current``  — totals, decision mix, score distribution for the window.\n    * ``previous`` — same-length window immediately prior, for trend.\n    * ``trend``    — pre-computed deltas (``None`` when previous is empty).\n    * ``needs_attention`` — referral / in-flight / failed counts.",
         "operationId": "get_score_request_stats_v1_score_requests_stats_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -1683,6 +1694,17 @@
               "title": "Period"
             },
             "description": "Window anchored at 'now'. 'today' is from start-of-day UTC."
+          },
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Admin-only: scope stats to a specific organisation. Org users and API keys must omit this param (or pass their own org id) — anything else is rejected as unauthorised cross-org access.",
+              "title": "Organization Id"
+            },
+            "description": "Admin-only: scope stats to a specific organisation. Org users and API keys must omit this param (or pass their own org id) — anything else is rejected as unauthorised cross-org access."
           }
         ],
         "responses": {
@@ -1711,7 +1733,7 @@
       "get": {
         "tags": ["Scoring API"],
         "summary": "Get Score Request",
-        "description": "Get the result of a score request by tracking ID.",
+        "description": "Get the result of a score request by tracking ID.\n\nOrg callers may only fetch requests belonging to their own org.\nPlatform admins with ``admin.score_requests.read`` may fetch any\nrequest regardless of org — those reads are recorded in ``audit_logs``.",
         "operationId": "get_score_request_v1_score_requests__request_id__get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -1748,7 +1770,7 @@
       "get": {
         "tags": ["Scoring API"],
         "summary": "Get Scoring Result",
-        "description": "Get the full 4-model scoring result for a score request.\n\nReturns the rich output from the AI pipeline including credit risk,\nfraud detection, loan amount, and income verification model results,\nalong with SHAP contributions and reason codes.",
+        "description": "Get the full 4-model scoring result for a score request.\n\nReturns the rich output from the AI pipeline including credit risk,\nfraud detection, loan amount, and income verification model results,\nalong with SHAP contributions and reason codes.\n\nSame org-scoping rules as :func:`get_score_request` — admins read any\norg, audit-logged.",
         "operationId": "get_scoring_result_v1_score_requests__request_id__scoring_result_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -2285,7 +2307,7 @@
       "get": {
         "tags": ["Batch Scoring"],
         "summary": "List Batch Jobs",
-        "description": "List all batch jobs for the authenticated organisation.",
+        "description": "List batch jobs.\n\nOrg callers see their own jobs only. Platform admins with\n``admin.batch_scoring.read`` may pass an ``organization_id`` to scope\nto a specific org, or omit it for cross-org platform visibility.",
         "operationId": "list_batch_jobs_v1_score_batch_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -2322,6 +2344,17 @@
               "default": 20,
               "title": "Page Size"
             }
+          },
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Admin-only: scope to a specific organisation. Org users and API keys must omit or pass their own org id.",
+              "title": "Organization Id"
+            },
+            "description": "Admin-only: scope to a specific organisation. Org users and API keys must omit or pass their own org id."
           }
         ],
         "responses": {
@@ -2344,7 +2377,7 @@
       "get": {
         "tags": ["Batch Scoring"],
         "summary": "Get Batch Job Status",
-        "description": "Return status and per-item progress counts for a batch job.",
+        "description": "Return status and per-item progress counts for a batch job.\n\nOrg callers see only their own jobs; admins with\n``admin.batch_scoring.read`` may inspect any org's job (audit-logged).",
         "operationId": "get_batch_job_status_v1_score_batch__job_id__get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -2380,7 +2413,7 @@
       "get": {
         "tags": ["Batch Scoring"],
         "summary": "Get Batch Results",
-        "description": "Return paginated per-item results for a batch job.\n\nItems are returned as soon as they are processed — no need to wait for the\nentire job to complete.  Use the ``status`` filter to show only failed items\nor only successful ones.\n\nEach completed item includes a ``score_request_id`` and ``score_tracking_id``\nthe frontend can use to deep-link into the individual scoring result.",
+        "description": "Return paginated per-item results for a batch job.\n\nItems are returned as soon as they are processed — no need to wait for the\nentire job to complete.  Use the ``status`` filter to show only failed items\nor only successful ones.\n\nEach completed item includes a ``score_request_id`` and ``score_tracking_id``\nthe frontend can use to deep-link into the individual scoring result.\n\nSame org-scoping rules as the status endpoint — admins read any org,\naudit-logged.",
         "operationId": "get_batch_results_v1_score_batch__job_id__results_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -3057,6 +3090,61 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/score-requests/stats": {
+      "get": {
+        "tags": ["Platform Admin – Scoring"],
+        "summary": "Get Platform Score Request Stats",
+        "description": "Platform-wide scoring stats with optional per-org scoping.\n\nWhen ``organization_id`` is provided, the response mirrors the org\nendpoint exactly (with ``by_org=[]``). When omitted, ``current`` and\n``previous`` aggregate across every organisation, and ``by_org``\ncarries one row per org for the current window.",
+        "operationId": "get_platform_score_request_stats_admin_score_requests_stats_get",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(today|7d|30d|90d)$",
+              "description": "Window anchored at 'now'. 'today' is from start-of-day UTC.",
+              "default": "7d",
+              "title": "Period"
+            },
+            "description": "Window anchored at 'now'. 'today' is from start-of-day UTC."
+          },
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "Optional — scope to a single org. Omit for platform-wide.",
+              "title": "Organization Id"
+            },
+            "description": "Optional — scope to a single org. Omit for platform-wide."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformScoreRequestStatsResponse"
+                }
               }
             }
           },
@@ -5349,6 +5437,36 @@
         "type": "object",
         "title": "ModelInfo"
       },
+      "OrgBreakdownEntry": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Organization Id"
+          },
+          "name": { "type": "string", "title": "Name" },
+          "short_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Short Name"
+          },
+          "total_requests": { "type": "integer", "title": "Total Requests" },
+          "decided": { "type": "integer", "title": "Decided" },
+          "approval_rate_pct": {
+            "type": "number",
+            "title": "Approval Rate Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "name",
+          "total_requests",
+          "decided",
+          "approval_rate_pct"
+        ],
+        "title": "OrgBreakdownEntry",
+        "description": "One row of the platform-wide ``by_org`` breakdown.\n\nReturned only when an admin omits ``organization_id`` — gives the\nplatform overview a tile-friendly per-tenant slice."
+      },
       "OrgUserListResponse": {
         "properties": {
           "items": {
@@ -5678,6 +5796,39 @@
           "scope"
         ],
         "title": "PermissionResponse"
+      },
+      "PlatformScoreRequestStatsResponse": {
+        "properties": {
+          "period": { "type": "string", "title": "Period" },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "current": { "$ref": "#/components/schemas/StatsCurrent" },
+          "previous": { "$ref": "#/components/schemas/StatsPrevious" },
+          "trend": { "$ref": "#/components/schemas/StatsTrend" },
+          "needs_attention": {
+            "$ref": "#/components/schemas/StatsNeedsAttention"
+          },
+          "by_org": {
+            "items": { "$ref": "#/components/schemas/OrgBreakdownEntry" },
+            "type": "array",
+            "title": "By Org"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "generated_at",
+          "current",
+          "previous",
+          "trend",
+          "needs_attention",
+          "by_org"
+        ],
+        "title": "PlatformScoreRequestStatsResponse",
+        "description": "Same shape as the org stats response plus a per-org breakdown.\n\nInherits the platform-wide aggregates (everything across all orgs in\nthe window) and adds ``by_org`` so the admin overview can render a\nsortable per-tenant table."
       },
       "ProvisionOrganizationRequest": {
         "properties": {
