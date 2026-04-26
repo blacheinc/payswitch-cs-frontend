@@ -149,9 +149,12 @@ export default function AdminDashboardPage() {
   const modelOps = modelOpsQuery.data;
   const alerts = alertsQuery.data;
 
+  // Only treat the alert summary as authoritative once the request resolves.
+  // Showing "All systems healthy" before the alerts call returns is misleading.
+  const alertsResolved = alertsQuery.isSuccess;
   const firingCount = alerts?.summary?.total_firing ?? 0;
   const criticalCount = alerts?.summary?.critical_firing ?? 0;
-  const isHealthy = firingCount === 0;
+  const isHealthy = alertsResolved && firingCount === 0;
 
   const totalRequests = infra?.request_volume?.total ?? 0;
   const p99 = infra?.latency?.p99_ms ?? 0;
@@ -203,35 +206,42 @@ export default function AdminDashboardPage() {
               ))}
             </SelectContent>
           </Select>
-          <Link
-            href={ROUTES.ADMIN.MONITORING}
-            className="inline-flex items-center"
-            aria-label={
-              isHealthy
-                ? "All systems healthy"
-                : `${firingCount} active alerts`
-            }
-          >
-            {isHealthy ? (
-              <Badge
-                variant="outline"
-                className="px-3 py-1.5 text-sm gap-2 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-900/50"
-              >
-                <BellOff className="h-3.5 w-3.5" />
-                All systems healthy
-              </Badge>
-            ) : (
-              <Badge variant="destructive" className="px-3 py-1.5 text-sm gap-2">
-                <Bell className="h-3.5 w-3.5" />
-                {firingCount} need{firingCount === 1 ? "s" : ""} attention
-                {criticalCount > 0 && (
-                  <span className="ml-1 rounded-full bg-white/20 px-1.5 text-[10px]">
-                    {criticalCount} urgent
-                  </span>
-                )}
-              </Badge>
-            )}
-          </Link>
+          {alertsResolved ? (
+            <Link
+              href={ROUTES.ADMIN.MONITORING}
+              className="inline-flex items-center"
+              aria-label={
+                isHealthy
+                  ? "All systems healthy"
+                  : `${firingCount} active alerts`
+              }
+            >
+              {isHealthy ? (
+                <Badge
+                  variant="outline"
+                  className="px-3 py-1.5 text-sm gap-2 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-900/50"
+                >
+                  <BellOff className="h-3.5 w-3.5" />
+                  All systems healthy
+                </Badge>
+              ) : (
+                <Badge
+                  variant="destructive"
+                  className="px-3 py-1.5 text-sm gap-2"
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                  {firingCount} need{firingCount === 1 ? "s" : ""} attention
+                  {criticalCount > 0 && (
+                    <span className="ml-1 rounded-full bg-white/20 px-1.5 text-[10px]">
+                      {criticalCount} urgent
+                    </span>
+                  )}
+                </Badge>
+              )}
+            </Link>
+          ) : (
+            <Skeleton className="h-9 w-44 rounded-full" />
+          )}
         </div>
       </div>
 

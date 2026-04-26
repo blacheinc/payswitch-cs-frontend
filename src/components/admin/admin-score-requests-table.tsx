@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Loader2, CheckCircle, Clock, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import {
 import type { ScoreRequest } from "@/types/models";
 import type { PaginatedResponse } from "@/types/api-type";
 import { formatDate } from "@/lib/utils";
+import { ROUTES } from "@/lib/constant";
 
 interface AdminScoreRequestsTableProps {
   data: PaginatedResponse<ScoreRequest> | undefined;
@@ -158,7 +160,12 @@ export function AdminScoreRequestsTable({
               return (
               <TableRow key={request.id}>
                 <TableCell>
-                  <span className="font-medium text-primary">{request.id}</span>
+                  <Link
+                    href={`${ROUTES.ADMIN.SCORE_REQUESTS}/${request.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {request.id}
+                  </Link>
                   {request.referenceId && (
                     <p className="text-xs text-muted-foreground">
                       {request.referenceId}
