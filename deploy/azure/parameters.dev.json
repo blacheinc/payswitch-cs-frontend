@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "dev" },
+    "resourceSuffix": { "value": "REPLACE_ME" },
+    "containerImage": {
+      "value": "REPLACE_ME.azurecr.io/credit-scoring-fe:dev-latest"
+    },
+    "nextPublicApiUrl": {
+      "value": "https://api-dev.payswitch.example.com"
+    },
+    "nextPublicSessionSecret": {
+      "value": "REPLACE_ME_GENERATE_WITH_openssl_rand_hex_64"
+    },
+    "minReplicas": { "value": 1 },
+    "maxReplicas": { "value": 3 }
+  }
+}

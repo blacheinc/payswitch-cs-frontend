@@ -1,9 +1,46 @@
+# Dockerfile + ignore file are not needed inside the image
 Dockerfile
 .dockerignore
+
+# Dependencies + build output (built fresh in the image)
 node_modules
-npm-debug.log
-README.md
 .next
+.next-e2e
+out
+
+# Local env (provided via build args / Container App secrets)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Tests + tooling
+tests
+test-results
+playwright-report
+playwright
+coverage
+vitest.config.ts
+playwright.config.ts
+
+# Source control + editor
 .git
-.env*.local
+.gitignore
+.github
+.vscode
+.idea
+*.swp
 .DS_Store
+
+# Docs / scratch (not needed at runtime)
+docs
+README.md
+*.md
+
+# CI configs
+azure-pipelines.yml
+
+# Misc
+*.log
+npm-debug.log

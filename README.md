@@ -19,9 +19,10 @@ Detailed docs live under [`docs/`](./docs/).
 | [Integrations](./docs/integrations.md) | How the FE consumes each backend integration guide. |
 | [Security](./docs/security.md) | Token storage posture, threat model, hardening recommendations. |
 | [Testing](./docs/testing.md) | Vitest + MSW + Playwright — how to run, write, and extend tests. |
+| [Deployment](./docs/deployment-guide.md) | Azure Container Apps + Bicep + GitHub Actions / ADO Pipelines — full one-shot deploy guide. |
 | [Known issues](./docs/known-issues.md) | Tracked follow-ups (lint debt, set-state-in-effect, etc.). |
 
-A deployment guide will be added separately.
+For a one-shot Azure deploy, jump straight to [`docs/deployment-guide.md`](./docs/deployment-guide.md).
 
 ---
 

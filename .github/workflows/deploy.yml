@@ -1,0 +1,138 @@
+# =============================================================================
+# Deploy — builds the FE container image, pushes it to ACR, and rolls a new
+# revision of the Container App via Bicep.
+#
+# Triggers:
+#   - Push of a tag matching `v*` → deploys to PROD.
+#   - Push to `develop`            → deploys to DEV.
+#   - Manual run (`workflow_dispatch`) → choose env at runtime.
+#
+# Auth: uses OIDC (federated credential) — no client secrets stored in
+# GitHub. Configure via:
+#
+#   az ad app federated-credential create --id <app-id> --parameters '{
+#     "name": "github-cs-fe-main",
+#     "issuer": "https://token.actions.githubusercontent.com",
+#     "subject": "repo:<org>/<repo>:ref:refs/heads/main",
+#     "audiences": ["api://AzureADTokenExchange"]
+#   }'
+#
+# Required GitHub secrets (Settings → Environments):
+#   AZURE_CLIENT_ID         → OIDC app registration client id
+#   AZURE_TENANT_ID
+#   AZURE_SUBSCRIPTION_ID
+#   AZURE_RESOURCE_GROUP    → e.g. cs-fe-prod-rg
+#   AZURE_RESOURCE_SUFFIX   → 3-8 alphanumeric chars (must match Bicep param)
+#
+# Required GitHub Environment variables:
+#   NEXT_PUBLIC_API_URL     → backend base URL for that env (NOT a secret)
+#
+# Required GitHub Environment secrets (per env: dev / prod):
+#   NEXT_PUBLIC_SESSION_SECRET → openssl rand -hex 64; one per env, never reuse
+# =============================================================================
+name: deploy
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [dev, prod]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy → ${{ steps.target.outputs.env }}
+    runs-on: ubuntu-latest
+    environment: ${{ steps.target.outputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve target environment
+        id: target
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "env=${{ inputs.environment }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "env=prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "env=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "value=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=$(echo "${{ steps.target.outputs.env }}-${{ github.sha }}" | cut -c1-30)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Ensure ACR
+        id: acr
+        run: |
+          ENV="${{ steps.target.outputs.env }}"
+          SUFFIX="${{ secrets.AZURE_RESOURCE_SUFFIX }}"
+          ACR_NAME="csfe${ENV}${SUFFIX}"
+          if ! az acr show --name "$ACR_NAME" --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" >/dev/null 2>&1; then
+            az acr create \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --name "$ACR_NAME" \
+              --sku Basic \
+              --admin-enabled false
+          fi
+          echo "name=$ACR_NAME" >> "$GITHUB_OUTPUT"
+          echo "loginServer=$(az acr show --name $ACR_NAME --query loginServer -o tsv)" >> "$GITHUB_OUTPUT"
+
+      - name: Build + push image (ACR Build)
+        run: |
+          az acr build \
+            --registry "${{ steps.acr.outputs.name }}" \
+            --image "credit-scoring-fe:${{ steps.tag.outputs.value }}" \
+            --build-arg "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" \
+            --build-arg "NEXT_PUBLIC_SESSION_SECRET=${{ secrets.NEXT_PUBLIC_SESSION_SECRET }}" \
+            --file Dockerfile \
+            .
+
+      - name: Deploy Bicep
+        run: |
+          IMAGE="${{ steps.acr.outputs.loginServer }}/credit-scoring-fe:${{ steps.tag.outputs.value }}"
+          ENV="${{ steps.target.outputs.env }}"
+          az deployment group create \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --template-file deploy/azure/main.bicep \
+            --parameters @deploy/azure/parameters.${ENV}.json \
+            --parameters \
+              resourceSuffix="${{ secrets.AZURE_RESOURCE_SUFFIX }}" \
+              containerImage="$IMAGE" \
+              nextPublicApiUrl="${{ vars.NEXT_PUBLIC_API_URL }}" \
+              nextPublicSessionSecret="${{ secrets.NEXT_PUBLIC_SESSION_SECRET }}" \
+            --output none
+
+      - name: Print Container App URL
+        run: |
+          ENV="${{ steps.target.outputs.env }}"
+          APP="cs-fe-${ENV}-${{ secrets.AZURE_RESOURCE_SUFFIX }}"
+          FQDN=$(az containerapp show \
+            -n "$APP" \
+            -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --query 'properties.configuration.ingress.fqdn' -o tsv)
+          echo "✅ Deployed to https://${FQDN}"
+          echo "URL=https://${FQDN}" >> "$GITHUB_STEP_SUMMARY"

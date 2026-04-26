@@ -36,6 +36,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Build a self-contained server bundle. This is what the production
+  // Dockerfile copies into the runner image — see deploy/ for details.
+  output: "standalone",
   async headers() {
     return [
       {

@@ -1,0 +1,226 @@
+# =============================================================================
+# Azure DevOps pipeline — alternative to .github/workflows/deploy.yml.
+#
+# Pick ONE of GitHub Actions or this file as your CI/CD source-of-truth; the
+# project ships both so the team can choose without re-implementing later.
+#
+# Stages:
+#   1. validate  → typecheck + lint + unit tests + Playwright E2E
+#   2. build     → ACR Build (multi-stage Docker) with NEXT_PUBLIC_* baked in
+#   3. deploy    → az deployment group create against the Bicep stack
+#
+# Variable groups:
+#   Configure two ADO variable groups in Library:
+#     cs-fe-shared           — non-secret values
+#       AZURE_RESOURCE_GROUP        e.g. cs-fe-prod-rg
+#       AZURE_RESOURCE_SUFFIX       3-8 alphanumeric chars
+#     cs-fe-<env>            — one per environment (dev / prod)
+#       NEXT_PUBLIC_API_URL         backend base URL for that env
+#       NEXT_PUBLIC_SESSION_SECRET  ⚠ secret variable; openssl rand -hex 64
+#
+# Service connection:
+#   Create an Azure Resource Manager service connection (workload identity is
+#   strongly preferred over secret-based auth) and reference it via the
+#   `azureServiceConnection` variable below.
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+      - develop
+      - main
+  tags:
+    include:
+      - v*
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+parameters:
+  - name: targetEnvironment
+    displayName: Override target environment (manual runs only)
+    type: string
+    default: auto
+    values: [auto, dev, prod]
+
+variables:
+  azureServiceConnection: cs-fe-azure
+  nodeVersion: "20.x"
+  # Resolve env automatically: tag → prod, develop → dev, manual override otherwise.
+  ${{ if eq(parameters.targetEnvironment, 'auto') }}:
+    ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/v') }}:
+      targetEnv: prod
+    ${{ if eq(variables['Build.SourceBranchName'], 'develop') }}:
+      targetEnv: dev
+  ${{ if ne(parameters.targetEnvironment, 'auto') }}:
+    targetEnv: ${{ parameters.targetEnvironment }}
+
+stages:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 1. Validate
+  # ───────────────────────────────────────────────────────────────────────────
+  - stage: validate
+    displayName: Validate
+    jobs:
+      - job: checks
+        displayName: Lint · Typecheck · Test
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - script: npm ci
+            displayName: Install deps
+
+          - script: npm run typecheck
+            displayName: Typecheck
+
+          - script: npm run lint
+            displayName: Lint
+
+          - script: npm run test:coverage
+            displayName: Unit tests + coverage
+
+          - task: PublishCodeCoverageResults@2
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage/lcov.info
+
+      - job: e2e
+        displayName: Playwright E2E
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - script: npm ci
+            displayName: Install deps
+
+          - script: npx playwright install --with-deps chromium
+            displayName: Install Playwright browsers
+
+          - script: npm run test:e2e
+            displayName: Run E2E
+            env:
+              NEXT_PUBLIC_API_URL: http://localhost:3001/api
+              NEXT_PUBLIC_SESSION_SECRET: e2e-ci-secret
+
+          - task: PublishPipelineArtifact@1
+            condition: failed()
+            inputs:
+              targetPath: playwright-report
+              artifact: playwright-report
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2. Build & push image (ACR Build)
+  # ───────────────────────────────────────────────────────────────────────────
+  - stage: build
+    displayName: Build container image
+    dependsOn: validate
+    condition: |
+      and(
+        succeeded(),
+        in(variables['Build.Reason'], 'IndividualCI', 'Manual'),
+        ne(variables['Build.SourceBranch'], 'refs/heads/main')
+      )
+    variables:
+      - group: cs-fe-shared
+      - group: cs-fe-${{ variables.targetEnv }}
+    jobs:
+      - job: build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: AzureCLI@2
+            displayName: Build & push image
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                ENV="$(targetEnv)"
+                ACR_NAME="csfe${ENV}$(AZURE_RESOURCE_SUFFIX)"
+
+                if ! az acr show --name "$ACR_NAME" --resource-group "$(AZURE_RESOURCE_GROUP)" >/dev/null 2>&1; then
+                  az acr create \
+                    --resource-group "$(AZURE_RESOURCE_GROUP)" \
+                    --name "$ACR_NAME" \
+                    --sku Basic \
+                    --admin-enabled false
+                fi
+
+                # Image tag: vN.N.N for tags, env-shortsha otherwise
+                if [[ "$(Build.SourceBranch)" == refs/tags/v* ]]; then
+                  TAG="${BUILD_SOURCEBRANCHNAME#v}"
+                else
+                  TAG="${ENV}-$(echo $(Build.SourceVersion) | cut -c1-8)"
+                fi
+                echo "##vso[task.setvariable variable=imageTag;isOutput=true]$TAG"
+
+                az acr build \
+                  --registry "$ACR_NAME" \
+                  --image "credit-scoring-fe:${TAG}" \
+                  --build-arg "NEXT_PUBLIC_API_URL=$(NEXT_PUBLIC_API_URL)" \
+                  --build-arg "NEXT_PUBLIC_SESSION_SECRET=$(NEXT_PUBLIC_SESSION_SECRET)" \
+                  --file Dockerfile \
+                  .
+            name: build_image
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 3. Deploy
+  # ───────────────────────────────────────────────────────────────────────────
+  - stage: deploy
+    displayName: Deploy to ${{ variables.targetEnv }}
+    dependsOn: build
+    condition: succeeded()
+    variables:
+      - group: cs-fe-shared
+      - group: cs-fe-${{ variables.targetEnv }}
+      - name: imageTag
+        value: $[ stageDependencies.build.build.outputs['build_image.imageTag'] ]
+    jobs:
+      - deployment: rollout
+        environment: ${{ variables.targetEnv }}
+        pool:
+          vmImage: ubuntu-latest
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: az deployment group create
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      ENV="$(targetEnv)"
+                      ACR_NAME="csfe${ENV}$(AZURE_RESOURCE_SUFFIX)"
+                      LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
+                      IMAGE="${LOGIN_SERVER}/credit-scoring-fe:$(imageTag)"
+
+                      az deployment group create \
+                        --resource-group "$(AZURE_RESOURCE_GROUP)" \
+                        --template-file deploy/azure/main.bicep \
+                        --parameters @deploy/azure/parameters.${ENV}.json \
+                        --parameters \
+                          resourceSuffix="$(AZURE_RESOURCE_SUFFIX)" \
+                          containerImage="$IMAGE" \
+                          nextPublicApiUrl="$(NEXT_PUBLIC_API_URL)" \
+                          nextPublicSessionSecret="$(NEXT_PUBLIC_SESSION_SECRET)"
+
+                      APP="cs-fe-${ENV}-$(AZURE_RESOURCE_SUFFIX)"
+                      FQDN=$(az containerapp show \
+                        -n "$APP" \
+                        -g "$(AZURE_RESOURCE_GROUP)" \
+                        --query 'properties.configuration.ingress.fqdn' -o tsv)
+                      echo "##vso[task.complete result=Succeeded;]Deployed: https://${FQDN}"

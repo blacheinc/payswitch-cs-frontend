@@ -1,0 +1,88 @@
+# =============================================================================
+# Continuous integration — runs on every PR and on pushes to main / develop.
+#
+# Three jobs in parallel:
+#   - typecheck   → tsc --noEmit
+#   - lint        → eslint
+#   - test        → vitest run + coverage
+#
+# A separate `e2e` job builds the production bundle and runs Playwright,
+# only on PRs to main/develop and on pushes to main (it's heavier).
+# =============================================================================
+name: ci
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-checks:
+    name: ${{ matrix.task }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [typecheck, lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run ${{ matrix.task }}
+        run: |
+          case "${{ matrix.task }}" in
+            typecheck) npm run typecheck ;;
+            lint)      npm run lint ;;
+            test)      npm run test:coverage ;;
+          esac
+
+      - name: Upload coverage
+        if: matrix.task == 'test'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 7
+
+  e2e:
+    name: e2e (Playwright)
+    runs-on: ubuntu-latest
+    needs: static-checks
+    if: github.event_name == 'push' || github.base_ref == 'main' || github.base_ref == 'develop'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api
+          NEXT_PUBLIC_SESSION_SECRET: e2e-ci-secret
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
