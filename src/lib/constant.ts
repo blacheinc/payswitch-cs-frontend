@@ -230,6 +230,13 @@ export const PERMISSION_CODES = {
     EVALUATE: "rules.evaluate",
   },
   // Org-scoped (organization dashboard)
+  ORG: {
+    READ: "org.read",
+    UPDATE: "org.update",
+  },
+  BUREAU: {
+    LOOKUP: "bureau.lookup",
+  },
   SCORE_REQUESTS: {
     CREATE: "score_requests.create",
     LIST: "score_requests.list",

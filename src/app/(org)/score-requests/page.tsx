@@ -26,9 +26,12 @@ import { scoreService, SCORE_KEYS } from "@/lib/score-service";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
 import { OrganizationScoreRequestsTable } from "@/components/score-requests/organization-score-requests-table";
+import { NoPermission } from "@/components/shared/no-permission";
 
 export default function ScoreRequestsPage() {
   const { can } = usePermissions();
+  const canList = can(PERMISSION_CODES.SCORE_REQUESTS.LIST);
+  const canBulkList = can(PERMISSION_CODES.BATCH_SCORING.LIST);
   const [page, setPage] = useState(1);
   const [perPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,9 +51,24 @@ export default function ScoreRequestsPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: SCORE_KEYS.list(listParams),
     queryFn: () => scoreService.getScoreRequests(listParams),
+    enabled: canList,
   });
 
   const scoreRequests = data?.items || [];
+
+  if (!canList) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Score Requests</h1>
+          <p className="text-muted-foreground">
+            View and manage credit score requests
+          </p>
+        </div>
+        <NoPermission />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -67,12 +85,14 @@ export default function ScoreRequestsPage() {
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button variant="outline" asChild>
-            <Link href={`${ROUTES.ORG.SCORE_REQUESTS}/bulk`}>
-              <UploadCloud className="mr-2 h-4 w-4" />
-              Bulk Request
-            </Link>
-          </Button>
+          {canBulkList && (
+            <Button variant="outline" asChild>
+              <Link href={`${ROUTES.ORG.SCORE_REQUESTS}/bulk`}>
+                <UploadCloud className="mr-2 h-4 w-4" />
+                Bulk Request
+              </Link>
+            </Button>
+          )}
           {can(PERMISSION_CODES.SCORE_REQUESTS.CREATE) && (
             <Button asChild>
               <Link href={`${ROUTES.ORG.SCORE_REQUESTS}/new`}>

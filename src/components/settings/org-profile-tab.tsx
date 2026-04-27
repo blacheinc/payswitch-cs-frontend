@@ -26,13 +26,20 @@ import {
   orgProfileSchema,
   type OrgProfileValues,
 } from "@/lib/schemas/settings-management";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
+import { NoPermission } from "@/components/shared/no-permission";
 
 export function OrgProfileTab() {
   const queryClient = useQueryClient();
+  const { can } = usePermissions();
+  const canRead = can(PERMISSION_CODES.ORG.READ);
+  const canUpdate = can(PERMISSION_CODES.ORG.UPDATE);
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ORG_PROFILE_KEYS.detail(),
     queryFn: orgProfileService.get,
+    enabled: canRead,
   });
 
   // ---- Form state ----
@@ -84,6 +91,10 @@ export function OrgProfileTab() {
     updateMutation.mutate(payload);
   };
 
+  if (!canRead) {
+    return <NoPermission inline />;
+  }
+
   if (profileLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -98,6 +109,9 @@ export function OrgProfileTab() {
       className="space-y-6"
       noValidate
     >
+      {/* `fieldset[disabled]` greys-out every nested control when the user
+          can read but not update — they see their data, can't change it. */}
+      <fieldset disabled={!canUpdate} className="space-y-6 contents">
       <Card>
         <CardHeader>
           <CardTitle>Organization Information</CardTitle>
@@ -233,16 +247,19 @@ export function OrgProfileTab() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={updateMutation.isPending}>
-          {updateMutation.isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {updateMutation.isPending ? "Saving..." : "Save Changes"}
-        </Button>
-      </div>
+      </fieldset>
+      {canUpdate && (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {updateMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

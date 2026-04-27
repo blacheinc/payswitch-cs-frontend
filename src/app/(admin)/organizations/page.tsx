@@ -17,11 +17,17 @@ import {
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
+import { NoPermission } from "@/components/shared/no-permission";
 
 import { AddOrganizationModal } from "@/components/organization/add-organization-modal";
 import { OrganizationTable } from "@/components/organization/organization-table";
 
 export default function OrganizationsPage() {
+  const { can } = usePermissions();
+  const canRead = can(PERMISSION_CODES.ADMIN.ORGS_READ);
+  const canCreate = can(PERMISSION_CODES.ADMIN.ORGS_CREATE);
   // ---- Search / filter / pagination state ----
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -45,10 +51,25 @@ export default function OrganizationsPage() {
         search: debouncedSearch,
         status: statusFilter,
       }),
+    enabled: canRead,
   });
 
   // ---- Add modal state ----
   const [isAddOpen, setIsAddOpen] = useState(false);
+
+  if (!canRead) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Organizations</h1>
+          <p className="text-muted-foreground">
+            Manage client organizations and their subscription tiers
+          </p>
+        </div>
+        <NoPermission />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -61,10 +82,12 @@ export default function OrganizationsPage() {
           </p>
         </div>
 
-        <Button onClick={() => setIsAddOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Organization
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsAddOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Organization
+          </Button>
+        )}
       </div>
 
       {/* Orgs Table */}

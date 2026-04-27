@@ -151,21 +151,22 @@ describe("AuthContext — session mutations", () => {
     expect(getUserCache()?.userType).toBe("org");
   });
 
-  it("logout calls authService.logout, clears cache, drops state", async () => {
+  it("logout clears the localStorage cache and calls authService.logout", async () => {
     saveUserCache({ user: orgUser, userType: "org" });
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
 
-    // logout is async now — we await before assertions to make sure the
-    // server-side cookie clear has had a chance to land before navigation
-    // kicks the user out (in real life). In tests, jsdom has no navigation
-    // so we just assert the post-logout state.
+    // logout deliberately KEEPS the React `user`/`isAuthenticated` set until
+    // navigation lands, so gated pages don't flash a NoPermission placeholder
+    // between state-clear and `window.location.href`. The localStorage cache
+    // is dropped immediately so a parallel tab can't rehydrate from it, and
+    // `isLoading` flips to true to mark the transition.
     await act(async () => {
       await result.current.logout();
     });
 
-    expect(result.current.isAuthenticated).toBe(false);
     expect(getUserCache()).toBeNull();
     expect(logoutMock).toHaveBeenCalledTimes(1);
+    expect(result.current.isLoading).toBe(true);
   });
 });

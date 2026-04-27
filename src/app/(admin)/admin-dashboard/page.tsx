@@ -32,7 +32,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { ROUTES } from "@/lib/constant";
+import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
+import { usePermissions } from "@/hooks/use-permissions";
+import { NoPermission } from "@/components/shared/no-permission";
 import {
   formatDate,
   formatMetric,
@@ -108,6 +110,13 @@ function periodLabel(value: string): string {
 }
 
 export default function AdminDashboardPage() {
+  const { can } = usePermissions();
+  const canInfra = can(PERMISSION_CODES.MONITORING.INFRASTRUCTURE);
+  const canRisk = can(PERMISSION_CODES.MONITORING.RISK);
+  const canModelOps = can(PERMISSION_CODES.MONITORING.MODEL_OPS);
+  const canAlerts = can(PERMISSION_CODES.MONITORING.ALERTS);
+  const hasAnyDashboardPerm = canInfra || canRisk || canModelOps || canAlerts;
+
   const [period, setPeriod] = useState<DashboardPeriod>("7d");
 
   const infraPeriod = toInfraPeriod(period);
@@ -120,6 +129,7 @@ export default function AdminDashboardPage() {
       monitoringService.getInfrastructure({ period: infraPeriod }),
     refetchInterval: INFRA_POLL_MS,
     staleTime: INFRA_POLL_MS / 2,
+    enabled: canInfra,
   });
 
   const riskQuery = useQuery({
@@ -127,6 +137,7 @@ export default function AdminDashboardPage() {
     queryFn: () => monitoringService.getRisk({ period: riskPeriod }),
     refetchInterval: RISK_POLL_MS,
     staleTime: RISK_POLL_MS / 2,
+    enabled: canRisk,
   });
 
   const modelOpsQuery = useQuery({
@@ -134,6 +145,7 @@ export default function AdminDashboardPage() {
     queryFn: () => monitoringService.getModelOps({ period: modelOpsPeriod }),
     refetchInterval: MODEL_OPS_POLL_MS,
     staleTime: MODEL_OPS_POLL_MS / 2,
+    enabled: canModelOps,
   });
 
   const alertsQuery = useQuery({
@@ -142,6 +154,7 @@ export default function AdminDashboardPage() {
       monitoringService.getAlerts({ status: "firing", limit: 5 }),
     refetchInterval: ALERTS_POLL_MS,
     staleTime: ALERTS_POLL_MS / 2,
+    enabled: canAlerts,
   });
 
   const infra = infraQuery.data;
@@ -173,6 +186,21 @@ export default function AdminDashboardPage() {
   const infraLoading = infraQuery.isLoading;
   const riskLoading = riskQuery.isLoading;
   const modelOpsLoading = modelOpsQuery.isLoading;
+
+  if (!hasAnyDashboardPerm) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Platform Overview</h1>
+          <p className="text-muted-foreground text-sm">
+            A live look at platform health, lending decisions, and model
+            performance.
+          </p>
+        </div>
+        <NoPermission />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -206,7 +234,7 @@ export default function AdminDashboardPage() {
               ))}
             </SelectContent>
           </Select>
-          {alertsResolved ? (
+          {canAlerts && alertsResolved ? (
             <Link
               href={ROUTES.ADMIN.MONITORING}
               className="inline-flex items-center"
@@ -239,71 +267,77 @@ export default function AdminDashboardPage() {
                 </Badge>
               )}
             </Link>
-          ) : (
+          ) : canAlerts ? (
             <Skeleton className="h-9 w-44 rounded-full" />
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* 2. KPI row */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        {infraLoading ? (
-          <KpiSkeleton />
-        ) : (
-          <StatCard
-            label="Requests"
-            value={formatNumber(totalRequests)}
-            icon={<Activity className="h-4 w-4 text-primary" />}
-            description={`${periodLabel(infraPeriod)} · ${formatPct(errorRate, 2)} errors`}
-          />
-        )}
-        {riskLoading ? (
-          <KpiSkeleton />
-        ) : (
-          <StatCard
-            label="Approval rate"
-            value={formatPct(approveRate, 1)}
-            icon={<TrendingUp className="h-4 w-4 text-green-500" />}
-            description={`${periodLabel(riskPeriod)} · ${formatNumber(totalDecisions)} decisions · ${formatPct(declineRate, 1)} declined`}
-            tone={approveRate > 0 ? "success" : "default"}
-          />
-        )}
-        {infraLoading ? (
-          <KpiSkeleton />
-        ) : (
-          <StatCard
-            label="Response time · P99"
-            value={formatMs(p99)}
-            icon={<Zap className="h-4 w-4 text-orange-500" />}
-            description={`${periodLabel(infraPeriod)} · slowest 1%`}
-            tone={p99 >= 1000 ? "danger" : "default"}
-          />
-        )}
-        {modelOpsLoading ? (
-          <KpiSkeleton />
-        ) : (
-          <StatCard
-            label="Model accuracy"
-            value={topAuc != null ? formatMetric(topAuc, 3) : "—"}
-            icon={<Brain className="h-4 w-4 text-primary" />}
-            description={
-              topChampion
-                ? `${prettyModelType(topChampion.model_type)} · v${topChampion.version}`
-                : "no active champion"
-            }
-            tone={
-              champAlerting > 0
-                ? "danger"
-                : topAuc != null
-                  ? "success"
-                  : "default"
-            }
-          />
-        )}
+        {canInfra &&
+          (infraLoading ? (
+            <KpiSkeleton />
+          ) : (
+            <StatCard
+              label="Requests"
+              value={formatNumber(totalRequests)}
+              icon={<Activity className="h-4 w-4 text-primary" />}
+              description={`${periodLabel(infraPeriod)} · ${formatPct(errorRate, 2)} errors`}
+            />
+          ))}
+        {canRisk &&
+          (riskLoading ? (
+            <KpiSkeleton />
+          ) : (
+            <StatCard
+              label="Approval rate"
+              value={formatPct(approveRate, 1)}
+              icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+              description={`${periodLabel(riskPeriod)} · ${formatNumber(totalDecisions)} decisions · ${formatPct(declineRate, 1)} declined`}
+              tone={approveRate > 0 ? "success" : "default"}
+            />
+          ))}
+        {canInfra &&
+          (infraLoading ? (
+            <KpiSkeleton />
+          ) : (
+            <StatCard
+              label="Response time · P99"
+              value={formatMs(p99)}
+              icon={<Zap className="h-4 w-4 text-orange-500" />}
+              description={`${periodLabel(infraPeriod)} · slowest 1%`}
+              tone={p99 >= 1000 ? "danger" : "default"}
+            />
+          ))}
+        {canModelOps &&
+          (modelOpsLoading ? (
+            <KpiSkeleton />
+          ) : (
+            <StatCard
+              label="Model accuracy"
+              value={topAuc != null ? formatMetric(topAuc, 3) : "—"}
+              icon={<Brain className="h-4 w-4 text-primary" />}
+              description={
+                topChampion
+                  ? `${prettyModelType(topChampion.model_type)} · v${topChampion.version}`
+                  : "no active champion"
+              }
+              tone={
+                champAlerting > 0
+                  ? "danger"
+                  : topAuc != null
+                    ? "success"
+                    : "default"
+              }
+            />
+          ))}
       </div>
 
       {/* 3. Traffic + decision mix */}
+      {(canInfra || canRisk) && (
       <div className="grid gap-4 xl:grid-cols-3">
+        {canInfra && (
         <div className="xl:col-span-2">
           {infraLoading ? (
             <ChartCardSkeleton />
@@ -337,7 +371,9 @@ export default function AdminDashboardPage() {
             />
           )}
         </div>
+        )}
 
+        {canRisk && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Decisions</CardTitle>
@@ -365,9 +401,12 @@ export default function AdminDashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
+      )}
 
       {/* 4. Champion model health strip */}
+      {canModelOps && (
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -454,6 +493,7 @@ export default function AdminDashboardPage() {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

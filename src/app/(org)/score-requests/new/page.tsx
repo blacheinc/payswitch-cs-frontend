@@ -51,7 +51,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ROUTES } from "@/lib/constant";
+import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
+import { usePermissions } from "@/hooks/use-permissions";
+import { NoPermission } from "@/components/shared/no-permission";
 import {
   scoreService,
   SCORE_KEYS,
@@ -200,6 +202,10 @@ const STEPS = [
 export default function NewScoreRequestPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  const { can } = usePermissions();
+  const canCreate = can(PERMISSION_CODES.SCORE_REQUESTS.CREATE);
+  const canBureauLookup = can(PERMISSION_CODES.BUREAU.LOOKUP);
 
   // ── Flow state ──
   const [currentStep, setCurrentStep] = useState(1);
@@ -804,6 +810,31 @@ export default function NewScoreRequestPage() {
   // ═══════════════════════════════════════════════════════════════════════════
   // Main Render
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // Bureau lookup is required to populate Step 1's `bureauResult` before
+  // the Score Request can be created. Without it the multi-step flow
+  // can't proceed, so we gate the whole page on that permission.
+  if (!canCreate || !canBureauLookup) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href={ROUTES.ORG.SCORE_REQUESTS}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold">New Score Request</h1>
+        </div>
+        <NoPermission
+          description={
+            !canCreate
+              ? "You need score_requests.create to submit a credit score request."
+              : "You need bureau.lookup to look up applicant credit data."
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

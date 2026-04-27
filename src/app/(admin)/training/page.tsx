@@ -25,13 +25,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
+import { NoPermission } from "@/components/shared/no-permission";
 import { TrainingUploadTable } from "@/components/training/training-upload-table";
 import { DataSourceTable } from "@/components/training/data-source-table";
 import { UploadDatasetModal } from "@/components/training/upload-dataset-modal";
 import { AddDataSourceModal } from "@/components/training/add-data-source-modal";
 
 export default function TrainingPage() {
-  const [activeTab, setActiveTab] = useState("datasets");
+  const { can } = usePermissions();
+  const canReadDatasets = can(PERMISSION_CODES.ADMIN.TRAINING_READ);
+  const canUpload = can(PERMISSION_CODES.ADMIN.TRAINING_UPLOAD);
+  const canReadSources = can(PERMISSION_CODES.ADMIN.SOURCES_READ);
+  const canManageSources = can(PERMISSION_CODES.ADMIN.SOURCES_MANAGE);
+  const hasAnyAccess = canReadDatasets || canReadSources;
+
+  const [activeTab, setActiveTab] = useState(
+    canReadDatasets ? "datasets" : "data-sources",
+  );
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isAddSourceOpen, setIsAddSourceOpen] = useState(false);
 
@@ -59,6 +71,7 @@ export default function TrainingPage() {
         page: datasetPage,
         search: debouncedDatasetSearch,
       }),
+    enabled: canReadDatasets,
   });
 
   const {
@@ -75,7 +88,22 @@ export default function TrainingPage() {
         page: sourcePage,
         search: debouncedSourceSearch,
       }),
+    enabled: canReadSources,
   });
+
+  if (!hasAnyAccess) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Training Data</h1>
+          <p className="text-muted-foreground">
+            Upload and manage datasets for model training and retraining
+          </p>
+        </div>
+        <NoPermission />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -94,12 +122,16 @@ export default function TrainingPage() {
         className="space-y-6"
       >
         <TabsList>
-          <TabsTrigger value="datasets">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Datasets
-          </TabsTrigger>
-          <TabsTrigger value="data-sources">
-            <Building2 className="mr-2 h-4 w-4" /> Data Sources
-          </TabsTrigger>
+          {canReadDatasets && (
+            <TabsTrigger value="datasets">
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Datasets
+            </TabsTrigger>
+          )}
+          {canReadSources && (
+            <TabsTrigger value="data-sources">
+              <Building2 className="mr-2 h-4 w-4" /> Data Sources
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ==================== DATASETS TAB ==================== */}
@@ -188,12 +220,14 @@ export default function TrainingPage() {
                       }}
                     />
                   </div>
-                  <Button
-                    onClick={() => setIsUploadOpen(true)}
-                    className="w-full sm:w-auto"
-                  >
-                    <UploadCloud className="mr-2 h-4 w-4" /> Upload Dataset
-                  </Button>
+                  {canUpload && (
+                    <Button
+                      onClick={() => setIsUploadOpen(true)}
+                      className="w-full sm:w-auto"
+                    >
+                      <UploadCloud className="mr-2 h-4 w-4" /> Upload Dataset
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -233,12 +267,14 @@ export default function TrainingPage() {
                       }}
                     />
                   </div>
-                  <Button
-                    onClick={() => setIsAddSourceOpen(true)}
-                    className="w-full sm:w-auto"
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> Add Source
-                  </Button>
+                  {canManageSources && (
+                    <Button
+                      onClick={() => setIsAddSourceOpen(true)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add Source
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>

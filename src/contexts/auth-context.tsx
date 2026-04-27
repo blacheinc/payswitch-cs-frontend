@@ -173,10 +173,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const cached = getUserCache();
     const wasAdmin = cached?.userType === "admin";
 
-    // Drop the local user cache up front so the UI flips immediately even if
-    // the server round-trip stalls.
+    // Drop the localStorage cache so a stale tab can't rehydrate after this,
+    // but DO NOT clear the React `user` yet — between this setState and the
+    // browser navigation below, every gated page would otherwise re-render
+    // once with empty permissions and flash the NoPermission placeholder.
+    // We just flip `isLoading: true` so any auth-dependent UI knows a
+    // transition is in flight; the full reset happens when the new page
+    // mounts after `window.location.href` lands.
     clearUserCache();
-    setState({ ...initialState, isLoading: false });
+    setState((prev) => ({ ...prev, isLoading: true }));
 
     try {
       await authService.logout();

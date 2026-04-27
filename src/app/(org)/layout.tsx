@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { ROUTES } from "@/lib/constant";
+import { ROUTES, PERMISSION_CODES, type PermissionCode } from "@/lib/constant";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useQuery } from "@tanstack/react-query";
 import { authService } from "@/lib/auth-service";
 import { useTheme } from "@/contexts/theme-context";
@@ -45,14 +46,31 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   badge?: string;
+  /** Any-of permission gate. Empty/undefined → always visible. */
+  perms?: PermissionCode[];
 }
 
 const navItems: NavItem[] = [
+  // Dashboard pulls cross-cutting widgets — open to anyone signed in.
   { title: "Dashboard", href: ROUTES.ORG.DASHBOARD, icon: LayoutDashboard },
-  { title: "Score Requests", href: ROUTES.ORG.SCORE_REQUESTS, icon: FileText },
+  {
+    title: "Score Requests",
+    href: ROUTES.ORG.SCORE_REQUESTS,
+    icon: FileText,
+    perms: [
+      PERMISSION_CODES.SCORE_REQUESTS.LIST,
+      PERMISSION_CODES.BATCH_SCORING.LIST,
+    ],
+  },
   // Developers module is intentionally hidden until we revert it.
   // { title: "Developers", href: ROUTES.ORG.DEVELOPERS, icon: Key },
-  { title: "Teams", href: ROUTES.ORG.TEAMS, icon: Users },
+  {
+    title: "Teams",
+    href: ROUTES.ORG.TEAMS,
+    icon: Users,
+    perms: [PERMISSION_CODES.USERS.LIST, PERMISSION_CODES.ROLES.READ],
+  },
+  // Settings is self-service — always available to the signed-in user.
   { title: "Settings", href: ROUTES.ORG.SETTINGS, icon: Settings },
 ];
 
@@ -79,6 +97,7 @@ interface SidebarContentProps {
   pathname: string;
   organization?: { name?: string } | null;
   userProfile?: { name?: string; email?: string } | null;
+  visibleNavItems: NavItem[];
 }
 
 function SidebarContent({
@@ -88,6 +107,7 @@ function SidebarContent({
   pathname,
   organization,
   userProfile,
+  visibleNavItems,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
@@ -129,7 +149,7 @@ function SidebarContent({
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-1">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== ROUTES.ORG.DASHBOARD &&
@@ -193,7 +213,7 @@ function SidebarContent({
 
 export default function OrgLayout({ children }: OrgLayoutProps) {
   const pathname = usePathname();
-  const { organization, logout } = useAuth();
+  const { organization, logout, user } = useAuth();
 
   const { data: userProfile } = useQuery({
     queryKey: ["auth-me"],
@@ -203,12 +223,23 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
   const { resolvedTheme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
 
+  // Filter nav by the signed-in user's permission set. Key on the presence
+  // of `user.permissions` rather than the auth `isLoading` flag so the
+  // sidebar stays populated during a logout transition (logout flips
+  // `isLoading: true` but keeps the user populated until the redirect lands).
+  const { can } = usePermissions();
+  const permissionsKnown = Array.isArray(user?.permissions);
+  const visibleNavItems = !permissionsKnown
+    ? []
+    : navItems.filter((item) => !item.perms || item.perms.some(can));
+
   const sidebarProps = {
     collapsed,
     resolvedTheme,
     pathname,
     organization,
     userProfile,
+    visibleNavItems,
   };
 
   return (

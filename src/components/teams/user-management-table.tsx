@@ -37,6 +37,8 @@ import {
 import type { OrgUserResponse } from "@/types/organization-type";
 import type { PaginatedResponse } from "@/types/api-type";
 import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
 
 function formatLegacyRoleLabel(label: string): string {
   return label.replace(/_/g, " ");
@@ -67,6 +69,11 @@ export function UserManagementTable({
 }: UserManagementTableProps) {
   const users = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
+
+  const { can } = usePermissions();
+  const canUpdate = can(PERMISSION_CODES.USERS.UPDATE);
+  const canSuspend = can(PERMISSION_CODES.USERS.SUSPEND);
+  const canDelete = can(PERMISSION_CODES.USERS.DELETE);
 
   const { data: rolesData } = useQuery({
     queryKey: RBAC_KEYS.roles(),
@@ -197,50 +204,64 @@ export function UserManagementTable({
                   {format(new Date(user.createdAt), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEditUser(user)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit User
-                      </DropdownMenuItem>
-                      {user.status === "active" && (
-                        <DropdownMenuItem
-                          onClick={() =>
-                            onSuspendUser({ id: user.id, name: user.name })
-                          }
-                        >
-                          <ShieldOff className="mr-2 h-4 w-4" />
-                          Suspend
-                        </DropdownMenuItem>
-                      )}
-                      {(user.status === "suspended" ||
-                        user.status === "inactive") && (
-                        <DropdownMenuItem
-                          onClick={() =>
-                            onActivateUser({ id: user.id, name: user.name })
-                          }
-                        >
-                          <ShieldCheck className="mr-2 h-4 w-4" />
-                          Activate
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() =>
-                          onRemoveUser({ id: user.id, name: user.name })
-                        }
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Remove User
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {canUpdate || canSuspend || canDelete ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {canUpdate && (
+                          <DropdownMenuItem onClick={() => onEditUser(user)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit User
+                          </DropdownMenuItem>
+                        )}
+                        {canSuspend && user.status === "active" && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              onSuspendUser({ id: user.id, name: user.name })
+                            }
+                          >
+                            <ShieldOff className="mr-2 h-4 w-4" />
+                            Suspend
+                          </DropdownMenuItem>
+                        )}
+                        {canSuspend &&
+                          (user.status === "suspended" ||
+                            user.status === "inactive") && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                onActivateUser({
+                                  id: user.id,
+                                  name: user.name,
+                                })
+                              }
+                            >
+                              <ShieldCheck className="mr-2 h-4 w-4" />
+                              Activate
+                            </DropdownMenuItem>
+                          )}
+                        {canDelete && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() =>
+                                onRemoveUser({ id: user.id, name: user.name })
+                              }
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Remove User
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))

@@ -41,7 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ROUTES } from "@/lib/constant";
+import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
 import {
   scoreService,
   SCORE_KEYS,
@@ -53,6 +53,8 @@ import {
   ScoreRequestDetailBody,
   getStatusBadge,
 } from "@/components/score-requests/score-request-detail-body";
+import { usePermissions } from "@/hooks/use-permissions";
+import { NoPermission } from "@/components/shared/no-permission";
 
 // =============================================================================
 // Page
@@ -62,6 +64,14 @@ export default function ScoreRequestDetailPage() {
   const params = useParams();
   const queryClient = useQueryClient();
   const requestId = params.id as string;
+
+  const { can } = usePermissions();
+  const canRead = can(PERMISSION_CODES.SCORE_REQUESTS.READ);
+  const canOverride = can(PERMISSION_CODES.SCORE_REQUESTS.OVERRIDE);
+  const canRecordOutcome = can(PERMISSION_CODES.SCORE_REQUESTS.REPORT_OUTCOME);
+  const canRecordPerformance = can(
+    PERMISSION_CODES.SCORE_REQUESTS.REPORT_PERFORMANCE,
+  );
 
   // ── Override Decision Modal state ──
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
@@ -102,7 +112,7 @@ export default function ScoreRequestDetailPage() {
   } = useQuery({
     queryKey: SCORE_KEYS.detail(requestId),
     queryFn: () => scoreService.getScoreRequestById(requestId),
-    enabled: !!requestId,
+    enabled: !!requestId && canRead,
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -220,6 +230,22 @@ export default function ScoreRequestDetailPage() {
   // Loading / Error states
   // ═══════════════════════════════════════════════════════════════════════════
 
+  if (!canRead) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href={ROUTES.ORG.SCORE_REQUESTS}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold">Score Request</h1>
+        </div>
+        <NoPermission />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -324,6 +350,7 @@ export default function ScoreRequestDetailPage() {
           </Button>
 
           {/* Override Decision */}
+          {canOverride && (
           <Dialog
             open={overrideDialogOpen}
             onOpenChange={(v) => {
@@ -433,8 +460,10 @@ export default function ScoreRequestDetailPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
 
           {/* Record Outcome */}
+          {canRecordOutcome && (
           <Dialog
             open={outcomeDialogOpen}
             onOpenChange={(v) => {
@@ -547,8 +576,10 @@ export default function ScoreRequestDetailPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
 
           {/* Record Performance */}
+          {canRecordPerformance && (
           <Dialog
             open={performanceDialogOpen}
             onOpenChange={(v) => {
@@ -651,6 +682,7 @@ export default function ScoreRequestDetailPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 

@@ -19,6 +19,9 @@ import { DeleteRoleModal } from "./delete-role-modal";
 
 export function RolesTab() {
   const { can } = usePermissions();
+  const canRead = can(PERMISSION_CODES.ADMIN.ROLES_READ);
+  const canManage = can(PERMISSION_CODES.ADMIN.ROLES_MANAGE);
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<RoleResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -29,6 +32,7 @@ export function RolesTab() {
   const { data, isLoading, isError } = useQuery({
     queryKey: RBAC_KEYS.roles(),
     queryFn: () => rbacService.listRoles(),
+    enabled: canRead,
   });
 
   return (
@@ -37,7 +41,7 @@ export function RolesTab() {
         <p className="text-sm text-muted-foreground">
           Manage custom roles and their permission assignments
         </p>
-        {can(PERMISSION_CODES.ADMIN.ROLES_MANAGE) && (
+        {canManage && (
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Role
@@ -53,6 +57,7 @@ export function RolesTab() {
             isError={isError}
             onEditRole={setEditTarget}
             onDeleteRole={setDeleteTarget}
+            canManage={canManage}
           />
         </CardContent>
       </Card>

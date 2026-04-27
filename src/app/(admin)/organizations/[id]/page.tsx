@@ -49,6 +49,9 @@ import {
 
 import { organizationService, ORG_KEYS } from "@/lib/organization-service";
 import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
+import { NoPermission } from "@/components/shared/no-permission";
 import type { OrgUserResponse } from "@/types/organization-type";
 
 import { EditOrganizationModal } from "@/components/organization/edit-organization-modal";
@@ -63,6 +66,12 @@ export default function OrganizationDetailPage() {
   const router = useRouter();
   const orgId = params.id as string;
 
+  const { can } = usePermissions();
+  const canRead = can(PERMISSION_CODES.ADMIN.ORGS_READ);
+  const canUpdate = can(PERMISSION_CODES.ADMIN.ORGS_UPDATE);
+  const canSuspend = can(PERMISSION_CODES.ADMIN.ORGS_SUSPEND);
+  const canProvision = can(PERMISSION_CODES.ADMIN.ORGS_PROVISION);
+
   // ---- Fetch org ----
   const {
     data: org,
@@ -71,7 +80,7 @@ export default function OrganizationDetailPage() {
   } = useQuery({
     queryKey: ORG_KEYS.detail(orgId),
     queryFn: () => organizationService.getById(orgId),
-    enabled: !!orgId,
+    enabled: !!orgId && canRead,
   });
 
   // ---- Fetch users ----
@@ -80,13 +89,13 @@ export default function OrganizationDetailPage() {
     queryKey: ORG_KEYS.users(orgId, { page: usersPage, perPage: 10 }),
     queryFn: () =>
       organizationService.listUsers(orgId, { page: usersPage, perPage: 10 }),
-    enabled: !!orgId,
+    enabled: !!orgId && canRead,
   });
 
   const { data: rolesData } = useQuery({
     queryKey: RBAC_KEYS.roles(),
     queryFn: () => rbacService.listRoles(),
-    enabled: !!orgId,
+    enabled: !!orgId && canRead,
   });
 
   const roleNameById = useMemo(() => {
@@ -138,6 +147,22 @@ export default function OrganizationDetailPage() {
         );
     }
   };
+
+  if (!canRead) {
+    return (
+      <div className="space-y-6">
+        <Button
+          variant="ghost"
+          className="w-fit"
+          onClick={() => router.push("/organizations")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Organizations
+        </Button>
+        <NoPermission />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -255,21 +280,23 @@ export default function OrganizationDetailPage() {
             </div>
           </div>
 
-          {/* Actions — visibility depends on status */}
+          {/* Actions — visibility depends on status AND on RBAC perms */}
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setIsEditOpen(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
+            {canUpdate && (
+              <Button variant="outline" onClick={() => setIsEditOpen(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            )}
 
-            {org.status === "pending" && (
+            {canProvision && org.status === "pending" && (
               <Button onClick={() => setIsProvisionOpen(true)}>
                 <Rocket className="mr-2 h-4 w-4" />
                 Provision
               </Button>
             )}
 
-            {org.status === "active" && (
+            {canSuspend && org.status === "active" && (
               <Button
                 variant="outline"
                 className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -280,7 +307,7 @@ export default function OrganizationDetailPage() {
               </Button>
             )}
 
-            {org.status === "suspended" && (
+            {canSuspend && org.status === "suspended" && (
               <Button
                 variant="outline"
                 className="text-success border-success hover:bg-success/10"
@@ -477,24 +504,30 @@ export default function OrganizationDetailPage() {
                           {format(new Date(user.createdAt), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setEditingUser(user);
-                                  setIsEditUserModalOpen(true);
-                                }}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {canUpdate ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setEditingUser(user);
+                                    setIsEditUserModalOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

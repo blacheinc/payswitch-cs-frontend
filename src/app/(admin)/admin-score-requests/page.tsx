@@ -46,9 +46,11 @@ import {
 } from "@/lib/score-service";
 import { AdminScoreRequestsTable } from "@/components/admin/admin-score-requests-table";
 import { StatCard } from "@/components/shared/stat-card";
+import { NoPermission } from "@/components/shared/no-permission";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
 import { formatNumber, formatPct } from "@/lib/utils";
-import { ROUTES } from "@/lib/constant";
+import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
 
 const PERIOD_OPTIONS: {
   value: ScoreDashboardPeriod;
@@ -62,6 +64,9 @@ const PERIOD_OPTIONS: {
 ];
 
 export default function AdminScoreRequestsPage() {
+  const { can } = usePermissions();
+  const canRead = can(PERMISSION_CODES.ADMIN.SCORE_REQUESTS_READ);
+
   const [period, setPeriod] = useState<ScoreDashboardPeriod>("30d");
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,6 +79,7 @@ export default function AdminScoreRequestsPage() {
     refetchInterval: period === "today" ? 60_000 : 5 * 60_000,
     staleTime: period === "today" ? 30_000 : 2 * 60_000,
     refetchOnWindowFocus: false,
+    enabled: canRead,
   });
 
   // Cross-org list — admins reading every org's score requests.
@@ -89,12 +95,27 @@ export default function AdminScoreRequestsPage() {
         perPage: 10,
         search: debouncedSearch,
       }),
+    enabled: canRead,
   });
 
   const stats = statsQuery.data;
   const periodShort =
     PERIOD_OPTIONS.find((o) => o.value === period)?.short ?? period;
   const statsLoading = statsQuery.isLoading;
+
+  if (!canRead) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Score Requests</h1>
+          <p className="text-muted-foreground">
+            Platform-wide credit score activity across all organisations.
+          </p>
+        </div>
+        <NoPermission />
+      </div>
+    );
+  }
 
   const needsAttention = stats
     ? stats.needs_attention.referred +

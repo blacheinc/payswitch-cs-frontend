@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/table";
 
 import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES } from "@/lib/constant";
 import type { PermissionResponse } from "@/types/rbac-types";
 
 function groupPermissions(permissions: PermissionResponse[]) {
@@ -36,11 +38,14 @@ function groupPermissions(permissions: PermissionResponse[]) {
 }
 
 export function PermissionsTab() {
+  const { can } = usePermissions();
+  const canRead = can(PERMISSION_CODES.ADMIN.ROLES_READ);
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: RBAC_KEYS.permissions(),
     queryFn: () => rbacService.listPermissions(),
+    enabled: canRead,
   });
 
   const permissions = data?.items ?? [];

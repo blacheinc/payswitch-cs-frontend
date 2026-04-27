@@ -22,8 +22,9 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { ROUTES } from "@/lib/constant";
+import { ROUTES, PERMISSION_CODES, type PermissionCode } from "@/lib/constant";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useQuery } from "@tanstack/react-query";
 import { authService } from "@/lib/auth-service";
 import { useTheme } from "@/contexts/theme-context";
@@ -44,28 +45,78 @@ interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
+  /**
+   * Any-of permission gate. The item shows when the signed-in admin has at
+   * least one of these codes. Empty array → always visible.
+   */
+  perms?: PermissionCode[];
 }
 
 const navItems: NavItem[] = [
-  { title: "Dashboard", href: ROUTES.ADMIN.DASHBOARD, icon: LayoutDashboard },
-  { title: "Organizations", href: ROUTES.ADMIN.ORGANIZATIONS, icon: Building2 },
+  {
+    title: "Dashboard",
+    href: ROUTES.ADMIN.DASHBOARD,
+    icon: LayoutDashboard,
+    // Dashboard mixes infra/risk/model-ops/alerts widgets; show when the
+    // admin can see at least one of them.
+    perms: [
+      PERMISSION_CODES.MONITORING.INFRASTRUCTURE,
+      PERMISSION_CODES.MONITORING.RISK,
+      PERMISSION_CODES.MONITORING.MODEL_OPS,
+      PERMISSION_CODES.MONITORING.COMPLIANCE,
+      PERMISSION_CODES.MONITORING.ALERTS,
+    ],
+  },
+  {
+    title: "Organizations",
+    href: ROUTES.ADMIN.ORGANIZATIONS,
+    icon: Building2,
+    perms: [PERMISSION_CODES.ADMIN.ORGS_READ],
+  },
   {
     title: "Score Requests",
     href: ROUTES.ADMIN.SCORE_REQUESTS,
     icon: FileText,
+    perms: [PERMISSION_CODES.ADMIN.SCORE_REQUESTS_READ],
   },
-  { title: "Training", href: ROUTES.ADMIN.TRAINING, icon: Database },
+  {
+    title: "Training",
+    href: ROUTES.ADMIN.TRAINING,
+    icon: Database,
+    perms: [
+      PERMISSION_CODES.ADMIN.TRAINING_READ,
+      PERMISSION_CODES.ADMIN.SOURCES_READ,
+    ],
+  },
   {
     title: "Scoring Engine",
     href: ROUTES.ADMIN.SCORING_ENGINE,
     icon: BrainCircuit,
+    perms: [PERMISSION_CODES.MODELS.READ, PERMISSION_CODES.RULES.EVALUATE],
   },
-  { title: "Monitoring", href: ROUTES.ADMIN.MONITORING, icon: MonitorDot },
+  {
+    title: "Monitoring",
+    href: ROUTES.ADMIN.MONITORING,
+    icon: MonitorDot,
+    perms: [
+      PERMISSION_CODES.MONITORING.INFRASTRUCTURE,
+      PERMISSION_CODES.MONITORING.RISK,
+      PERMISSION_CODES.MONITORING.MODEL_OPS,
+      PERMISSION_CODES.MONITORING.COMPLIANCE,
+      PERMISSION_CODES.MONITORING.ALERTS,
+      PERMISSION_CODES.ADMIN.API_LOGS_READ,
+    ],
+  },
   {
     title: "Access Control",
     href: ROUTES.ADMIN.ACCESS_CONTROL,
     icon: ShieldCheck,
+    perms: [
+      PERMISSION_CODES.ADMIN.ADMINS_LIST,
+      PERMISSION_CODES.ADMIN.ROLES_READ,
+    ],
   },
+  // Settings is self-service — always available to the signed-in admin.
   { title: "Settings", href: ROUTES.ADMIN.SETTINGS, icon: Settings },
 ];
 
@@ -92,6 +143,7 @@ interface SidebarContentProps {
   resolvedTheme: "light" | "dark";
   pathname: string;
   userProfile?: { name?: string; email?: string } | null;
+  visibleNavItems: NavItem[];
 }
 
 function SidebarContent({
@@ -100,6 +152,7 @@ function SidebarContent({
   resolvedTheme,
   pathname,
   userProfile,
+  visibleNavItems,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
@@ -129,7 +182,7 @@ function SidebarContent({
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-1">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
             <Link
@@ -183,7 +236,7 @@ function SidebarContent({
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const { data: userProfile } = useQuery({
     queryKey: ["auth-me"],
@@ -193,11 +246,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { resolvedTheme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
 
+  // Filter nav items by the signed-in admin's permission set. We key on the
+  // presence of `user.permissions` rather than the auth `isLoading` flag so
+  // the sidebar stays populated during a logout transition (logout flips
+  // `isLoading: true` but keeps the user populated until the redirect lands).
+  const { can } = usePermissions();
+  const permissionsKnown = Array.isArray(user?.permissions);
+  const visibleNavItems = !permissionsKnown
+    ? []
+    : navItems.filter((item) => !item.perms || item.perms.some(can));
+
   const sidebarProps = {
     collapsed,
     resolvedTheme,
     pathname,
     userProfile,
+    visibleNavItems,
   };
 
   return (

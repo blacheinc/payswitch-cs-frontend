@@ -33,6 +33,8 @@ interface RolesTableProps {
   onDeleteRole: (role: { id: string; name: string }) => void;
   /** Org roles are always org-scoped; hiding Scope avoids redundant UI. @default true */
   showScope?: boolean;
+  /** Hides destructive / mutating actions when the caller lacks roles.manage. */
+  canManage?: boolean;
 }
 
 export function RolesTable({
@@ -42,6 +44,7 @@ export function RolesTable({
   onEditRole,
   onDeleteRole,
   showScope = true,
+  canManage = true,
 }: RolesTableProps) {
   const colCount = showScope ? 5 : 4;
   if (isLoading) {
@@ -128,9 +131,9 @@ export function RolesTable({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onEditRole(role)}>
                       <Pencil className="mr-2 h-4 w-4" />
-                      {role.is_system ? "View Role" : "Edit Role"}
+                      {!canManage || role.is_system ? "View Role" : "Edit Role"}
                     </DropdownMenuItem>
-                    {!role.is_system && (
+                    {canManage && !role.is_system && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

@@ -16,6 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PERMISSION_CODES, type PermissionCode } from "@/lib/constant";
+import { NoPermission } from "@/components/shared/no-permission";
 import { InfrastructureTab } from "@/components/admin/monitoring/infrastructure-tab";
 import { RiskTab } from "@/components/admin/monitoring/risk-tab";
 import { ModelOpsTab } from "@/components/admin/monitoring/model-ops-tab";
@@ -28,18 +31,55 @@ const TABS = [
     value: "infrastructure",
     label: "Infrastructure",
     icon: Server,
+    perm: PERMISSION_CODES.MONITORING.INFRASTRUCTURE,
   },
-  { value: "risk", label: "Risk", icon: ShieldAlert },
-  { value: "model-ops", label: "Model Ops", icon: BrainCircuit },
-  { value: "compliance", label: "Compliance", icon: Shield },
-  { value: "alerts", label: "Alerts", icon: Bell },
-  { value: "activity", label: "Activity", icon: Footprints },
-] as const;
+  {
+    value: "risk",
+    label: "Risk",
+    icon: ShieldAlert,
+    perm: PERMISSION_CODES.MONITORING.RISK,
+  },
+  {
+    value: "model-ops",
+    label: "Model Ops",
+    icon: BrainCircuit,
+    perm: PERMISSION_CODES.MONITORING.MODEL_OPS,
+  },
+  {
+    value: "compliance",
+    label: "Compliance",
+    icon: Shield,
+    perm: PERMISSION_CODES.MONITORING.COMPLIANCE,
+  },
+  {
+    value: "alerts",
+    label: "Alerts",
+    icon: Bell,
+    perm: PERMISSION_CODES.MONITORING.ALERTS,
+  },
+  {
+    value: "activity",
+    label: "Activity",
+    icon: Footprints,
+    perm: PERMISSION_CODES.ADMIN.API_LOGS_READ,
+  },
+] as const satisfies ReadonlyArray<{
+  value: string;
+  label: string;
+  icon: typeof Server;
+  perm: PermissionCode;
+}>;
 
 type TabValue = (typeof TABS)[number]["value"];
 
 export default function AdminMonitoringPage() {
-  const [active, setActive] = useState<TabValue>("infrastructure");
+  const { can } = usePermissions();
+  const visibleTabs = TABS.filter((t) => can(t.perm));
+  const canSeeAlerts = can(PERMISSION_CODES.MONITORING.ALERTS);
+
+  const [active, setActive] = useState<TabValue>(
+    (visibleTabs[0]?.value as TabValue) ?? "infrastructure",
+  );
 
   // Global "firing" banner — polls every 60s per integration guide.
   const firingQuery = useQuery({
@@ -48,10 +88,26 @@ export default function AdminMonitoringPage() {
       monitoringService.getAlerts({ status: "firing", limit: 5 }),
     refetchInterval: 60_000,
     staleTime: 30_000,
+    enabled: canSeeAlerts,
   });
   const summary = firingQuery.data?.summary;
   const firingCount = summary?.total_firing ?? 0;
   const criticalCount = summary?.critical_firing ?? 0;
+
+  if (visibleTabs.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Monitoring</h1>
+          <p className="text-muted-foreground text-sm">
+            A live look at platform health, lending decisions, model
+            performance, and compliance.
+          </p>
+        </div>
+        <NoPermission />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -65,6 +121,7 @@ export default function AdminMonitoringPage() {
           </p>
         </div>
 
+        {canSeeAlerts && (
         <button
           type="button"
           onClick={() => setActive("alerts")}
@@ -94,6 +151,7 @@ export default function AdminMonitoringPage() {
             </Badge>
           )}
         </button>
+        )}
       </div>
 
       <Tabs
@@ -102,7 +160,7 @@ export default function AdminMonitoringPage() {
         className="space-y-6"
       >
         <TabsList className="flex-wrap h-auto gap-1">
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               <tab.icon className="mr-2 h-4 w-4" />
               {tab.label}
@@ -115,24 +173,36 @@ export default function AdminMonitoringPage() {
           ))}
         </TabsList>
 
-        <TabsContent value="infrastructure">
-          <InfrastructureTab />
-        </TabsContent>
-        <TabsContent value="risk">
-          <RiskTab />
-        </TabsContent>
-        <TabsContent value="model-ops">
-          <ModelOpsTab />
-        </TabsContent>
-        <TabsContent value="compliance">
-          <ComplianceTab />
-        </TabsContent>
-        <TabsContent value="alerts">
-          <AlertsTab />
-        </TabsContent>
-        <TabsContent value="activity">
-          <ActivityTab />
-        </TabsContent>
+        {can(PERMISSION_CODES.MONITORING.INFRASTRUCTURE) && (
+          <TabsContent value="infrastructure">
+            <InfrastructureTab />
+          </TabsContent>
+        )}
+        {can(PERMISSION_CODES.MONITORING.RISK) && (
+          <TabsContent value="risk">
+            <RiskTab />
+          </TabsContent>
+        )}
+        {can(PERMISSION_CODES.MONITORING.MODEL_OPS) && (
+          <TabsContent value="model-ops">
+            <ModelOpsTab />
+          </TabsContent>
+        )}
+        {can(PERMISSION_CODES.MONITORING.COMPLIANCE) && (
+          <TabsContent value="compliance">
+            <ComplianceTab />
+          </TabsContent>
+        )}
+        {canSeeAlerts && (
+          <TabsContent value="alerts">
+            <AlertsTab />
+          </TabsContent>
+        )}
+        {can(PERMISSION_CODES.ADMIN.API_LOGS_READ) && (
+          <TabsContent value="activity">
+            <ActivityTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
