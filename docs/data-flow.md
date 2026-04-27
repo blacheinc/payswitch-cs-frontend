@@ -34,7 +34,7 @@ Three rules keep this clean:
 
 `src/lib/api-client.ts` exports a default axios instance configured with:
 
-- `baseURL = process.env.NEXT_PUBLIC_API_URL` (fallback `http://localhost:3001/api`)
+- `baseURL = "/api/proxy"` — same-origin Next Route Handler that forwards to the upstream `BACKEND_API_URL` server-side
 - `timeout = 30000` ms
 - `Content-Type: application/json` by default
 

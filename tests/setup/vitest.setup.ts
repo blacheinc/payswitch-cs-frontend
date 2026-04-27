@@ -33,9 +33,7 @@ afterAll(() => server.close());
 // =============================================================================
 // Default env vars used by source code under test
 // =============================================================================
-vi.stubEnv("NEXT_PUBLIC_API_URL", "http://api.test/api");
-vi.stubEnv("NEXT_PUBLIC_SESSION_SECRET", "test-secret-for-vitest-only");
-vi.stubEnv("NEXT_PUBLIC_MOCK_AUTH", "false");
+vi.stubEnv("BACKEND_API_URL", "http://api.test/api");
 
 // =============================================================================
 // Polyfills happy-dom doesn't ship

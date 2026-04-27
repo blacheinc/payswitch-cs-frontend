@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -149,6 +150,102 @@ function TableEmpty({
   );
 }
 
+// =============================================================================
+// Generic table skeleton.
+//
+// Two helpers — neither requires per-column configuration. The goal is a
+// single drop-in loader that fits every table now and every table to come.
+//
+// • `<TableSkeleton>` — full table including `<TableHeader>`. Use it when the
+//   consumer's loading branch is an early return:
+//
+//       if (isLoading) {
+//         return (
+//           <TableSkeleton
+//             headers={["Request ID", "Applicant", "Status", "Score", "Risk",
+//                       "Decision", "Date", ""]}
+//           />
+//         );
+//       }
+//
+// • `<TableSkeletonRows>` — placeholder rows only. Drop them inside an
+//   existing `<TableBody>` so the same `<TableHeader>` is shared between
+//   loading and loaded states (no header reflow):
+//
+//       <TableBody>
+//         {isLoading
+//           ? <TableSkeletonRows columns={8} />
+//           : items.map(item => <TableRow>...</TableRow>)}
+//       </TableBody>
+//
+// Both inherit the existing `<Table>` chrome (wrapper, `overflow-x-auto`),
+// so they stay responsive on narrow viewports.
+// =============================================================================
+
+export interface TableSkeletonRowsProps {
+  /** How many columns each placeholder row should have. */
+  columns: number;
+  /** Number of placeholder rows to render. Default 8. */
+  rows?: number;
+}
+
+function TableSkeletonRows({ columns, rows = 8 }: TableSkeletonRowsProps) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIdx) => (
+        <TableRow
+          key={`skeleton-${rowIdx}`}
+          className="hover:bg-transparent"
+        >
+          {Array.from({ length: columns }).map((_, colIdx) => (
+            <TableCell key={colIdx}>
+              <Skeleton className="h-4 w-3/4 max-w-[160px]" />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+export interface TableSkeletonProps {
+  /**
+   * Column header labels. Length determines the number of columns in each
+   * placeholder row. Use empty strings (`""`) for icon-only columns.
+   */
+  headers: React.ReactNode[];
+  /** Number of placeholder rows to render. Default 8. */
+  rows?: number;
+  /** Wrap in `rounded-md border` to mirror the typical loaded-table chrome. */
+  bordered?: boolean;
+  /** `className` applied to the outer wrapper. */
+  className?: string;
+}
+
+function TableSkeleton({
+  headers,
+  rows = 8,
+  bordered = true,
+  className,
+}: TableSkeletonProps) {
+  return (
+    <div className={cn(bordered && "rounded-md border", className)}>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {headers.map((header, i) => (
+              <TableHead key={i}>{header}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableSkeletonRows columns={headers.length} rows={rows} />
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export {
   Table,
   TableHeader,
@@ -159,4 +256,6 @@ export {
   TableCell,
   TableCaption,
   TableEmpty,
+  TableSkeleton,
+  TableSkeletonRows,
 };

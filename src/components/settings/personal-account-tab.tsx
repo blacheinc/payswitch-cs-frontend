@@ -54,14 +54,15 @@ export function PersonalAccountTab() {
         <CardHeader>
           <CardTitle>Personal Information</CardTitle>
           <CardDescription>
-            Manage your individual account details
+            This information is view-only. If you need to update your name or
+            role, please contact your organization admin via the Teams page.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="user-name">Full Name</Label>
-              <Input id="user-name" defaultValue={user?.name || ""} />
+              <Input id="user-name" defaultValue={user?.name || ""} disabled />
             </div>
             <div className="space-y-2">
               <Label htmlFor="user-email">Email Address</Label>
@@ -92,10 +93,7 @@ export function PersonalAccountTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button
-            variant="outline"
-            onClick={() => setChangePasswordOpen(true)}
-          >
+          <Button variant="outline" onClick={() => setChangePasswordOpen(true)}>
             Change Password
           </Button>
           <div className="flex items-center justify-between pt-4">
@@ -132,4 +130,3 @@ export function PersonalAccountTab() {
     </div>
   );
 }
-

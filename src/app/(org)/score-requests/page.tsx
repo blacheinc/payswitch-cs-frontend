@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -154,8 +155,16 @@ export default function ScoreRequestsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Results</CardTitle>
           <CardDescription>
-            {data?.total ?? 0} request
-            {(data?.total ?? 0) !== 1 ? "s" : ""} found
+            {isLoading ? (
+              // Match the height of the loaded copy ("X requests found") so the
+              // header doesn't reflow when the count lands.
+              <Skeleton className="inline-block h-4 w-32 align-middle" />
+            ) : (
+              <>
+                {data?.total ?? 0} request
+                {(data?.total ?? 0) !== 1 ? "s" : ""} found
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>

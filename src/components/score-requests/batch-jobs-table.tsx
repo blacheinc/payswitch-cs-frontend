@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  MoreVertical,
   XCircle,
   Ban,
   Eye,
@@ -21,7 +22,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ROUTES } from "@/lib/constant";
 import { formatDate } from "@/lib/utils";
 import type { BatchJobListItem, BatchJobStatus } from "@/lib/score-service";
@@ -93,9 +101,18 @@ export function BatchJobsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        headers={[
+          "Job ID",
+          "Status",
+          "Total",
+          "Completed",
+          "Failed",
+          "Submitted",
+          "Finished",
+          "",
+        ]}
+      />
     );
   }
 
@@ -156,13 +173,23 @@ export function BatchJobsTable({
                     {formatDate(job.completedAt)}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link
-                        href={`${ROUTES.ORG.SCORE_REQUESTS}/bulk/${job.jobId}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link
+                            href={`${ROUTES.ORG.SCORE_REQUESTS}/bulk/${job.jobId}`}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

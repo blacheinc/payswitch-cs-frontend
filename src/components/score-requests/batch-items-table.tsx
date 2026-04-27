@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  MoreVertical,
   XCircle,
   Ban,
   Eye,
@@ -22,7 +23,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -122,9 +130,17 @@ export function BatchItemsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        headers={[
+          "#",
+          "Applicant",
+          "Status",
+          "Tracking ID",
+          "Error",
+          "Finished",
+          "",
+        ]}
+      />
     );
   }
 
@@ -213,14 +229,26 @@ export function BatchItemsTable({
                       {formatDate(item.completedAt)}
                     </TableCell>
                     <TableCell>
-                      {item.scoreTrackingId && (
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link
-                            href={`${ROUTES.ORG.SCORE_REQUESTS}/${item.scoreTrackingId}`}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                      {item.scoreTrackingId ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link
+                                href={`${ROUTES.ORG.SCORE_REQUESTS}/${item.scoreTrackingId}`}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   </TableRow>

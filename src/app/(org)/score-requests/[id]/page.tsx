@@ -247,23 +247,43 @@ export default function ScoreRequestDetailPage() {
   }
 
   if (isLoading) {
+    // Mirrors the loaded layout — header row (back button + title/status +
+    // action buttons), then the 3-column main/sidebar grid that
+    // <ScoreRequestDetailBody /> renders. Each placeholder "card" reproduces
+    // the header (icon + title + caption) + body content shape so nothing
+    // shifts when data lands.
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10 rounded-md" />
-          <div className="space-y-2">
-            <Skeleton className="h-7 w-64" />
-            <Skeleton className="h-4 w-40" />
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-9 rounded-md" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-7 w-48" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-40" />
           </div>
         </div>
+
+        {/* Body grid: 2-col main + 1-col sidebar */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-64 w-full rounded-xl" />
-            <Skeleton className="h-48 w-full rounded-xl" />
+            <DetailCardSkeleton lines={5} />
+            <DetailCardSkeleton lines={4} />
+            <DetailCardSkeleton lines={3} />
           </div>
           <div className="space-y-6">
-            <Skeleton className="h-48 w-full rounded-xl" />
-            <Skeleton className="h-40 w-full rounded-xl" />
+            <DetailCardSkeleton lines={4} />
+            <DetailCardSkeleton lines={3} />
           </div>
         </div>
       </div>
@@ -690,5 +710,36 @@ export default function ScoreRequestDetailPage() {
       {/* All read-only model breakdowns + sidebar live in the shared body. */}
       <ScoreRequestDetailBody scoreRequest={scoreRequest} />
     </div>
+  );
+}
+
+/**
+ * Skeleton replica of a Card with header (icon + title + caption) and a
+ * body of `lines` text rows. Used inside the loading layout to stand in for
+ * the various model-breakdown cards inside `<ScoreRequestDetailBody />`.
+ */
+function DetailCardSkeleton({ lines = 4 }: { lines?: number }) {
+  return (
+    <Card>
+      <CardContent className="p-6 space-y-4">
+        {/* Card header — icon + title + caption */}
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-md" />
+          <div className="space-y-2 flex-1 min-w-0">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+        </div>
+        {/* Body — alternating wide/narrow rows */}
+        <div className="space-y-2.5">
+          {Array.from({ length: lines }).map((_, i) => (
+            <Skeleton
+              key={i}
+              className={i % 2 === 0 ? "h-3 w-full" : "h-3 w-3/4"}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { Loader2, MoreVertical, Pencil, Trash2, Lock } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, Lock } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -48,10 +49,16 @@ export function RolesTable({
 }: RolesTableProps) {
   const colCount = showScope ? 5 : 4;
   if (isLoading) {
+    // Match the loaded table — no surrounding `rounded-md border`.
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        bordered={false}
+        headers={
+          showScope
+            ? ["Name", "Scope", "Permissions", "Created", ""]
+            : ["Name", "Permissions", "Created", ""]
+        }
+      />
     );
   }
 

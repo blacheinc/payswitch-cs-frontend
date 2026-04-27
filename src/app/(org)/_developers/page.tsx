@@ -235,7 +235,7 @@ export default function DevelopersPage() {
               </div>
               <Button asChild size="lg" className="gap-2 mt-2">
                 <a
-                  href={`${process.env.NEXT_PUBLIC_API_URL}/docs`}
+                  href="/api/proxy/docs"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

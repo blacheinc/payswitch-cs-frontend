@@ -45,7 +45,7 @@ For a one-shot Azure deploy, jump straight to [`docs/deployment-guide.md`](./doc
 
 - **Node.js ≥ 20** (required by Next 16 / React 19)
 - **npm** (comes with Node)
-- A running backend API at `NEXT_PUBLIC_API_URL` (see [`.env.example`](./.env.example)).
+- A running backend API at `BACKEND_API_URL` (see [`.env.example`](./.env.example)).
 
 ---
 
@@ -83,12 +83,11 @@ The app is served at [http://localhost:3000](http://localhost:3000).
 
 ## Environment variables
 
-Two variables are read at build/runtime — see [`.env.example`](./.env.example) for details.
+See [`.env.example`](./.env.example) for the complete list.
 
 | Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | Base URL of the backend API. |
-| `NEXT_PUBLIC_SESSION_SECRET` | AES key used to encrypt the session cookie payload (see [security doc](./docs/security.md)). |
+| `BACKEND_API_URL` | Base URL of the backend API. **Server-only** — never reaches the browser; the FE talks exclusively to `/api/*` routes on this Next app. |
 
 ---
 

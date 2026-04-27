@@ -25,6 +25,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -136,9 +137,9 @@ export function UserManagementTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        headers={["User", "Role", "Status", "Last Active", "Date Added", ""]}
+      />
     );
   }
 
@@ -191,7 +192,7 @@ export function UserManagementTable({
                     {isAdminDisplay(user) && (
                       <Shield className="h-3 w-3 text-primary" />
                     )}
-                    <span>{getRoleDisplay(user)}</span>
+                    <span className="capitalize">{getRoleDisplay(user)}</span>
                   </div>
                 </TableCell>
                 <TableCell>{getStatusBadge(user.status)}</TableCell>

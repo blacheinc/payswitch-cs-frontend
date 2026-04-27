@@ -7,7 +7,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -162,12 +162,21 @@ export function OrganizationScoreRequestsTable({
     );
   };
 
+  // Headers must match the loaded `<TableHead>` titles below 1:1 so the
+  // header doesn't reflow when data arrives. `isCompact` (used by the
+  // dashboard's referral queue) drops the Date column.
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    const headers = [
+      "Request ID",
+      "Applicant",
+      "Status",
+      "Score",
+      "Risk",
+      "Decision",
+      ...(isCompact ? [] : ["Date"]),
+      "",
+    ];
+    return <TableSkeleton headers={headers} rows={isCompact ? 5 : 8} />;
   }
 
   if (isError) {

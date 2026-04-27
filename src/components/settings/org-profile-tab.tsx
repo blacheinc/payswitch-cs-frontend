@@ -5,6 +5,8 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, Mail, Phone, MapPin, Globe, Loader2 } from "lucide-react";
+
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -96,9 +98,45 @@ export function OrgProfileTab() {
   }
 
   if (profileLoading) {
+    // Mirror the loaded shape — same two cards, same 4-field grid, same
+    // Save button on the right — so the layout doesn't shift on data arrival.
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Organization Information</CardTitle>
+            <CardDescription>
+              Details about your institution shown on reports and API requests
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <FormFieldSkeleton key={i} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Contact Details</CardTitle>
+            <CardDescription>
+              Primary contact information for platform-related communications
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <FormFieldSkeleton key={i} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Skeleton className="h-9 w-32" />
+        </div>
       </div>
     );
   }
@@ -261,5 +299,19 @@ export function OrgProfileTab() {
         </div>
       )}
     </form>
+  );
+}
+
+/**
+ * Skeleton replica of a `<Field>` (label + input). Matches the spacing &
+ * heights of the loaded form rows so the grid doesn't reflow on data
+ * arrival.
+ */
+function FormFieldSkeleton() {
+  return (
+    <div className="space-y-2">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-9 w-full" />
+    </div>
   );
 }

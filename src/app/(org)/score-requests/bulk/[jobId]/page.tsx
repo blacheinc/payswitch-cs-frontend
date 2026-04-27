@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,9 +150,63 @@ export default function BatchJobDetailPage() {
   }
 
   if (statusQuery.isLoading) {
+    // Mirror the loaded layout: header (back + title + status + actions),
+    // a Progress card, then an Items card with table inside. Items table
+    // skeleton is provided by `<BatchItemsTable isLoading />`.
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-9 rounded-md" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-5 w-24 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </div>
+
+        {/* Progress card */}
+        <Card>
+          <CardHeader className="pb-3">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-3 w-40 mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-2 w-full rounded-full" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-12" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Items card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-9 w-48" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <BatchItemsTable items={[]} isLoading total={0} />
+          </CardContent>
+        </Card>
       </div>
     );
   }

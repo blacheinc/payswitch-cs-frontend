@@ -6,6 +6,6 @@ describe("test scaffold", () => {
   });
 
   it("has env stubs", () => {
-    expect(process.env.NEXT_PUBLIC_API_URL).toBe("http://api.test/api");
+    expect(process.env.BACKEND_API_URL).toBe("http://api.test/api");
   });
 });
