@@ -32,14 +32,17 @@ export default defineConfig({
     : {
         // Prod build is more representative than dev mode and avoids
         // colliding with a running `next dev` (.next/dev lock).
-        // We use `next start` here; Next prints an informational warning
-        // about output: "standalone" that's safe to ignore for tests since
-        // the regular .next/server/ output is still present.
+        //
+        // We point next at a separate distDir (`.next-e2e`) so a developer's
+        // `npm run dev` (which writes to `.next/`) can run in parallel
+        // without corrupting the dev server's Turbopack persistent cache.
+        // See docs/known-issues.md for the original incident.
         command: `npx next build && npx next start -p ${PORT}`,
         url: BASE_URL,
         reuseExistingServer: false,
         timeout: 240_000,
         env: {
+          NEXT_DIST_DIR: ".next-e2e",
           BACKEND_API_URL:
             process.env.BACKEND_API_URL || "http://localhost:3001",
         },

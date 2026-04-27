@@ -39,6 +39,10 @@ const nextConfig: NextConfig = {
   // Build a self-contained server bundle. This is what the production
   // Dockerfile copies into the runner image — see deploy/ for details.
   output: "standalone",
+  // Allow callers (e.g. Playwright `next build && next start`) to write to a
+  // different directory so they don't corrupt the dev server's Turbopack
+  // cache when run concurrently. Default is the canonical `.next`.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async headers() {
     return [
       {
