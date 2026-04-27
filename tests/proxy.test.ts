@@ -1,19 +1,16 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
-import CryptoJS from "crypto-js";
 import { proxy } from "@/proxy";
 
-// Source uses the same secret as the test setup stub.
-const SECRET = "test-secret-for-vitest-only";
+const COOKIE_NAME = "__Host-session";
 
-function buildSessionCookie(userType: "admin" | "org"): string {
-  const payload = JSON.stringify({
+function buildSession(userType: "admin" | "org"): string {
+  return JSON.stringify({
     accessToken: "a",
     refreshToken: "r",
     userType,
     user: { id: "u-1" },
   });
-  return CryptoJS.AES.encrypt(payload, SECRET).toString();
 }
 
 function makeRequest(
@@ -23,11 +20,7 @@ function makeRequest(
   const url = `http://app.test${path}`;
   const req = new NextRequest(new Request(url));
   if (options?.session) {
-    // NextRequest cookies API auto-encodes when reading; we set the raw
-    // ciphertext URL-encoded once so proxy.ts's `decodeURIComponent` recovers
-    // the original ciphertext.
-    const ciphertext = buildSessionCookie(options.session);
-    req.cookies.set("session", encodeURIComponent(ciphertext));
+    req.cookies.set(COOKIE_NAME, buildSession(options.session));
   }
   return req;
 }
@@ -47,7 +40,6 @@ describe("proxy — auth zone", () => {
 
   it("lets an unauthenticated user reach /login", () => {
     const res = proxy(makeRequest("/login"));
-    // Allowed → no redirect / no rewrite.
     expect(res.status).toBe(200);
     expect(res.headers.get("location")).toBeNull();
   });
@@ -64,9 +56,7 @@ describe("proxy — admin zone", () => {
 
   it("rewrites org user → not-found for an admin path (no path leak)", () => {
     const res = proxy(makeRequest("/admin-dashboard", { session: "org" }));
-    // A rewrite is a 200/304-class internal pointer; status is not 307.
     expect(res.status).not.toBe(307);
-    // x-middleware-rewrite is set on internal rewrites.
     expect(res.headers.get("x-middleware-rewrite")).toContain("/_not-found");
   });
 
@@ -136,11 +126,10 @@ describe("proxy — security headers", () => {
 });
 
 describe("proxy — invalid session cookie", () => {
-  it("treats a tampered/garbage cookie as unauthenticated", () => {
+  it("treats malformed JSON as unauthenticated", () => {
     const url = "http://app.test/dashboard";
-    const headers = new Headers();
-    headers.set("cookie", "session=not-a-real-encrypted-value");
-    const req = new NextRequest(new Request(url, { headers }));
+    const req = new NextRequest(new Request(url));
+    req.cookies.set(COOKIE_NAME, "not-json{");
     const res = proxy(req);
     const loc = res.headers.get("location") || "";
     expect(res.status).toBe(307);

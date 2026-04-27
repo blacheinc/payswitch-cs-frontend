@@ -263,28 +263,20 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
         return;
       }
 
-      // Non-2FA path: enforce scope before we touch the session store.
       if (!verifyScope(result?.userType)) {
         toast.error(
           audience === "admin"
             ? "This account is not a platform admin."
             : "This is a platform-admin account.",
         );
+        // Roll the cookie back — we wouldn't want a wrong-scope session
+        // sitting around on the server.
+        void authService.logout().catch(() => {});
         return;
       }
 
-      if (
-        result?.accessToken &&
-        result?.refreshToken &&
-        result?.user &&
-        result?.userType
-      ) {
-        setSession(
-          result.accessToken,
-          result.refreshToken,
-          result.userType,
-          result.user,
-        );
+      if (result?.user && result?.userType) {
+        setSession(result.userType, result.user);
 
         queryClient.prefetchQuery({
           queryKey: ["auth-me"],
@@ -309,25 +301,15 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
             ? "This account is not a platform admin."
             : "This is a platform-admin account.",
         );
-        // Reset 2FA state so they can't retry with the same temp token.
         setIs2FAStep(false);
         setTempToken("");
         twoFactorForm.reset({ code: "" });
+        void authService.logout().catch(() => {});
         return;
       }
 
-      if (
-        result?.accessToken &&
-        result?.refreshToken &&
-        result?.user &&
-        result?.userType
-      ) {
-        setSession(
-          result.accessToken,
-          result.refreshToken,
-          result.userType,
-          result.user,
-        );
+      if (result?.user && result?.userType) {
+        setSession(result.userType, result.user);
 
         queryClient.prefetchQuery({
           queryKey: ["auth-me"],

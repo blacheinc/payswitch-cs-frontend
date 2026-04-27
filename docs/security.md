@@ -58,32 +58,40 @@ A 403 from the backend is the ground truth. The FE may *also* hide the same acti
 
 ---
 
-## 3. Token storage (and the open hardening item)
+## 3. Token storage
 
-### Today
+Tokens live in a single **`HttpOnly`, `Secure`, `__Host-` prefixed cookie** set by Next Route Handlers under [`src/app/api/auth/*`](../src/app/api/auth/). They never reach JavaScript on the client. Concretely:
 
-After login, [`session-storage.ts`](../src/lib/session-storage.ts) saves a single payload to **two** places:
-
-| Location | Why | Lifetime |
+| What | Where | Visible to JS? |
 |---|---|---|
-| `localStorage["session_data"]` | Read by the React app on every render | Until logout / clear |
-| `document.cookie["session"]` | Read by the edge proxy on every navigation | `max-age=86400`, `SameSite=Strict`, `path=/` |
+| Access token | `__Host-session` cookie payload | ❌ |
+| Refresh token | `__Host-session` cookie payload | ❌ |
+| User profile + `userType` | Same cookie + a non-sensitive `localStorage` cache for instant re-hydration | User profile yes (no tokens) |
 
-Both copies hold the **same** JSON payload (access token, refresh token, user, userType), AES-encrypted with `NEXT_PUBLIC_SESSION_SECRET` via `crypto-js`.
+### Request lifecycle
 
-### Why the encryption is "mostly theatre"
+1. Browser → `POST /api/auth/login` (Next Route Handler).
+2. Route handler → backend `/auth/login`. Captures `access_token` + `refresh_token` server-side.
+3. Route handler sets the `__Host-session` cookie with `HttpOnly; Secure; SameSite=Strict; Path=/`.
+4. Response to the browser contains only `{ user, userType }` — no tokens.
+5. Subsequent backend calls go via `/api/proxy/[...path]`. The proxy reads the cookie server-side, attaches `Authorization: Bearer <accessToken>`, forwards to the backend, and returns the response. On 401 it refreshes once + retries.
 
-The secret is shipped to the browser as a `NEXT_PUBLIC_*` env var. An attacker with a foothold (XSS, malicious browser extension, devtools access on a shared device) can read the secret and decrypt the cookie. The encryption helps **only** against passive, unsophisticated inspection (e.g. casual URL/cookie sharing).
+Source files:
 
-The reason this layout exists at all is that the proxy (which runs at the edge) needs to read the `userType` claim **before any React code runs** in order to classify the route. A pure-`HttpOnly` cookie was incompatible with the original `localStorage`-first auth flow.
+- [`src/lib/server-session.ts`](../src/lib/server-session.ts) — cookie helpers (server-only).
+- [`src/app/api/auth/login/route.ts`](../src/app/api/auth/login/route.ts), [`/2fa/verify`](../src/app/api/auth/2fa/verify/route.ts), [`/refresh`](../src/app/api/auth/refresh/route.ts), [`/logout`](../src/app/api/auth/logout/route.ts), [`/me`](../src/app/api/auth/me/route.ts).
+- [`src/app/api/proxy/[...path]/route.ts`](../src/app/api/proxy/[...path]/route.ts) — catch-all backend proxy.
 
-### Hardening recommendation (tracked)
+### What this protects against
 
-Move tokens to an `HttpOnly`, `Secure`, `__Host-` prefixed cookie set by a Next Route Handler that proxies `/auth/login` and `/auth/refresh`. The browser never sees the access token; only same-origin requests can attach it; XSS no longer exfiltrates it.
+- **XSS exfiltration** — JavaScript cannot read the cookie. Even a successful XSS can issue requests as the user (via the same-origin cookie) but cannot lift the bearer token off the page.
+- **Cookie-snooping at rest** — the cookie is opaque on disk; the backend signs the JWT inside, the FE never decodes it.
+- **CSRF** — `SameSite=Strict` blocks cross-site requests from carrying the cookie. Combined with the same-origin-only proxy, classical CSRF is structurally impossible.
 
-This is documented in code at [`src/proxy.ts:21-24`](../src/proxy.ts) and is the single largest security item on the FE backlog. It's tracked in [known-issues.md](./known-issues.md) and is **strongly recommended** before going live with real customer data.
+### What still needs care
 
-Once that change lands, `NEXT_PUBLIC_SESSION_SECRET` can be removed entirely.
+- An XSS payload can still **make requests as the user** because the browser will include the cookie automatically. The cookie isolates the secret material, not the user's authority. Continue to keep XSS out (input handling, no `dangerouslySetInnerHTML`, CSP).
+- The cookie is `__Host-`-scoped, so it only travels to the FE origin. The proxy attaches the bearer to the upstream backend server-side, so the backend never sees the cookie at all.
 
 ---
 
@@ -109,12 +117,9 @@ A full nonce-based CSP (`script-src 'self' 'nonce-...'`) is **not** yet in place
 
 | Variable | Sensitivity | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | Public | Reaches the browser. |
-| `NEXT_PUBLIC_SESSION_SECRET` | Public, but rotate per env | Reaches the browser. Treat rotation as part of every credential incident response. Generate with `openssl rand -hex 64`. |
+| `BACKEND_API_URL` | Server-only | Read by Next Route Handlers; never reaches the browser. |
 
-There are **no server-only secrets** in the frontend today — every variable is `NEXT_PUBLIC_*`. The backend is the keeper of all real secrets (DB credentials, ML model keys, signing keys for JWTs).
-
-When the `HttpOnly` cookie hardening (§3) lands, expect to introduce server-only env vars (e.g. cookie-signing key) and drop `NEXT_PUBLIC_SESSION_SECRET`.
+All FE configuration is server-only — no `NEXT_PUBLIC_*` variables. The image is therefore environment-portable: the same tag promotes from dev → prod with only a runtime env-var change. The backend remains the keeper of all upstream secrets (DB credentials, ML model keys, JWT signing keys).
 
 ---
 

@@ -7,11 +7,8 @@
     "containerImage": {
       "value": "REPLACE_ME.azurecr.io/credit-scoring-fe:dev-latest"
     },
-    "nextPublicApiUrl": {
+    "backendApiUrl": {
       "value": "https://api-dev.payswitch.example.com"
-    },
-    "nextPublicSessionSecret": {
-      "value": "REPLACE_ME_GENERATE_WITH_openssl_rand_hex_64"
     },
     "minReplicas": { "value": 1 },
     "maxReplicas": { "value": 3 }

@@ -105,8 +105,7 @@ $EDITOR deploy/azure/parameters.prod.local.json
 |---|---|
 | `resourceSuffix` | The 3–8 char stem from §2.1 |
 | `containerImage` | Initial value can be `<acr>.azurecr.io/credit-scoring-fe:1.0.0`. The deploy script overrides this on every run. |
-| `nextPublicApiUrl` | The backend's public HTTPS URL, no trailing slash |
-| `nextPublicSessionSecret` | The hex string from §2.2 |
+| `backendApiUrl` | The backend's public HTTPS URL, no trailing slash. Server-only — never reaches the browser. |
 | `minReplicas` / `maxReplicas` | Reasonable defaults: `1`/`3` for dev, `2`/`10` for prod |
 
 Keep the `*.local.json` copy out of source control (`.gitignore` already covers `*.local.json` patterns under env files; verify before committing).
@@ -129,7 +128,7 @@ What it does, in order:
 
 1. Creates the resource group if missing.
 2. Creates the ACR named `csfeprod<suffix>` if missing.
-3. Builds `Dockerfile` with `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SESSION_SECRET` as `--build-arg`s, and pushes the resulting image to ACR.
+3. Builds `Dockerfile` (no build args needed — every secret is read at runtime) and pushes the resulting image to ACR.
 4. Runs `az deployment group create` against [`main.bicep`](../deploy/azure/main.bicep) with the parameters file + the just-pushed image.
 5. Prints the public FQDN of the new revision.
 
@@ -147,26 +146,24 @@ You should see something like:
 
 ---
 
-## 4. The browser-baked-secret problem
+## 4. Configuration is runtime-only — the image is environment-portable
 
-> **READ THIS BEFORE YOU PROMOTE TO PROD**
+Tokens never reach the browser, and the FE has no `NEXT_PUBLIC_*` configuration. As a result:
 
-Every variable prefixed `NEXT_PUBLIC_*` is **inlined into the client JavaScript bundle at `next build` time** — it is not read at runtime. That means:
-
-- `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SESSION_SECRET` are baked into the image.
-- To change either value (rotate the secret, point at a new backend, …) you must **rebuild the image and roll a new revision**.
-- The Container App secrets we provision (`next-public-api-url`, `next-public-session-secret`) exist for runtime visibility on the server side and as a single source of truth in the platform — but updating them in isolation does **not** affect what the browser sees.
-
-The deploy script does the right thing automatically: every run rebuilds the image with the values from your parameters file. To rotate **just the secret without changing anything else**:
+- The container image is **the same** for dev, staging, and prod. Promotion is a tag move.
+- The only runtime configuration is `BACKEND_API_URL`, surfaced as a Container App secret.
+- Rotating the backend URL is a Container App secret update — no rebuild needed:
 
 ```bash
-# 1. Generate + put the new secret in your parameters file
-NEW_SECRET=$(openssl rand -hex 64)
-jq ".parameters.nextPublicSessionSecret.value = \"$NEW_SECRET\"" \
-  deploy/azure/parameters.prod.local.json \
-  > /tmp/p.json && mv /tmp/p.json deploy/azure/parameters.prod.local.json
+deploy/scripts/set-secrets.sh \
+  --resource-group cs-fe-prod-rg \
+  --app cs-fe-prod-prod42 \
+  --backend-api-url https://api.payswitch.example.com
+```
 
-# 2. Re-run deploy with a new tag
+To redeploy with a new image tag:
+
+```bash
 deploy/scripts/deploy.sh \
   --resource-group cs-fe-prod-rg \
   --location westeurope \
@@ -176,9 +173,7 @@ deploy/scripts/deploy.sh \
   --parameters deploy/azure/parameters.prod.local.json
 ```
 
-Container Apps does the rest: traffic shifts to the new revision once it passes its readiness probe. Old browsers continue to use the old secret until they refresh.
-
-`deploy/scripts/set-secrets.sh` exists for advanced cases where you want to pre-stage a secret in the platform without rolling a revision; it does **not** ship a new bundle to clients on its own. See its inline help.
+Container Apps shifts traffic to the new revision once it passes its readiness probe.
 
 ---
 
@@ -227,10 +222,8 @@ Then in **GitHub → Settings → Environments**, create `dev` and `prod` enviro
 | Repo secrets | secret | `AZURE_SUBSCRIPTION_ID` | (your sub) |
 | Repo secrets | secret | `AZURE_RESOURCE_GROUP` | `cs-fe-prod-rg` |
 | Repo secrets | secret | `AZURE_RESOURCE_SUFFIX` | `prod42` |
-| Env (`prod`) variable | var | `NEXT_PUBLIC_API_URL` | `https://api.payswitch.example.com` |
-| Env (`prod`) secret | secret | `NEXT_PUBLIC_SESSION_SECRET` | `openssl rand -hex 64` (per env, never reuse) |
-| Env (`dev`) variable | var | `NEXT_PUBLIC_API_URL` | `https://api-dev.…` |
-| Env (`dev`) secret | secret | `NEXT_PUBLIC_SESSION_SECRET` | (different value) |
+| Env (`prod`) secret | secret | `BACKEND_API_URL` | `https://api.payswitch.example.com` |
+| Env (`dev`) secret | secret | `BACKEND_API_URL` | `https://api-dev.…` |
 
 For `prod` consider enabling **required reviewers** in the environment settings — the workflow will pause for approval before deploying.
 
@@ -248,7 +241,7 @@ Setup:
    Update the variable name in the pipeline if you call your connection something else.
 2. Create two variable groups in **Library**:
    - `cs-fe-shared` — `AZURE_RESOURCE_GROUP`, `AZURE_RESOURCE_SUFFIX`.
-   - `cs-fe-dev` and `cs-fe-prod` — `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SESSION_SECRET` (mark the secret as 🔒).
+   - `cs-fe-dev` and `cs-fe-prod` — `BACKEND_API_URL` (mark as 🔒).
 3. Create matching ADO **Environments** named `dev` and `prod`. Attach approval gates to `prod`.
 
 Triggers (same semantics as GitHub):
@@ -300,9 +293,9 @@ Azure issues a free managed certificate (renews automatically). For a customer-s
 
 ### 6.3 Make it the canonical origin
 
-The browser-baked `NEXT_PUBLIC_API_URL` already references the backend's public domain (set in your parameters file). If the FE itself moves to the custom domain, no rebuild is needed because the FE doesn't call itself by FQDN — it serves the bundle.
+The browser only ever calls `/api/*` on this Next app. The Next Route Handlers proxy server-side to the backend at `BACKEND_API_URL`. Moving the FE to a custom domain therefore requires no FE rebuild and no backend CORS configuration — same-origin everywhere.
 
-> **Don't forget**: the backend must include the FE's new origin in its CORS allowlist. The deployment is a "separate origin" so CORS misconfiguration is the most common post-deploy failure mode.
+> **CORS is no longer a deployment concern.** The browser doesn't talk to the backend directly, so the backend doesn't need the FE's origin in any allow-list.
 
 ---
 
@@ -421,7 +414,7 @@ This removes everything in §1, including the registry. Anything outside the res
 |---|---|---|
 | `ImagePullBackOff` on the Container App | Managed identity hasn't received AcrPull yet | Wait 30 s — the role-assignment is async; or `az role assignment create` manually. |
 | Browser shows `Unable to connect` after a clean deploy | Backend origin not in CORS allowlist | Add the FE's FQDN (and custom domain) to the BE's CORS config. |
-| Login form submits but stalls | `NEXT_PUBLIC_API_URL` baked into the bundle is wrong | Re-build the image (parameters file → `deploy.sh`). Hard-refresh the browser. |
+| Login form submits but stalls | `BACKEND_API_URL` Container App secret is wrong / unset | `deploy/scripts/set-secrets.sh --backend-api-url …` then verify with `az containerapp logs show`. |
 | `tsc --noEmit` clean locally, fails in CI | Node version mismatch (CI is 20, local was 22) | Pin the Node engine in `package.json` and align CI to match. |
 | Revision flips to "Failed" with no obvious error | Liveness probe times out (cold start > 10 s) | Bump probe `initialDelaySeconds` in `main.bicep` or set `minReplicas: 1` to keep one warm. |
 | `Persisting failed: Unable to write SST file` in dev | Two Next.js processes writing to the same `.next/` (dev + Playwright build colliding) | See [known-issues.md](./known-issues.md) — use a separate `distDir` for Playwright. |
@@ -430,7 +423,7 @@ This removes everything in §1, including the registry. Anything outside the res
 
 ## 12. What's NOT in this guide
 
-- **The backend API**: separate repository, separate deploy. The frontend has no relationship with it beyond `NEXT_PUBLIC_API_URL` + CORS.
+- **The backend API**: separate repository, separate deploy. The frontend's only relationship is the server-side `BACKEND_API_URL`. No CORS coordination is required because the browser never talks to the backend directly.
 - **Customer SSL termination**: the `azurecontainerapps.io` domain comes with a wildcard cert; for customer domains, see §6.
 - **Application Insights**: not provisioned. If observability beyond Log Analytics becomes a need, add it as a follow-up — there's a TODO note in [known-issues.md](./known-issues.md).
 - **HttpOnly-cookie auth migration**: the long-term hardening item described in [security.md §3](./security.md#3-token-storage-and-the-open-hardening-item) requires backend changes and is out of scope for this deploy guide.

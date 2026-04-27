@@ -12,21 +12,6 @@ Severity legend:
 
 ## Security
 
-### 🔴 Move tokens to `HttpOnly` cookies
-
-**Where:** [`src/lib/session-storage.ts`](../src/lib/session-storage.ts), [`src/proxy.ts`](../src/proxy.ts), [`src/contexts/auth-context.tsx`](../src/contexts/auth-context.tsx)
-
-Today, access and refresh tokens live in `localStorage` plus a non-`HttpOnly` cookie, AES-encrypted with `NEXT_PUBLIC_SESSION_SECRET`. The encryption key reaches the browser, which makes the encryption "mostly theatre" against an attacker with XSS or devtools access. Any successful XSS would exfiltrate both tokens.
-
-**Plan**
-
-1. Add a Next Route Handler that proxies `POST /auth/login` and `POST /auth/refresh` server-side, sets `__Host-session` as `HttpOnly; Secure; SameSite=Strict; Path=/`.
-2. The browser never sees raw tokens. Forward the bearer to backend calls server-side via Route Handlers, or attach via a server-set readable claim (NOT the token itself).
-3. Remove `NEXT_PUBLIC_SESSION_SECRET` from `.env.example` and the codebase.
-4. Update [security.md §3](./security.md#3-token-storage-and-the-open-hardening-item) once landed.
-
-This is the largest single hardening item. Tracked in code at `src/proxy.ts:21-24` and `src/lib/session-storage.ts:17-19`.
-
 ### 🟡 Nonce-based Content Security Policy
 
 **Where:** [`next.config.ts`](../next.config.ts), [`src/proxy.ts`](../src/proxy.ts)

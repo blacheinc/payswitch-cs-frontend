@@ -4,15 +4,19 @@ import { http, HttpResponse } from "msw";
  * Canonical happy-path handlers. Tests override per-case with `server.use(...)`.
  * Keep these minimal — they exist so unhandled requests don't fail the suite,
  * not as full fixtures.
+ *
+ * The api-client now targets `/api/proxy` on its own origin (the Next Route
+ * Handler attaches the bearer + handles 401 refresh server-side). The
+ * `/api/auth/*` endpoints are direct Next routes, not proxied.
  */
-const API = "http://api.test/api";
+const ORIGIN = "http://localhost:3000";
+const API = `${ORIGIN}/api/proxy`;
+const AUTH = `${ORIGIN}/api/auth`;
 
 export const defaultHandlers = [
-  // ---------- Auth ----------
-  http.post(`${API}/auth/login`, async () => {
-    return HttpResponse.json({
-      access_token: "access-token-123",
-      refresh_token: "refresh-token-123",
+  // ---------- Auth (Next Route Handlers, NOT proxied) ----------
+  http.post(`${AUTH}/login`, () =>
+    HttpResponse.json({
       user: {
         id: "user-1",
         email: "user@org.com",
@@ -22,25 +26,27 @@ export const defaultHandlers = [
         organization: { id: "org-1", name: "Test Org", slug: "test-org" },
       },
       userType: "org",
-    });
-  }),
-
-  http.post(`${API}/auth/refresh`, () =>
-    HttpResponse.json({ access_token: "access-token-refreshed" }),
-  ),
-
-  http.get(`${API}/auth/me`, () =>
-    HttpResponse.json({
-      id: "user-1",
-      email: "user@org.com",
-      name: "Test User",
-      roleLabel: "User",
-      permissions: ["score_requests.list"],
-      totp_enabled: false,
     }),
   ),
 
-  http.post(`${API}/auth/logout`, () => new HttpResponse(null, { status: 204 })),
+  http.post(`${AUTH}/refresh`, () => HttpResponse.json({ ok: true })),
+
+  http.get(`${AUTH}/me`, () =>
+    HttpResponse.json({
+      user: {
+        id: "user-1",
+        email: "user@org.com",
+        name: "Test User",
+        roleLabel: "User",
+        permissions: ["score_requests.list"],
+      },
+      userType: "org",
+    }),
+  ),
+
+  http.post(`${AUTH}/logout`, () =>
+    HttpResponse.json({ message: "ok" }, { status: 200 }),
+  ),
 
   // ---------- Score requests ----------
   http.get(`${API}/v1/score-requests`, () =>

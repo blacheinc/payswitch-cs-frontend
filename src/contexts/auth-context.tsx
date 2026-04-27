@@ -10,15 +10,28 @@ import {
   useCallback,
 } from "react";
 import {
-  saveSession,
-  getSession,
-  clearSession,
+  saveUserCache,
+  getUserCache,
+  clearUserCache,
 } from "@/lib/session-storage";
-import { authService, mergeUserFromMeProfile } from "@/lib/auth-service";
+import { authService } from "@/lib/auth-service";
+import { mergeUserFromMeProfile } from "@/lib/user-merge";
 import { User, Organization, AdminUser, OrgUser } from "@/types/models";
 import { INACTIVITY_TIMEOUT_MS, ROUTES } from "@/lib/constant";
 
-// Auth state interface
+// =============================================================================
+// AuthContext
+//
+// Tokens live ONLY in the HttpOnly session cookie set by Next Route Handlers
+// (`src/app/api/auth/*`). This context never sees, stores, or transmits them.
+//
+// What lives here:
+//   - the user object (id, name, permissions, etc.) for rendering
+//   - the userType ("admin" | "org") for sidebar / route gating decisions
+//   - a tiny localStorage cache of the above so the UI hydrates immediately on
+//     reload (the source of truth is /api/auth/me)
+// =============================================================================
+
 interface AuthState {
   user: User | null;
   organization: Organization | null;
@@ -29,19 +42,17 @@ interface AuthState {
   pendingEmail: string | null;
 }
 
-// Auth context interface
 interface AuthContextType extends AuthState {
-  setSession: (
-    accessToken: string,
-    refreshToken: string,
-    userType: string,
-    user: User,
-  ) => void;
-  logout: () => void;
+  /**
+   * Mark the React-side state as "logged in" after a successful
+   * /api/auth/login or /api/auth/2fa/verify. The HttpOnly cookie is already
+   * set by the Route Handler at this point — we only sync the user shape.
+   */
+  setSession: (userType: string, user: User) => void;
+  logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
 
-// Initial state
 const initialState: AuthState = {
   user: null,
   organization: null,
@@ -52,60 +63,67 @@ const initialState: AuthState = {
   pendingEmail: null,
 };
 
-// Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auth provider props
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Auth provider component
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>(initialState);
 
-  // Check if user is admin
   const checkIsAdmin = (user: User): user is AdminUser => {
     return "isAdmin" in user && user.isAdmin === true;
   };
 
-  // Get organization from user
   const getOrganization = (user: User): Organization | null => {
-    if (checkIsAdmin(user)) {
-      return null;
-    }
+    if (checkIsAdmin(user)) return null;
     return (user as OrgUser).organization || null;
   };
 
-  // Initialize auth state from stored session
+  /**
+   * Hydrate the React state.
+   *
+   * 1. If we have a localStorage cache of the user, render with it immediately
+   *    so the UI doesn't flash a logged-out state on reload.
+   * 2. Always call /api/auth/me — that's the source of truth. It returns 401
+   *    if the HttpOnly cookie is missing, in which case we mark unauthenticated.
+   */
   const initializeAuth = useCallback(async () => {
-    const session = getSession();
+    const cached = getUserCache();
 
-    if (!session) {
-      setState((prev) => ({ ...prev, isLoading: false }));
-      return;
+    if (cached) {
+      setState({
+        user: cached.user,
+        organization: getOrganization(cached.user),
+        isAuthenticated: true,
+        isLoading: true,
+        isAdmin: checkIsAdmin(cached.user),
+        requires2FA: false,
+        pendingEmail: null,
+      });
     }
 
-    // Hydrate from stored session immediately
-    setState({
-      user: session.user,
-      organization: getOrganization(session.user),
-      isAuthenticated: true,
-      isLoading: false,
-      isAdmin: checkIsAdmin(session.user),
-      requires2FA: false,
-      pendingEmail: null,
-    });
-
-    // Refresh profile + resolved RBAC `permissions` from GET /auth/me
     try {
       const profile = await authService.getMe();
-      const merged = mergeUserFromMeProfile(
-        session.user,
-        profile,
-        session.userType,
-      );
-      saveSession({ ...session, user: merged });
+      const merged = cached
+        ? mergeUserFromMeProfile(cached.user, profile, profile.user_type)
+        : ({
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            roleLabel: profile.role as User["roleLabel"],
+            status: profile.status as User["status"],
+            createdAt: profile.created_at || new Date().toISOString(),
+            organizationId: profile.organization_id ?? undefined,
+            permissions: profile.permissions ?? [],
+            ...(profile.user_type === "admin"
+              ? { isAdmin: true, adminRole: "super_admin" }
+              : {}),
+          } as User);
+
+      saveUserCache({ user: merged, userType: profile.user_type ?? "org" });
+
       setState({
         user: merged,
         organization: getOrganization(merged),
@@ -116,20 +134,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         pendingEmail: null,
       });
     } catch {
-      // Avoid indefinite loading in usePermissions when /auth/me fails
-      if (session.user.permissions === undefined) {
-        const patched = { ...session.user, permissions: [] as string[] };
-        saveSession({ ...session, user: patched });
-        setState({
-          user: patched,
-          organization: getOrganization(patched),
-          isAuthenticated: true,
-          isLoading: false,
-          isAdmin: checkIsAdmin(patched),
-          requires2FA: false,
-          pendingEmail: null,
-        });
-      }
+      // /api/auth/me said 401 (no cookie / refresh failed) → unauthenticated.
+      clearUserCache();
+      setState({ ...initialState, isLoading: false });
     }
   }, []);
 
@@ -138,40 +145,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initializeAuth();
   }, [initializeAuth]);
 
-  // Set session from mutation
-  const setSession = useCallback(
-    (
-      accessToken: string,
-      refreshToken: string,
-      userType: string,
-      user: User,
-    ) => {
-      // Persist complete session data (localStorage + cookie)
-      saveSession({ accessToken, refreshToken, userType, user });
-
-      setState({
-        user,
-        organization: getOrganization(user),
-        isAuthenticated: true,
-        isLoading: false,
-        isAdmin: checkIsAdmin(user),
-        requires2FA: false,
-        pendingEmail: null,
-      });
-    },
-    [],
-  );
-
-  // Logout function — sends the user back to the login page for their scope
-  // so an admin doesn't land on the org portal (and vice versa).
-  const logout = useCallback(() => {
-    // Snapshot scope before we wipe the session.
-    const wasAdmin = getSession()?.userType === "admin";
-    clearSession();
+  /** Called by login flows after the server has set the HttpOnly cookie. */
+  const setSession = useCallback((userType: string, user: User) => {
+    saveUserCache({ user, userType });
     setState({
-      ...initialState,
+      user,
+      organization: getOrganization(user),
+      isAuthenticated: true,
       isLoading: false,
+      isAdmin: checkIsAdmin(user),
+      requires2FA: false,
+      pendingEmail: null,
     });
+  }, []);
+
+  /**
+   * Logout — call /api/auth/logout to clear the HttpOnly cookie + invalidate
+   * upstream, then wipe local state and bounce to the right login page.
+   *
+   * IMPORTANT: we await the server call before navigating. Triggering
+   * `window.location.href = ...` immediately would cancel the pending fetch
+   * mid-flight, leaving the HttpOnly cookie in place — the proxy middleware
+   * would then see the user as "still authenticated" and bounce them back
+   * to /dashboard, defeating the logout.
+   */
+  const logout = useCallback(async () => {
+    const cached = getUserCache();
+    const wasAdmin = cached?.userType === "admin";
+
+    // Drop the local user cache up front so the UI flips immediately even if
+    // the server round-trip stalls.
+    clearUserCache();
+    setState({ ...initialState, isLoading: false });
+
+    try {
+      await authService.logout();
+    } catch {
+      // Best-effort: even if the server fails, we still navigate away.
+    }
 
     if (typeof window !== "undefined") {
       window.location.href = wasAdmin
@@ -184,18 +195,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Check both context state and stored session for mock-auth compatibility
-    const hasSession = typeof window !== "undefined" && getSession() !== null;
-    const isLoggedIn = state.isAuthenticated || hasSession;
-
-    if (!isLoggedIn) return;
+    if (!state.isAuthenticated) return;
 
     const resetTimer = () => {
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
       }
       inactivityTimerRef.current = setTimeout(() => {
-        logout();
+        void logout();
       }, INACTIVITY_TIMEOUT_MS);
     };
 
@@ -209,8 +216,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     activityEvents.forEach((event) =>
       window.addEventListener(event, resetTimer),
     );
-
-    // Start the timer immediately
     resetTimer();
 
     return () => {
@@ -223,12 +228,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [state.isAuthenticated, logout]);
 
-  // Refresh session
   const refreshSession = async (): Promise<void> => {
     await initializeAuth();
   };
 
-  // Context value
   const value: AuthContextType = {
     ...state,
     setSession,
@@ -239,41 +242,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Hook to use auth context
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
-
   return context;
 }
 
-// Hook to require authentication — defaults to the org login. Admin layouts
-// should pass ROUTES.AUTH.ADMIN_LOGIN explicitly.
 export function useRequireAuth(redirectTo: string = ROUTES.AUTH.LOGIN) {
   const auth = useAuth();
-
   useEffect(() => {
     if (!auth.isLoading && !auth.isAuthenticated) {
       window.location.href = redirectTo;
     }
   }, [auth.isLoading, auth.isAuthenticated, redirectTo]);
-
   return auth;
 }
 
-// Hook to require admin access. Unauthed → admin login. Authed-but-non-admin
-// → their own dashboard, never the admin UI.
 export function useRequireAdmin(redirectTo: string = ROUTES.ORG.DASHBOARD) {
   const auth = useRequireAuth(ROUTES.AUTH.ADMIN_LOGIN);
-
   useEffect(() => {
     if (!auth.isLoading && auth.isAuthenticated && !auth.isAdmin) {
       window.location.href = redirectTo;
     }
   }, [auth.isLoading, auth.isAuthenticated, auth.isAdmin, redirectTo]);
-
   return auth;
 }

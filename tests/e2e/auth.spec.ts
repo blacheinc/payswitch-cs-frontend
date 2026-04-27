@@ -1,20 +1,18 @@
 import { test, expect, type BrowserContext } from "@playwright/test";
-import CryptoJS from "crypto-js";
 
 /**
  * Portal-isolation + security-header E2E.
  *
  * Login UI flows (real credentials, 2FA) are covered separately against a live
- * backend — see docs/testing.md §3. The specs here seed the session cookie
- * directly so they verify the FE proxy / RBAC behaviour without depending on
- * any backend being up.
+ * backend — see docs/testing.md §3. The specs here seed the HttpOnly session
+ * cookie directly so they verify the FE proxy / RBAC behaviour without
+ * depending on any backend being up.
  */
 
-const SESSION_SECRET =
-  process.env.NEXT_PUBLIC_SESSION_SECRET || "e2e-test-secret";
+const SESSION_COOKIE = "__Host-session";
 
-function buildSessionCookie(userType: "admin" | "org"): string {
-  const payload = JSON.stringify({
+function buildSession(userType: "admin" | "org"): string {
+  return JSON.stringify({
     accessToken: "test-access",
     refreshToken: "test-refresh",
     userType,
@@ -34,7 +32,6 @@ function buildSessionCookie(userType: "admin" | "org"): string {
       createdAt: new Date().toISOString(),
     },
   });
-  return CryptoJS.AES.encrypt(payload, SESSION_SECRET).toString();
 }
 
 async function seedSession(
@@ -42,16 +39,17 @@ async function seedSession(
   userType: "admin" | "org",
   origin: string,
 ) {
-  const ciphertext = buildSessionCookie(userType);
   const url = new URL(origin);
   await context.addCookies([
     {
-      name: "session",
-      value: encodeURIComponent(ciphertext),
+      name: SESSION_COOKIE,
+      value: buildSession(userType),
       domain: url.hostname,
       path: "/",
-      httpOnly: false,
-      secure: false,
+      // `__Host-` prefix requires Secure. localhost is treated as a secure
+      // context by modern browsers so this works over http://localhost.
+      httpOnly: true,
+      secure: true,
       sameSite: "Strict",
     },
   ]);

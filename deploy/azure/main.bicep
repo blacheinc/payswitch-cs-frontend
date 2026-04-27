@@ -9,17 +9,13 @@
 //   - Container App (the Next.js workload itself)
 //
 // Wire-up:
-//   The Container App is configured to consume two `secrets`:
-//     - `next-public-session-secret` — the AES key (NEXT_PUBLIC_SESSION_SECRET)
-//     - `next-public-api-url`        — the backend base URL (set as a secret
-//                                       so it can be rotated without rebuilding
-//                                       the Bicep stack)
+//   The Container App carries one secret:
+//     - `backend-api-url` — base URL of the upstream backend
 //
-//   IMPORTANT: every NEXT_PUBLIC_* value is INLINED INTO THE CLIENT BUNDLE at
-//   `next build` time, NOT read at runtime. The Container App secrets here
-//   exist for *runtime visibility* (and for the deploy script's `set-secrets`
-//   helper). Rotating either value still requires a rebuild + new revision —
-//   see docs/deployment-guide.md §6.
+//   This is read by the Next Route Handlers (server-side only) — the browser
+//   only ever talks to /api/* on this app, never to the backend directly. The
+//   image is therefore ENVIRONMENT-PORTABLE: the same tag promotes from dev →
+//   prod unchanged. No browser-baked secrets, no rebuild-per-env.
 // =============================================================================
 
 @description('Azure region for every resource in this deployment.')
@@ -37,12 +33,9 @@ param resourceSuffix string
 @description('Container image fully-qualified tag, e.g. "myacr.azurecr.io/credit-scoring-fe:1.2.3". Provided by the deploy script.')
 param containerImage string
 
-@description('Backend API base URL the FE should call. Reaches the browser; no trailing slash.')
-param nextPublicApiUrl string
-
 @secure()
-@description('AES secret used to encrypt the FE session cookie. Generate with `openssl rand -hex 64`. See docs/security.md §3.')
-param nextPublicSessionSecret string
+@description('Backend API base URL the Next app calls server-side. No trailing slash. Treated as a secret so the value is never logged in deployment history.')
+param backendApiUrl string
 
 @description('Number of warm revisions to keep at minimum. 1 keeps cold-start to zero; 0 lets the env scale to zero between requests.')
 @minValue(0)
@@ -152,7 +145,6 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 3000
         transport: 'auto'
         allowInsecure: false
-        // Cap-off bursts to keep cold-start latency predictable for the FE.
         traffic: [
           { latestRevision: true, weight: 100 }
         ]
@@ -163,17 +155,12 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           identity: identity.id
         }
       ]
-      // Container App secrets — visible to the workload as referenced env vars.
-      // NEXT_PUBLIC_* values must ALSO be passed to `docker build --build-arg`
-      // (see deploy/scripts/deploy.sh) because Next inlines them at build time.
+      // Single server-only secret. The Next.js Route Handlers read it at
+      // request time; nothing reaches the browser.
       secrets: [
         {
-          name: 'next-public-session-secret'
-          value: nextPublicSessionSecret
-        }
-        {
-          name: 'next-public-api-url'
-          value: nextPublicApiUrl
+          name: 'backend-api-url'
+          value: backendApiUrl
         }
       ]
     }
@@ -187,11 +174,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             memory: '1.0Gi'
           }
           env: [
-            { name: 'NEXT_PUBLIC_API_URL', secretRef: 'next-public-api-url' }
-            {
-              name: 'NEXT_PUBLIC_SESSION_SECRET'
-              secretRef: 'next-public-session-secret'
-            }
+            { name: 'BACKEND_API_URL', secretRef: 'backend-api-url' }
             { name: 'PORT', value: '3000' }
           ]
           probes: [

@@ -24,11 +24,11 @@
 #   AZURE_RESOURCE_GROUP    → e.g. cs-fe-prod-rg
 #   AZURE_RESOURCE_SUFFIX   → 3-8 alphanumeric chars (must match Bicep param)
 #
-# Required GitHub Environment variables:
-#   NEXT_PUBLIC_API_URL     → backend base URL for that env (NOT a secret)
-#
 # Required GitHub Environment secrets (per env: dev / prod):
-#   NEXT_PUBLIC_SESSION_SECRET → openssl rand -hex 64; one per env, never reuse
+#   BACKEND_API_URL         → server-only base URL of the backend API
+#
+# The image is environment-portable: no NEXT_PUBLIC_* are baked into the
+# bundle, so the same tag promotes from dev → prod unchanged.
 # =============================================================================
 name: deploy
 
@@ -106,8 +106,6 @@ jobs:
           az acr build \
             --registry "${{ steps.acr.outputs.name }}" \
             --image "credit-scoring-fe:${{ steps.tag.outputs.value }}" \
-            --build-arg "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" \
-            --build-arg "NEXT_PUBLIC_SESSION_SECRET=${{ secrets.NEXT_PUBLIC_SESSION_SECRET }}" \
             --file Dockerfile \
             .
 
@@ -122,8 +120,7 @@ jobs:
             --parameters \
               resourceSuffix="${{ secrets.AZURE_RESOURCE_SUFFIX }}" \
               containerImage="$IMAGE" \
-              nextPublicApiUrl="${{ vars.NEXT_PUBLIC_API_URL }}" \
-              nextPublicSessionSecret="${{ secrets.NEXT_PUBLIC_SESSION_SECRET }}" \
+              backendApiUrl="${{ secrets.BACKEND_API_URL }}" \
             --output none
 
       - name: Print Container App URL

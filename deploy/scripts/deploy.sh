@@ -17,6 +17,11 @@
 #       az account set --subscription <sub-id>
 #   - Docker daemon running (for building the image locally) — or pass
 #     --use-acr-build to build inside Azure Container Registry instead.
+#
+# Notes:
+#   The image is environment-portable. There are no NEXT_PUBLIC_* build args
+#   to bake in — every secret is server-side and read at runtime. Promoting
+#   from dev → prod is a tag-only change.
 # =============================================================================
 set -euo pipefail
 
@@ -70,7 +75,7 @@ echo "▶ Use ACR Build:     $USE_ACR_BUILD"
 
 # --- Step 1: ensure resource group --------------------------------------------
 echo ""
-echo "═══ Step 1/5: Ensure resource group ═══"
+echo "═══ Step 1/4: Ensure resource group ═══"
 az group create \
   --name "$RESOURCE_GROUP" \
   --location "$LOCATION" \
@@ -78,11 +83,9 @@ az group create \
 echo "✓ Resource group ready."
 
 # --- Step 2: derive ACR name + ensure registry exists -------------------------
-# The Bicep template names the ACR `csfe<env><suffix>`. Mirror that here so we
-# can build & push BEFORE the full Bicep deployment runs.
 ACR_NAME="csfe${ENVIRONMENT}${SUFFIX}"
 echo ""
-echo "═══ Step 2/5: Ensure ACR '$ACR_NAME' exists ═══"
+echo "═══ Step 2/4: Ensure ACR '$ACR_NAME' exists ═══"
 if ! az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
   echo "→ ACR not found, creating..."
   az acr create \
@@ -95,19 +98,15 @@ fi
 ACR_LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
 echo "✓ ACR login server: $ACR_LOGIN_SERVER"
 
-# --- Step 3: build + push the image -------------------------------------------
+# --- Step 3: build + push the image (no build args) ---------------------------
 IMAGE_FULL="${ACR_LOGIN_SERVER}/credit-scoring-fe:${TAG}"
 echo ""
-echo "═══ Step 3/5: Build + push image '${IMAGE_FULL}' ═══"
+echo "═══ Step 3/4: Build + push image '${IMAGE_FULL}' ═══"
 
-# Pull the NEXT_PUBLIC_* values out of the parameters file so we can pass them
-# as build args. They MUST be inlined into the bundle at build time.
-NEXT_PUBLIC_API_URL=$(jq -r '.parameters.nextPublicApiUrl.value' "$PARAM_FILE")
-NEXT_PUBLIC_SESSION_SECRET=$(jq -r '.parameters.nextPublicSessionSecret.value' "$PARAM_FILE")
-
-if [[ "$NEXT_PUBLIC_SESSION_SECRET" == "REPLACE_ME"* || -z "$NEXT_PUBLIC_SESSION_SECRET" ]]; then
-  echo "❌ nextPublicSessionSecret in $PARAM_FILE is still a placeholder."
-  echo "   Generate one with:  openssl rand -hex 64"
+# Pull backend URL from parameters file (used for sanity check + output only).
+BACKEND_API_URL=$(jq -r '.parameters.backendApiUrl.value' "$PARAM_FILE")
+if [[ "$BACKEND_API_URL" == "REPLACE_ME"* || -z "$BACKEND_API_URL" ]]; then
+  echo "❌ backendApiUrl in $PARAM_FILE is still a placeholder."
   exit 1
 fi
 
@@ -116,21 +115,13 @@ if [[ "$USE_ACR_BUILD" == "true" ]]; then
   az acr build \
     --registry "$ACR_NAME" \
     --image "credit-scoring-fe:${TAG}" \
-    --build-arg "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" \
-    --build-arg "NEXT_PUBLIC_SESSION_SECRET=${NEXT_PUBLIC_SESSION_SECRET}" \
     --file Dockerfile \
     .
 else
   echo "→ Building locally with docker..."
-  docker build \
-    --build-arg "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" \
-    --build-arg "NEXT_PUBLIC_SESSION_SECRET=${NEXT_PUBLIC_SESSION_SECRET}" \
-    -t "$IMAGE_FULL" \
-    .
-
+  docker build -t "$IMAGE_FULL" .
   echo "→ Logging in to ACR..."
   az acr login --name "$ACR_NAME"
-
   echo "→ Pushing image..."
   docker push "$IMAGE_FULL"
 fi
@@ -138,7 +129,7 @@ echo "✓ Image '$IMAGE_FULL' is in the registry."
 
 # --- Step 4: deploy the Bicep stack -------------------------------------------
 echo ""
-echo "═══ Step 4/5: Deploy Bicep stack ═══"
+echo "═══ Step 4/4: Deploy Bicep stack ═══"
 DEPLOYMENT_NAME="cs-fe-${ENVIRONMENT}-$(date +%Y%m%d%H%M%S)"
 
 az deployment group create \
@@ -153,9 +144,8 @@ az deployment group create \
 
 echo "✓ Bicep deployment '$DEPLOYMENT_NAME' succeeded."
 
-# --- Step 5: surface the public FQDN ------------------------------------------
+# --- Output -------------------------------------------------------------------
 echo ""
-echo "═══ Step 5/5: Outputs ═══"
 FQDN=$(az deployment group show \
   --resource-group "$RESOURCE_GROUP" \
   --name "$DEPLOYMENT_NAME" \

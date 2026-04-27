@@ -25,36 +25,39 @@ Password recovery (`/forgot-password`, `/reset-password`) is shared.
 sequenceDiagram
     autonumber
     participant U as User
-    participant LP as Login page
-    participant Auth as authService
+    participant LP as Login page (browser)
+    participant NextLogin as /api/auth/login<br/>(Next Route Handler)
     participant API as Backend /auth/*
-    participant Ctx as AuthContext
-    participant Store as session-storage<br/>(localStorage + cookie)
-    participant Proxy as Edge proxy
+    participant Ctx as AuthContext (browser)
+    participant Cookie as __Host-session<br/>(HttpOnly cookie)
+    participant Proxy as Edge middleware
 
     U->>LP: email + password
-    LP->>Auth: authService.login(email, password)
-    Auth->>API: POST /auth/login
+    LP->>NextLogin: POST /api/auth/login
+    NextLogin->>API: POST /auth/login
     alt 2FA required
-        API-->>Auth: { requires_2fa: true, temp_token }
-        Auth-->>LP: requires2FA = true
+        API-->>NextLogin: { requires_2fa: true, temp_token }
+        NextLogin-->>LP: { requires_2fa, temp_token }
         LP->>U: render 6-digit code input
         U->>LP: TOTP code
-        LP->>Auth: authService.verify2FA({ code, temp_token })
-        Auth->>API: POST /auth/2fa/verify
-        API-->>Auth: { access_token, refresh_token, user, userType }
+        LP->>NextLogin: POST /api/auth/2fa/verify
+        NextLogin->>API: POST /auth/2fa/verify
+        API-->>NextLogin: { access_token, refresh_token }
     else 2FA disabled
-        API-->>Auth: { access_token, refresh_token, user, userType }
+        API-->>NextLogin: { access_token, refresh_token }
     end
-    Auth-->>LP: tokens + user
-    LP->>Ctx: setSession(...)
-    Ctx->>Store: saveSession({ accessToken, refreshToken, user, userType })
-    Note over Store: cookie payload is AES-encrypted<br/>(see security.md)
-    LP->>U: window.location = dashboard
+    NextLogin->>API: GET /auth/me (with bearer)
+    API-->>NextLogin: profile
+    NextLogin->>Cookie: Set-Cookie HttpOnly Secure SameSite=Strict
+    NextLogin-->>LP: { user, userType } — no tokens
+    LP->>Ctx: setSession(userType, user)
+    LP->>U: router.push(dashboard)
     U->>Proxy: GET /dashboard (or /admin-dashboard)
-    Proxy->>Store: read cookie · decrypt · classify
+    Proxy->>Cookie: read userType
     Proxy-->>U: render the right portal
 ```
+
+> **Tokens never reach JavaScript.** The Route Handler captures them server-side, the cookie is `HttpOnly`, and every subsequent backend call is forwarded through `/api/proxy/[...path]` which attaches the bearer server-side.
 
 Login page implementation: [`src/components/auth/login-shell.tsx`](../src/components/auth/login-shell.tsx).
 Service: [`src/lib/auth-service.ts`](../src/lib/auth-service.ts).
@@ -68,35 +71,36 @@ Once logged in, three mechanisms keep the session valid (or kill it):
 
 ### 3.1 Token refresh on 401
 
-The axios response interceptor watches every API response. On a `401` from a non-`/auth/*` endpoint, it transparently refreshes the access token and retries the request once.
+Refresh runs **server-side** inside the catch-all proxy handler. The browser never touches a refresh token.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Page
-    participant Axios as apiClient
+    participant Page as Browser
+    participant NextProxy as /api/proxy/[...path]<br/>(Next Route Handler)
     participant API as Backend
-    participant Store as session-storage
+    participant Cookie as __Host-session
 
-    Page->>Axios: GET /v1/score-requests
-    Axios->>API: …Authorization: Bearer <expired jwt>
-    API-->>Axios: 401
-    alt refresh token present
-        Axios->>API: POST /auth/refresh { refresh_token }
-        API-->>Axios: { access_token }
-        Axios->>Store: updateTokens(access_token)
-        Axios->>API: retry GET /v1/score-requests<br/>with new bearer
-        API-->>Axios: 200
-        Axios-->>Page: data
-    else refresh fails or no refresh token
-        Axios->>Store: clearSession()
-        Axios->>Page: window.location = /login
+    Page->>NextProxy: GET /api/proxy/v1/score-requests
+    NextProxy->>Cookie: read accessToken + refreshToken
+    NextProxy->>API: GET /v1/score-requests<br/>Authorization: Bearer <expired>
+    API-->>NextProxy: 401
+    NextProxy->>API: POST /auth/refresh { refresh_token }
+    alt refresh succeeds
+        API-->>NextProxy: { access_token }
+        NextProxy->>Cookie: rewrite with new accessToken
+        NextProxy->>API: retry GET /v1/score-requests<br/>(new bearer)
+        API-->>NextProxy: 200
+        NextProxy-->>Page: 200
+    else refresh fails
+        NextProxy->>Cookie: clear
+        NextProxy-->>Page: 401 → axios bounces to /login
     end
 ```
 
-Implementation: [`src/lib/api-client.ts`](../src/lib/api-client.ts) lines 80–135.
+Implementation: [`src/app/api/proxy/[...path]/route.ts`](../src/app/api/proxy/[...path]/route.ts).
 
-A 401 from `/auth/*` itself is **not** treated as expiry — it's bad credentials and is bubbled up to the form.
+The browser-side axios client (`src/lib/api-client.ts`) is now token-free — its only job is to talk to `/api/proxy` and normalize errors. A 401 reaching the browser means the server-side refresh already failed, and the client redirects to `/login`.
 
 ### 3.2 Inactivity timeout
 

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import CryptoJS from "crypto-js";
 import {
   ROUTES,
   ADMIN_ROUTE_PREFIXES,
@@ -11,38 +10,30 @@ import {
 // Session cookie
 // =============================================================================
 //
-// The session cookie is AES-encrypted with a shared secret (matches
-// session-storage.ts on the client). On the server we can only decrypt it to
-// inspect the `userType` claim — we never trust anything else in it for
-// authorization decisions. The real authority on access lives on the API
-// backend; this proxy's job is defense in depth and preventing a wrong-scope
-// UI from even rendering.
+// The session is a single HttpOnly cookie set by Next Route Handlers in
+// src/app/api/auth/*. The cookie value is plain JSON — no encryption is
+// needed because the cookie is HttpOnly and never reaches JavaScript on the
+// client. The proxy reads it server-side to gate route access.
 //
-// Follow-up hardening (not blocking the split): move tokens to an HttpOnly,
-// Secure, __Host- prefixed cookie set by a Next Route Handler, and remove
-// NEXT_PUBLIC_SESSION_SECRET (it's currently shipped to the browser, which
-// makes the encryption mostly theatre against an attacker with DevTools).
+// `userType` is the only field the proxy uses for routing decisions. The real
+// authority on per-action access lives on the backend, which re-checks every
+// request's bearer JWT.
 // =============================================================================
 
-const SESSION_SECRET =
-  process.env.NEXT_PUBLIC_SESSION_SECRET || "__credit_scoring_session_key__";
+const SESSION_COOKIE = "__Host-session";
 
-interface DecodedSession {
+interface SessionShape {
   accessToken: string;
   refreshToken: string;
   userType: string;
   user: Record<string, unknown>;
 }
 
-function decryptSessionCookie(request: NextRequest): DecodedSession | null {
-  const raw = request.cookies.get("session")?.value;
+function readSessionCookie(request: NextRequest): SessionShape | null {
+  const raw = request.cookies.get(SESSION_COOKIE)?.value;
   if (!raw) return null;
   try {
-    const ciphertext = decodeURIComponent(raw);
-    const bytes = CryptoJS.AES.decrypt(ciphertext, SESSION_SECRET);
-    const json = bytes.toString(CryptoJS.enc.Utf8);
-    if (!json) return null;
-    return JSON.parse(json) as DecodedSession;
+    return JSON.parse(raw) as SessionShape;
   } catch {
     return null;
   }
@@ -72,7 +63,7 @@ function classifyRoute(path: string): Zone {
   return "public";
 }
 
-function isAdminScope(session: DecodedSession | null): boolean {
+function isAdminScope(session: SessionShape | null): boolean {
   return session?.userType === "admin";
 }
 
@@ -151,7 +142,7 @@ function next(): NextResponse {
 
 export function proxy(request: NextRequest): NextResponse {
   const path = request.nextUrl.pathname;
-  const session = decryptSessionCookie(request);
+  const session = readSessionCookie(request);
   const isAuthed = session !== null;
   const isAdmin = isAdminScope(session);
   const zone = classifyRoute(path);

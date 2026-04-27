@@ -1,4 +1,4 @@
-// Inactivity timeout in milliseconds (5 minutes)
+// Inactivity timeout in milliseconds (10 minutes)
 export const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 export const TABLE_ITEM_PER_PAGE = 10;

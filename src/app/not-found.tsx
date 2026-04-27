@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constant";
 import { AlertTriangle } from "lucide-react";
-import { getSession } from "@/lib/session-storage";
+import { getUserCache } from "@/lib/session-storage";
 
 /**
  * 404 / wrong-scope page.
@@ -27,11 +27,11 @@ export default function NotFound() {
     // we start with the anon default and upgrade client-side. The setState-in-
     // effect warning is intentional here — this is synchronising React state
     // with an external store (the session cookie/localStorage).
-    const session = getSession();
-    if (!session) return;
+    const cached = getUserCache();
+    if (!cached) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHome(
-      session.userType === "admin"
+      cached.userType === "admin"
         ? { label: "Go to admin dashboard", href: ROUTES.ADMIN.DASHBOARD }
         : { label: "Go to dashboard", href: ROUTES.ORG.DASHBOARD },
     );

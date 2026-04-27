@@ -15,8 +15,7 @@
 #       AZURE_RESOURCE_GROUP        e.g. cs-fe-prod-rg
 #       AZURE_RESOURCE_SUFFIX       3-8 alphanumeric chars
 #     cs-fe-<env>            — one per environment (dev / prod)
-#       NEXT_PUBLIC_API_URL         backend base URL for that env
-#       NEXT_PUBLIC_SESSION_SECRET  ⚠ secret variable; openssl rand -hex 64
+#       BACKEND_API_URL             ⚠ secret variable; backend base URL
 #
 # Service connection:
 #   Create an Azure Resource Manager service connection (workload identity is
@@ -109,8 +108,7 @@ stages:
           - script: npm run test:e2e
             displayName: Run E2E
             env:
-              NEXT_PUBLIC_API_URL: http://localhost:3001/api
-              NEXT_PUBLIC_SESSION_SECRET: e2e-ci-secret
+              BACKEND_API_URL: http://localhost:3001
 
           - task: PublishPipelineArtifact@1
             condition: failed()
@@ -168,8 +166,6 @@ stages:
                 az acr build \
                   --registry "$ACR_NAME" \
                   --image "credit-scoring-fe:${TAG}" \
-                  --build-arg "NEXT_PUBLIC_API_URL=$(NEXT_PUBLIC_API_URL)" \
-                  --build-arg "NEXT_PUBLIC_SESSION_SECRET=$(NEXT_PUBLIC_SESSION_SECRET)" \
                   --file Dockerfile \
                   .
             name: build_image
@@ -215,8 +211,7 @@ stages:
                         --parameters \
                           resourceSuffix="$(AZURE_RESOURCE_SUFFIX)" \
                           containerImage="$IMAGE" \
-                          nextPublicApiUrl="$(NEXT_PUBLIC_API_URL)" \
-                          nextPublicSessionSecret="$(NEXT_PUBLIC_SESSION_SECRET)"
+                          backendApiUrl="$(BACKEND_API_URL)"
 
                       APP="cs-fe-${ENV}-$(AZURE_RESOURCE_SUFFIX)"
                       FQDN=$(az containerapp show \

@@ -2,13 +2,17 @@
 # Production image — Next.js 16 standalone, served on Azure Container Apps.
 #
 # Multi-stage build:
-#   1. deps      — install production dependencies once, cache between rebuilds.
-#   2. builder   — full install + `next build` with the env vars baked in.
+#   1. deps      — install dependencies once, cache between rebuilds.
+#   2. builder   — full install + `next build`. NO build args needed; every
+#                  app secret is server-only and read at runtime.
 #   3. runner    — minimal runtime image: Node + the standalone server bundle.
 #
-# IMPORTANT: every NEXT_PUBLIC_* variable is INLINED INTO THE CLIENT BUNDLE
-# at `next build` time. To rotate any of these (e.g. NEXT_PUBLIC_SESSION_SECRET)
-# you must rebuild the image and redeploy. See docs/deployment-guide.md §6.
+# Runtime env vars (set on the platform — Container Apps secret refs / Vercel
+# project env / docker run -e):
+#   - BACKEND_API_URL   — base URL of the upstream backend, server-only
+#
+# The image is environment-portable: the same tag promotes from dev → prod
+# unchanged. No more rebuild-per-env, no more browser-baked secrets.
 # =============================================================================
 
 # --- Stage 1: production dependencies -----------------------------------------
@@ -16,7 +20,6 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy only the lock + manifest so this layer caches across code-only changes.
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=optional
 
@@ -29,13 +32,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# NEXT_PUBLIC_* variables must be present at build time.
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SESSION_SECRET
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_SESSION_SECRET=${NEXT_PUBLIC_SESSION_SECRET}
-
-# Build-time telemetry off, build runs deterministically.
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 

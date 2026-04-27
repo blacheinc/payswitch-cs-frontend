@@ -6,33 +6,24 @@
 #   deploy/scripts/set-secrets.sh \
 #     --resource-group cs-fe-prod-rg \
 #     --app cs-fe-prod-abc123 \
-#     --api-url https://api.payswitch.example.com \
-#     --session-secret "$(openssl rand -hex 64)"
+#     --backend-api-url https://api.payswitch.example.com
 #
-# IMPORTANT: NEXT_PUBLIC_* values are inlined at `next build` time. Updating
-# the Container App secret here ALONE does not change what the browser sees —
-# it only updates the runtime env var. To make a new value visible to clients
-# you must rebuild the image (deploy/scripts/deploy.sh) with the new --build-arg
-# and roll a new revision.
-#
-# Use this script when you want to pre-stage a rotation in the platform secret
-# store, or when only the server-readable env matters for a future change.
+# Updates `backend-api-url` in place. The Container App picks up the new value
+# on its next revision (no rebuild needed because the value is server-only).
 # =============================================================================
 set -euo pipefail
 
 RESOURCE_GROUP=""
 APP_NAME=""
-API_URL=""
-SESSION_SECRET=""
+BACKEND_API_URL=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --resource-group)  RESOURCE_GROUP="$2"; shift 2 ;;
-    --app)             APP_NAME="$2"; shift 2 ;;
-    --api-url)         API_URL="$2"; shift 2 ;;
-    --session-secret)  SESSION_SECRET="$2"; shift 2 ;;
+    --resource-group)   RESOURCE_GROUP="$2"; shift 2 ;;
+    --app)              APP_NAME="$2"; shift 2 ;;
+    --backend-api-url)  BACKEND_API_URL="$2"; shift 2 ;;
     -h|--help)
-      grep '^#' "$0" | head -25
+      grep '^#' "$0" | head -15
       exit 0
       ;;
     *)
@@ -42,31 +33,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$RESOURCE_GROUP" ]] && { echo "❌ --resource-group is required"; exit 1; }
-[[ -z "$APP_NAME" ]]       && { echo "❌ --app is required (Container App name)"; exit 1; }
-
-if [[ -z "$API_URL" && -z "$SESSION_SECRET" ]]; then
-  echo "❌ Provide at least one of --api-url or --session-secret"
-  exit 1
-fi
-
-UPDATE_ARGS=()
-if [[ -n "$API_URL" ]]; then
-  UPDATE_ARGS+=(--secrets "next-public-api-url=${API_URL}")
-fi
-if [[ -n "$SESSION_SECRET" ]]; then
-  UPDATE_ARGS+=(--secrets "next-public-session-secret=${SESSION_SECRET}")
-fi
+[[ -z "$RESOURCE_GROUP" ]]  && { echo "❌ --resource-group is required"; exit 1; }
+[[ -z "$APP_NAME" ]]        && { echo "❌ --app is required (Container App name)"; exit 1; }
+[[ -z "$BACKEND_API_URL" ]] && { echo "❌ --backend-api-url is required"; exit 1; }
 
 echo "▶ Updating secrets on Container App: $APP_NAME"
 az containerapp secret set \
   --name "$APP_NAME" \
   --resource-group "$RESOURCE_GROUP" \
-  "${UPDATE_ARGS[@]}" \
+  --secrets "backend-api-url=${BACKEND_API_URL}" \
   --output none
 
-echo "✓ Secrets updated."
-echo ""
-echo "⚠ Reminder: NEXT_PUBLIC_* values are baked into the client bundle at"
-echo "  build time. To make these new values visible to browsers, rebuild and"
-echo "  redeploy via deploy/scripts/deploy.sh."
+# Trigger a fresh revision so the new value is picked up.
+az containerapp update \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --output none
+
+echo "✓ Secret updated. New revision is rolling out."

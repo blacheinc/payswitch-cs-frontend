@@ -3,7 +3,10 @@ import { http, HttpResponse } from "msw";
 import { server } from "../setup/msw-server";
 import { scoreService, SCORE_KEYS } from "@/lib/score-service";
 
-const API = "http://api.test/api";
+// The api-client now points at /api/proxy on its own origin (the Next Route
+// Handler attaches the bearer + handles 401 refresh server-side). Tests
+// register MSW handlers under the same path.
+const API = "http://localhost:3000/api/proxy";
 
 describe("scoreService.getScoreRequests", () => {
   it("maps snake_case API rows to camelCase domain items", async () => {
