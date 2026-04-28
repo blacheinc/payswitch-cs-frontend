@@ -22,14 +22,13 @@ import {
   Users,
   Eye,
   EyeOff,
-  ChevronLeft,
-  ChevronRight,
   MoreVertical,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TablePagination } from "@/components/shared/table-pagination";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -85,10 +84,14 @@ export default function OrganizationDetailPage() {
 
   // ---- Fetch users ----
   const [usersPage, setUsersPage] = useState(1);
+  const [usersPerPage, setUsersPerPage] = useState(10);
   const { data: usersData, isLoading: isUsersLoading } = useQuery({
-    queryKey: ORG_KEYS.users(orgId, { page: usersPage, perPage: 10 }),
+    queryKey: ORG_KEYS.users(orgId, { page: usersPage, perPage: usersPerPage }),
     queryFn: () =>
-      organizationService.listUsers(orgId, { page: usersPage, perPage: 10 }),
+      organizationService.listUsers(orgId, {
+        page: usersPage,
+        perPage: usersPerPage,
+      }),
     enabled: !!orgId && canRead,
   });
 
@@ -535,32 +538,18 @@ export default function OrganizationDetailPage() {
                 </Table>
               </div>
 
-              {/* Pagination */}
-              {usersData.totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Page {usersData.page} of {usersData.totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={usersPage <= 1}
-                      onClick={() => setUsersPage((p) => p - 1)}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={usersPage >= usersData.totalPages}
-                      onClick={() => setUsersPage((p) => p + 1)}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <TablePagination
+                page={usersData.page}
+                totalPages={usersData.totalPages}
+                total={usersData.total}
+                onPageChange={setUsersPage}
+                perPage={usersPerPage}
+                onPerPageChange={(n) => {
+                  setUsersPerPage(n);
+                  setUsersPage(1);
+                }}
+                unitLabel="users"
+              />
             </>
           )}
         </CardContent>

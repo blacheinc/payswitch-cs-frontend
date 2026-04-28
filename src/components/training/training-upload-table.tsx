@@ -33,6 +33,8 @@ interface TrainingUploadTableProps {
   isError: boolean;
   page: number;
   onPageChange: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -42,6 +44,8 @@ export function TrainingUploadTable({
   isError,
   page,
   onPageChange,
+  perPage,
+  onPerPageChange,
   onDelete,
 }: TrainingUploadTableProps) {
   const router = useRouter();
@@ -241,6 +245,8 @@ export function TrainingUploadTable({
         totalPages={totalPages}
         total={data?.total ?? 0}
         onPageChange={onPageChange}
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
       />
     </>
   );

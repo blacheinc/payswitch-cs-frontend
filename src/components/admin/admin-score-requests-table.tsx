@@ -27,6 +27,8 @@ interface AdminScoreRequestsTableProps {
   isError: boolean;
   page: number;
   onPageChange: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
 }
 
 export function AdminScoreRequestsTable({
@@ -35,6 +37,8 @@ export function AdminScoreRequestsTable({
   isError,
   page,
   onPageChange,
+  perPage,
+  onPerPageChange,
 }: AdminScoreRequestsTableProps) {
   const requests = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
@@ -229,6 +233,8 @@ export function AdminScoreRequestsTable({
         totalPages={totalPages}
         total={data?.total ?? 0}
         onPageChange={onPageChange}
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
       />
     </>
   );

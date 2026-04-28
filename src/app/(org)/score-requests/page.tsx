@@ -34,7 +34,7 @@ export default function ScoreRequestsPage() {
   const canList = can(PERMISSION_CODES.SCORE_REQUESTS.LIST);
   const canBulkList = can(PERMISSION_CODES.BATCH_SCORING.LIST);
   const [page, setPage] = useState(1);
-  const [perPage] = useState(10);
+  const [perPage, setPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [decisionFilter, setDecisionFilter] = useState<string>("all");
@@ -174,6 +174,11 @@ export default function ScoreRequestsPage() {
             page={page}
             totalPages={data?.totalPages}
             onPageChange={setPage}
+            perPage={perPage}
+            onPerPageChange={(n) => {
+              setPerPage(n);
+              setPage(1);
+            }}
             isLoading={isLoading}
             isError={isError}
           />

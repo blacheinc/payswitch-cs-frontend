@@ -33,6 +33,8 @@ interface DataSourceTableProps {
   isError: boolean;
   page: number;
   onPageChange: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -42,6 +44,8 @@ export function DataSourceTable({
   isError,
   page,
   onPageChange,
+  perPage,
+  onPerPageChange,
   onDelete,
 }: DataSourceTableProps) {
   const router = useRouter();
@@ -176,6 +180,8 @@ export function DataSourceTable({
         totalPages={totalPages}
         total={data?.total ?? 0}
         onPageChange={onPageChange}
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
       />
     </>
   );

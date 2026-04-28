@@ -85,6 +85,7 @@ export default function AdminScoreRequestsPage() {
 
   // Tab 1: All Score Requests state
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery);
 
@@ -92,9 +93,11 @@ export default function AdminScoreRequestsPage() {
   const [selectedOrg, setSelectedOrg] =
     useState<{ id: string; name: string; shortName: string | null } | null>(null);
   const [orgPage, setOrgPage] = useState(1);
+  const [orgPerPage, setOrgPerPage] = useState(10);
   const [orgSearch, setOrgSearch] = useState("");
   const debouncedOrgSearch = useDebounce(orgSearch);
   const [scopedPage, setScopedPage] = useState(1);
+  const [scopedPerPage, setScopedPerPage] = useState(10);
   const [scopedSearch, setScopedSearch] = useState("");
   const debouncedScopedSearch = useDebounce(scopedSearch);
 
@@ -118,13 +121,13 @@ export default function AdminScoreRequestsPage() {
   const allListQuery = useQuery({
     queryKey: SCORE_KEYS.list({
       page,
-      perPage: 10,
+      perPage,
       search: debouncedSearch,
     }),
     queryFn: () =>
       scoreService.getScoreRequests({
         page,
-        perPage: 10,
+        perPage,
         search: debouncedSearch,
       }),
     enabled: canRead && activeTab === "all",
@@ -134,13 +137,13 @@ export default function AdminScoreRequestsPage() {
   const orgsQuery = useQuery({
     queryKey: ORG_KEYS.list({
       page: orgPage,
-      perPage: 10,
+      perPage: orgPerPage,
       search: debouncedOrgSearch,
     }),
     queryFn: () =>
       organizationService.list({
         page: orgPage,
-        perPage: 10,
+        perPage: orgPerPage,
         search: debouncedOrgSearch,
       }),
     enabled: canRead && activeTab === "by-org" && !selectedOrg,
@@ -150,14 +153,14 @@ export default function AdminScoreRequestsPage() {
   const scopedListQuery = useQuery({
     queryKey: SCORE_KEYS.list({
       page: scopedPage,
-      perPage: 10,
+      perPage: scopedPerPage,
       search: debouncedScopedSearch,
       organizationId: selectedOrg?.id,
     }),
     queryFn: () =>
       scoreService.getScoreRequests({
         page: scopedPage,
-        perPage: 10,
+        perPage: scopedPerPage,
         search: debouncedScopedSearch,
         organizationId: selectedOrg!.id,
       }),
@@ -301,7 +304,10 @@ export default function AdminScoreRequestsPage() {
         className="space-y-6"
       >
         <TabsList>
-          <TabsTrigger value="all">All Score Requests</TabsTrigger>
+          <TabsTrigger value="all">
+            <FileText className="mr-2 h-4 w-4" />
+            All Score Requests
+          </TabsTrigger>
           <TabsTrigger value="by-org">
             <Building2 className="mr-2 h-4 w-4" />
             By Organisation
@@ -340,6 +346,11 @@ export default function AdminScoreRequestsPage() {
                 isError={allListQuery.isError}
                 page={page}
                 onPageChange={setPage}
+                perPage={perPage}
+                onPerPageChange={(n) => {
+                  setPerPage(n);
+                  setPage(1);
+                }}
               />
             </CardContent>
           </Card>
@@ -378,6 +389,11 @@ export default function AdminScoreRequestsPage() {
                   isError={orgsQuery.isError}
                   page={orgPage}
                   onPageChange={setOrgPage}
+                  perPage={orgPerPage}
+                  onPerPageChange={(n) => {
+                    setOrgPerPage(n);
+                    setOrgPage(1);
+                  }}
                   onSelect={handleSelectOrg}
                 />
               </CardContent>
@@ -426,6 +442,11 @@ export default function AdminScoreRequestsPage() {
                   isError={scopedListQuery.isError}
                   page={scopedPage}
                   onPageChange={setScopedPage}
+                  perPage={scopedPerPage}
+                  onPerPageChange={(n) => {
+                    setScopedPerPage(n);
+                    setScopedPage(1);
+                  }}
                 />
               </CardContent>
             </Card>
@@ -454,6 +475,8 @@ interface OrgPickerTableProps {
   isError: boolean;
   page: number;
   onPageChange: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
   onSelect: (org: OrganizationResponse) => void;
 }
 
@@ -463,6 +486,8 @@ function OrgPickerTable({
   isError,
   page,
   onPageChange,
+  perPage,
+  onPerPageChange,
   onSelect,
 }: OrgPickerTableProps) {
   const orgs = data?.items ?? [];
@@ -547,6 +572,8 @@ function OrgPickerTable({
         total={total}
         onPageChange={onPageChange}
         unitLabel="organisations"
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
       />
     </>
   );

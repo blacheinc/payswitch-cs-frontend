@@ -21,6 +21,7 @@ export default function DataSourceDetailPage() {
   const router = useRouter();
 
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
 
@@ -37,10 +38,15 @@ export default function DataSourceDetailPage() {
   } = useQuery({
     queryKey: TRAINING_KEYS.sourceUploads(id, {
       page,
+      perPage,
       search: debouncedSearch,
     }),
     queryFn: () =>
-      trainingService.listSourceUploads(id, { page, search: debouncedSearch }),
+      trainingService.listSourceUploads(id, {
+        page,
+        perPage,
+        search: debouncedSearch,
+      }),
   });
 
   if (isLoadingSource) {
@@ -231,6 +237,11 @@ export default function DataSourceDetailPage() {
               isError={isErrorUploads}
               page={page}
               onPageChange={setPage}
+              perPage={perPage}
+              onPerPageChange={(n) => {
+                setPerPage(n);
+                setPage(1);
+              }}
             />
           </CardContent>
         </Card>

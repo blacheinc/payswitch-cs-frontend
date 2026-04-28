@@ -32,7 +32,7 @@ export default function OrganizationsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(1);
-  const perPage = 20;
+  const [perPage, setPerPage] = useState(20);
 
   const debouncedSearch = useDebounce(searchInput);
 
@@ -135,6 +135,11 @@ export default function OrganizationsPage() {
             isError={isError}
             page={page}
             onPageChange={setPage}
+            perPage={perPage}
+            onPerPageChange={(n) => {
+              setPerPage(n);
+              setPage(1);
+            }}
           />
         </CardContent>
       </Card>

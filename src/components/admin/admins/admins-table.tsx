@@ -66,6 +66,8 @@ interface AdminsTableProps {
   isError: boolean;
   page: number;
   onPageChange: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
   onEdit: (admin: AdminMember) => void;
   onSuspend: (admin: AdminMember) => void;
   onActivate: (admin: AdminMember) => void;
@@ -86,6 +88,8 @@ export function AdminsTable({
   isError,
   page,
   onPageChange,
+  perPage,
+  onPerPageChange,
   onEdit,
   onSuspend,
   onActivate,
@@ -269,6 +273,8 @@ export function AdminsTable({
         totalPages={totalPages}
         total={data?.total ?? 0}
         onPageChange={onPageChange}
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
       />
     </>
   );

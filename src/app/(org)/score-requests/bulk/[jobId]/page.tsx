@@ -74,7 +74,7 @@ export default function BatchJobDetailPage() {
 
   const [itemStatus, setItemStatus] = useState<BatchItemStatus | "all">("all");
   const [itemsPage, setItemsPage] = useState(1);
-  const itemsPageSize = 50;
+  const [itemsPageSize, setItemsPageSize] = useState(50);
 
   const canCancel = can(PERMISSION_CODES.BATCH_SCORING.CANCEL);
   const canRead = can(PERMISSION_CODES.BATCH_SCORING.READ);
@@ -400,6 +400,10 @@ export default function BatchJobDetailPage() {
             isLoading={resultsQuery.isLoading}
             isError={resultsQuery.isError}
             onPageChange={setItemsPage}
+            onPageSizeChange={(n) => {
+              setItemsPageSize(n);
+              setItemsPage(1);
+            }}
           />
         </CardContent>
       </Card>

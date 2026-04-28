@@ -263,7 +263,7 @@ export default function BulkScoreRequestsPage() {
   const [historyStatus, setHistoryStatus] = useState<BatchJobStatus | "all">(
     "all",
   );
-  const historyPageSize = 10;
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   const canCreate = can(PERMISSION_CODES.BATCH_SCORING.CREATE);
   const canList = can(PERMISSION_CODES.BATCH_SCORING.LIST);
@@ -802,6 +802,10 @@ export default function BulkScoreRequestsPage() {
               isLoading={historyQuery.isLoading}
               isError={historyQuery.isError}
               onPageChange={setHistoryPage}
+              onPageSizeChange={(n) => {
+                setHistoryPageSize(n);
+                setHistoryPage(1);
+              }}
             />
           </CardContent>
         </Card>

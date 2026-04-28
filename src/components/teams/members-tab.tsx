@@ -27,6 +27,7 @@ import { RemoveUserModal } from "./remove-user-modal";
 export function MembersTab() {
   const { can } = usePermissions();
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<OrgUserResponse | null>(null);
@@ -44,8 +45,8 @@ export function MembersTab() {
   } | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: USER_MGMT_KEYS.list({ page }),
-    queryFn: () => userManagementService.list({ page }),
+    queryKey: USER_MGMT_KEYS.list({ page, perPage }),
+    queryFn: () => userManagementService.list({ page, perPage }),
   });
 
   const { data: rolesData } = useQuery({
@@ -145,6 +146,11 @@ export function MembersTab() {
             isError={isError}
             page={page}
             onPageChange={setPage}
+            perPage={perPage}
+            onPerPageChange={(n) => {
+              setPerPage(n);
+              setPage(1);
+            }}
             onEditUser={setEditTarget}
             onSuspendUser={setSuspendTarget}
             onActivateUser={setActivateTarget}

@@ -42,6 +42,9 @@ interface BatchJobsTableProps {
   pageSize?: number;
   total?: number;
   onPageChange?: (page: number) => void;
+  /** Called when the user picks a new "rows per page". Caller is expected
+   *  to also reset `page` to 1 to avoid landing on a non-existent page. */
+  onPageSizeChange?: (pageSize: number) => void;
 }
 
 export function getBatchJobStatusBadge(status: BatchJobStatus) {
@@ -96,6 +99,7 @@ export function BatchJobsTable({
   pageSize = 20,
   total = 0,
   onPageChange,
+  onPageSizeChange,
 }: BatchJobsTableProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -204,6 +208,8 @@ export function BatchJobsTable({
           totalPages={totalPages}
           total={total}
           onPageChange={onPageChange}
+          perPage={pageSize}
+          onPerPageChange={onPageSizeChange}
         />
       )}
     </>

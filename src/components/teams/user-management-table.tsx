@@ -50,6 +50,8 @@ interface UserManagementTableProps {
   isError: boolean;
   page: number;
   onPageChange: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
   onEditUser: (user: OrgUserResponse) => void;
   onSuspendUser: (user: { id: string; name: string }) => void;
   onActivateUser: (user: { id: string; name: string }) => void;
@@ -62,6 +64,8 @@ export function UserManagementTable({
   isError,
   page,
   onPageChange,
+  perPage,
+  onPerPageChange,
   onEditUser,
   onSuspendUser,
   onActivateUser,
@@ -274,6 +278,8 @@ export function UserManagementTable({
         totalPages={totalPages}
         total={data?.total ?? 0}
         onPageChange={onPageChange}
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
       />
     </>
   );

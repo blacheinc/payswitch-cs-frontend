@@ -50,10 +50,12 @@ export default function TrainingPage() {
 
   // Search & Pagination State
   const [datasetPage, setDatasetPage] = useState(1);
+  const [datasetPerPage, setDatasetPerPage] = useState(10);
   const [datasetSearch, setDatasetSearch] = useState("");
   const debouncedDatasetSearch = useDebounce(datasetSearch);
 
   const [sourcePage, setSourcePage] = useState(1);
+  const [sourcePerPage, setSourcePerPage] = useState(10);
   const [sourceSearch, setSourceSearch] = useState("");
   const debouncedSourceSearch = useDebounce(sourceSearch);
 
@@ -65,11 +67,13 @@ export default function TrainingPage() {
   } = useQuery({
     queryKey: TRAINING_KEYS.uploads({
       page: datasetPage,
+      perPage: datasetPerPage,
       search: debouncedDatasetSearch,
     }),
     queryFn: () =>
       trainingService.listUploads({
         page: datasetPage,
+        perPage: datasetPerPage,
         search: debouncedDatasetSearch,
       }),
     enabled: canReadDatasets,
@@ -82,11 +86,13 @@ export default function TrainingPage() {
   } = useQuery({
     queryKey: TRAINING_KEYS.sources({
       page: sourcePage,
+      perPage: sourcePerPage,
       search: debouncedSourceSearch,
     }),
     queryFn: () =>
       trainingService.listSources({
         page: sourcePage,
+        perPage: sourcePerPage,
         search: debouncedSourceSearch,
       }),
     enabled: canReadSources,
@@ -260,6 +266,11 @@ export default function TrainingPage() {
                 isError={isErrorDatasets}
                 page={datasetPage}
                 onPageChange={setDatasetPage}
+                perPage={datasetPerPage}
+                onPerPageChange={(n) => {
+                  setDatasetPerPage(n);
+                  setDatasetPage(1);
+                }}
               />
             </CardContent>
           </Card>
@@ -307,6 +318,11 @@ export default function TrainingPage() {
                 isError={isErrorSources}
                 page={sourcePage}
                 onPageChange={setSourcePage}
+                perPage={sourcePerPage}
+                onPerPageChange={(n) => {
+                  setSourcePerPage(n);
+                  setSourcePage(1);
+                }}
               />
             </CardContent>
           </Card>

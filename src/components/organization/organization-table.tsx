@@ -34,6 +34,8 @@ interface OrganizationTableProps {
   isError: boolean;
   page: number;
   onPageChange: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
 }
 
 export function OrganizationTable({
@@ -42,6 +44,8 @@ export function OrganizationTable({
   isError,
   page,
   onPageChange,
+  perPage,
+  onPerPageChange,
 }: OrganizationTableProps) {
   const router = useRouter();
   const organizations = data?.items ?? [];
@@ -173,6 +177,8 @@ export function OrganizationTable({
         totalPages={totalPages}
         total={data?.total ?? 0}
         onPageChange={onPageChange}
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
       />
     </>
   );

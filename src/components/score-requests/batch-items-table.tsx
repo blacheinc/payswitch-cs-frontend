@@ -49,6 +49,7 @@ interface BatchItemsTableProps {
   pageSize?: number;
   total?: number;
   onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
 }
 
 function getItemStatusBadge(status: BatchItemStatus) {
@@ -125,6 +126,7 @@ export function BatchItemsTable({
   pageSize = 50,
   total = 0,
   onPageChange,
+  onPageSizeChange,
 }: BatchItemsTableProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -266,6 +268,8 @@ export function BatchItemsTable({
           total={total}
           onPageChange={onPageChange}
           unitLabel="items"
+          perPage={pageSize}
+          onPerPageChange={onPageSizeChange}
         />
       )}
     </TooltipProvider>

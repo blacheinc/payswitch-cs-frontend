@@ -28,6 +28,7 @@ export function AdminsTab() {
   const { can } = usePermissions();
   const { user } = useAuth();
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AdminMember | null>(null);
@@ -44,8 +45,8 @@ export function AdminsTab() {
   const canDelete = can(PERMISSION_CODES.ADMIN.ADMINS_DELETE);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ADMIN_MGMT_KEYS.list({ page, perPage: 20 }),
-    queryFn: () => adminManagementService.list({ page, perPage: 20 }),
+    queryKey: ADMIN_MGMT_KEYS.list({ page, perPage }),
+    queryFn: () => adminManagementService.list({ page, perPage }),
     enabled: canList,
   });
 
@@ -166,6 +167,11 @@ export function AdminsTab() {
             isError={isError}
             page={page}
             onPageChange={setPage}
+            perPage={perPage}
+            onPerPageChange={(n) => {
+              setPerPage(n);
+              setPage(1);
+            }}
             onEdit={setEditTarget}
             onSuspend={setSuspendTarget}
             onActivate={setActivateTarget}

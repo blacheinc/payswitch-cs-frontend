@@ -44,6 +44,8 @@ interface OrganizationScoreRequestsTableProps {
   totalPages?: number;
   total?: number;
   onPageChange?: (page: number) => void;
+  perPage?: number;
+  onPerPageChange?: (perPage: number) => void;
   // View mode
   isCompact?: boolean; // For dashboard view
 }
@@ -56,6 +58,8 @@ export function OrganizationScoreRequestsTable({
   totalPages = 1,
   total = 0,
   onPageChange,
+  perPage,
+  onPerPageChange,
   isCompact = false,
 }: OrganizationScoreRequestsTableProps) {
   const getStatusBadge = (status: string) => {
@@ -282,6 +286,8 @@ export function OrganizationScoreRequestsTable({
           totalPages={totalPages}
           total={total}
           onPageChange={onPageChange}
+          perPage={perPage}
+          onPerPageChange={onPerPageChange}
         />
       )}
     </>
