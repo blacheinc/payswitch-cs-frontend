@@ -289,7 +289,7 @@ Schemas in `src/lib/schemas/`:
 
 ## 7. Adding a new endpoint — checklist
 
-Walk through this when wiring a new endpoint. Mirrors what was done for the score-stats endpoint in [`fe_dashboard_integration_guide.md`](../fe_dashboard_integration_guide.md).
+Walk through this when wiring a new endpoint.
 
 1. **Add the endpoint constant** in `API_ENDPOINTS` (`src/lib/constant.ts`).
 2. **Define the raw API type** (`Api*`) inside the relevant `*-service.ts`.

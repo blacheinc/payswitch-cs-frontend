@@ -7,7 +7,7 @@ This doc summarizes those integrations and explains where each one is consumed i
 - A new contributor can find the implementation surface for any feature in one place.
 - Backend changes can be cross-referenced to the FE files that need updating.
 
-> The original integration markdowns lived under `docs/integration-guides/` during development but were not retained at handoff. The summaries below capture the contracts; the source-of-truth contracts now live in the backend OpenAPI spec mirrored at [`src/lib/openapi.json`](../src/lib/openapi.json).
+> The source-of-truth contracts live in the backend OpenAPI spec, mirrored at [`src/lib/openapi.json`](../src/lib/openapi.json). The summaries below capture the FE consumption surface for each contract.
 
 ---
 
@@ -162,11 +162,3 @@ Backend updates that change a contract should:
 
 For breaking changes, prefer a runtime feature flag (server-side env var, since the FE has no `NEXT_PUBLIC_*` configuration) so the FE can roll back independently of a backend deploy.
 
----
-
-## 4. Backend product context
-
-Two non-integration documents in the repo root capture the broader product spec — useful for understanding *why* an endpoint looks the way it does:
-
-- [`prd_credit_scoring_platform.md`](../prd_credit_scoring_platform.md) — top-level product requirements.
-- [`dashboard_backend_requirements.md`](../dashboard_backend_requirements.md) — the original FE → BE requirements doc that drove the dashboard integration.
