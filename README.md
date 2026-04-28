@@ -17,10 +17,9 @@ Detailed docs live under [`docs/`](./docs/).
 | [Data flow](./docs/data-flow.md) | Service layer convention, TanStack Query patterns, snake/camel mapping. |
 | [Feature map](./docs/feature-map.md) | Every route → endpoints consumed → permission gates. |
 | [Integrations](./docs/integrations.md) | How the FE consumes each backend integration guide. |
-| [Security](./docs/security.md) | Token storage posture, threat model, hardening recommendations. |
+| [Security](./docs/security.md) | Token storage, threat model, security headers. |
 | [Testing](./docs/testing.md) | Vitest + MSW + Playwright — how to run, write, and extend tests. |
 | [Deployment](./docs/deployment-guide.md) | Azure Container Apps + Bicep + GitHub Actions / ADO Pipelines — full one-shot deploy guide. |
-| [Known issues](./docs/known-issues.md) | Tracked follow-ups (lint debt, set-state-in-effect, etc.). |
 
 For a one-shot Azure deploy, jump straight to [`docs/deployment-guide.md`](./docs/deployment-guide.md).
 
@@ -34,7 +33,7 @@ For a one-shot Azure deploy, jump straight to [`docs/deployment-guide.md`](./doc
 - **Server state**: [TanStack Query 5](https://tanstack.com/query/latest)
 - **Client state**: React Context (auth, theme)
 - **Forms**: [react-hook-form](https://react-hook-form.com/) + [zod](https://zod.dev/)
-- **HTTP**: [axios](https://axios-http.com/) (interceptors handle bearer-token attach + 401 refresh)
+- **HTTP**: [axios](https://axios-http.com/) — browser-side, points at same-origin `/api/proxy`. Bearer-attach + 401 refresh run server-side in the proxy Route Handler.
 - **Icons**: [lucide-react](https://lucide.dev/)
 - **Toasts**: [sonner](https://sonner.emilkowal.ski/)
 - **Theme**: [next-themes](https://github.com/pacocoursey/next-themes) (light / dark / system)
@@ -73,7 +72,7 @@ The app is served at [http://localhost:3000](http://localhost:3000).
 | `npm run dev` | Start the dev server with hot reload (Turbopack). |
 | `npm run build` | Production build to `.next/`. |
 | `npm start` | Run the production build (after `npm run build`). |
-| `npm run lint` | Run ESLint. See [`docs/known-issues.md`](./docs/known-issues.md) for the current backlog. |
+| `npm run lint` | Run ESLint. |
 | `npm run typecheck` | TypeScript compile check (`tsc --noEmit`). |
 | `npm test` | Run the Vitest unit + integration suite. |
 | `npm run test:coverage` | Same, with V8 coverage and the configured thresholds. |
@@ -107,10 +106,15 @@ src/
 ├── contexts/                     # AuthContext, ThemeContext
 ├── hooks/                        # usePermissions, useDebounce, ...
 ├── lib/                          # Services, API client, query client, utils, schemas
-│   ├── api-client.ts             # axios instance + interceptors
+│   ├── api-client.ts             # axios instance pointed at /api/proxy
 │   ├── *-service.ts              # One service per backend domain
+│   ├── server-session.ts         # HttpOnly cookie helpers (server-only)
+│   ├── session-storage.ts        # Non-sensitive user-cache (localStorage)
 │   ├── schemas/                  # zod validation schemas
 │   └── constant.ts               # Routes, permission codes, API endpoints
+├── app/api/                      # Next Route Handlers
+│   ├── auth/                     # /auth/* — login, 2FA, logout, refresh, me
+│   └── proxy/[...path]/          # Same-origin pass-through to BACKEND_API_URL
 ├── proxy.ts                      # Next middleware: route classification + RBAC gate
 └── types/                        # Shared TypeScript types
 ```
@@ -122,9 +126,9 @@ See [`docs/architecture.md`](./docs/architecture.md) for a deeper tour.
 ## Contributing
 
 1. Create a feature branch from `develop` (`feat/<short-description>` or `fix/<short-description>`).
-2. Run `npm run lint` and `npx tsc --noEmit` before opening a PR.
+2. Run `npm run lint` and `npm run typecheck` before opening a PR.
 3. PR title follows [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `style:`, `refactor:`, `docs:`, `chore:`.
-4. Reference the issue or backend integration guide in the PR description.
+4. Reference any related issue or backend contract in the PR description.
 
 ---
 
