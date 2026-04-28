@@ -3,6 +3,7 @@ import { API_ENDPOINTS, TABLE_ITEM_PER_PAGE } from "@/lib/constant";
 import type { PaginatedResponse, PaginationParams } from "@/types/api-type";
 import type {
   BureauFeatures,
+  OrganizationSummary,
   ScoreRequest,
   ScoreRequestScoringResult,
   ScoreRequestStatus,
@@ -12,10 +13,18 @@ import type {
 
 // ===================== RAW API SHAPES (snake_case) =====================
 
+interface ApiRawOrganizationSummary {
+  id: string;
+  name: string;
+  short_name: string | null;
+}
+
 interface ApiRawScoreRequest {
   request_id: string;
   tracking_id: string;
   organization_id: string;
+  /** Embedded org summary added 2026-04-27. Optional for back-compat. */
+  organization?: ApiRawOrganizationSummary | null;
   reference_id?: string | null;
   status: string;
   request_source: string;
@@ -247,6 +256,13 @@ function mapScoreRequest(raw: ApiRawScoreRequest): ScoreRequestItem {
     id: raw.request_id || raw.tracking_id,
     trackingId: raw.tracking_id,
     organizationId: raw.organization_id,
+    organization: raw.organization
+      ? {
+          id: raw.organization.id,
+          name: raw.organization.name,
+          shortName: raw.organization.short_name,
+        }
+      : undefined,
     referenceId: raw.reference_id || undefined,
     status: raw.status as ScoreRequestStatus,
     requestSource: raw.request_source as ScoreRequestSource,
@@ -422,29 +438,10 @@ export interface ScoreRequestStatsResponse {
   needs_attention: StatsNeedsAttention;
 }
 
-/** Per-org row returned by the platform stats endpoint when not scoped. */
-export interface OrgBreakdownEntry {
-  organization_id: string;
-  name: string;
-  short_name: string | null;
-  total_requests: number;
-  decided: number;
-  /** 0.0 (not null) when the org has zero decided requests in the window. */
-  approval_rate_pct: number;
-}
-
-/**
- * Response for `GET /admin/score-requests/stats`.
- *
- * Strictly extends the org-side response — the FE can pipe it through the
- * same StatCard / OutcomeBar / ScoreHistogram primitives the org dashboard
- * already uses, then optionally render the `by_org` breakdown alongside.
- */
-export interface PlatformScoreRequestStatsResponse
-  extends ScoreRequestStatsResponse {
-  /** Empty array when the request was scoped via `organization_id`. */
-  by_org: OrgBreakdownEntry[];
-}
+// `OrgBreakdownEntry` and `PlatformScoreRequestStatsResponse` were removed
+// on 2026-04-27 — the platform stats endpoint now returns the same shape
+// as the org-side endpoint (`ScoreRequestStatsResponse`). Per-org tables
+// fan out via `/admin/organizations` + a stats query per visible row.
 
 // ===================== BATCH SCORING TYPES =====================
 
@@ -493,6 +490,8 @@ export interface BatchItemCounts {
 export interface BatchJobStatusResponse {
   jobId: string;
   status: BatchJobStatus;
+  /** Embedded org summary (since 2026-04-27). Always own-org for org users. */
+  organization?: OrganizationSummary;
   total: number;
   progressPct: number;
   items: BatchItemCounts;
@@ -504,6 +503,8 @@ export interface BatchJobStatusResponse {
 export interface BatchJobListItem {
   jobId: string;
   status: BatchJobStatus;
+  /** Embedded org summary (since 2026-04-27). Always own-org for org users. */
+  organization?: OrganizationSummary;
   total: number;
   completed: number;
   failed: number;
@@ -567,6 +568,7 @@ interface ApiBatchSubmitResponse {
 interface ApiBatchStatus {
   job_id: string;
   status: string;
+  organization?: ApiRawOrganizationSummary | null;
   total: number;
   progress_pct: number;
   items: BatchItemCounts;
@@ -578,6 +580,7 @@ interface ApiBatchStatus {
 interface ApiBatchJobListItem {
   job_id: string;
   status: string;
+  organization?: ApiRawOrganizationSummary | null;
   total: number;
   completed: number;
   failed: number;
@@ -617,10 +620,18 @@ interface ApiBatchCancel {
   cancelled_items: number;
 }
 
+function mapOrganizationSummary(
+  raw: ApiRawOrganizationSummary | null | undefined,
+): OrganizationSummary | undefined {
+  if (!raw) return undefined;
+  return { id: raw.id, name: raw.name, shortName: raw.short_name };
+}
+
 function mapBatchJobListItem(raw: ApiBatchJobListItem): BatchJobListItem {
   return {
     jobId: raw.job_id,
     status: raw.status as BatchJobStatus,
+    organization: mapOrganizationSummary(raw.organization),
     total: raw.total,
     completed: raw.completed,
     failed: raw.failed,
@@ -749,17 +760,18 @@ export const scoreService = {
   },
 
   /**
-   * GET /admin/score-requests/stats — platform-wide stats with `by_org[]`.
+   * GET /admin/score-requests/stats — platform-wide aggregate stats.
    *
-   * Returns the same shape as the org `/stats` call plus a per-org breakdown.
-   * When `organizationId` is provided the response is scoped to that org and
-   * `by_org` is `[]`. Requires `admin.score_requests.read`.
+   * Since 2026-04-27 the response shape is identical to the org-side stats
+   * endpoint (no more `by_org[]`). For per-org tables, page orgs via
+   * `/admin/organizations` and call this endpoint with `organizationId`
+   * once per visible row (fan-out pattern). Requires `admin.score_requests.read`.
    */
   async getPlatformScoreRequestsStats(
     period: ScoreDashboardPeriod,
     organizationId?: string,
-  ): Promise<PlatformScoreRequestStatsResponse> {
-    const response = await apiClient.get<PlatformScoreRequestStatsResponse>(
+  ): Promise<ScoreRequestStatsResponse> {
+    const response = await apiClient.get<ScoreRequestStatsResponse>(
       API_ENDPOINTS.ADMIN.SCORE_REQUESTS_STATS,
       {
         params: {
@@ -936,6 +948,7 @@ export const scoreService = {
     return {
       jobId: data.job_id,
       status: data.status as BatchJobStatus,
+      organization: mapOrganizationSummary(data.organization),
       total: data.total,
       progressPct: data.progress_pct,
       items: data.items,

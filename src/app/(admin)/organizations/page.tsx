@@ -34,7 +34,7 @@ export default function OrganizationsPage() {
   const [page, setPage] = useState(1);
   const perPage = 20;
 
-  const debouncedSearch = useDebounce(searchInput, 600);
+  const debouncedSearch = useDebounce(searchInput);
 
   // ---- List query ----
   const { data, isLoading, isError } = useQuery({

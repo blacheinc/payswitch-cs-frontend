@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search,
@@ -9,8 +8,6 @@ import {
   TrendingUp,
   ShieldCheck,
   Sparkles,
-  ArrowRight,
-  Building2,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -28,21 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
   scoreService,
   SCORE_KEYS,
   type ScoreDashboardPeriod,
-  type OrgBreakdownEntry,
 } from "@/lib/score-service";
 import { AdminScoreRequestsTable } from "@/components/admin/admin-score-requests-table";
 import { StatCard } from "@/components/shared/stat-card";
@@ -50,7 +38,7 @@ import { NoPermission } from "@/components/shared/no-permission";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
 import { formatNumber, formatPct } from "@/lib/utils";
-import { ROUTES, PERMISSION_CODES } from "@/lib/constant";
+import { PERMISSION_CODES } from "@/lib/constant";
 
 const PERIOD_OPTIONS: {
   value: ScoreDashboardPeriod;
@@ -70,7 +58,7 @@ export default function AdminScoreRequestsPage() {
   const [period, setPeriod] = useState<ScoreDashboardPeriod>("30d");
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const debouncedSearch = useDebounce(searchQuery, 400);
+  const debouncedSearch = useDebounce(searchQuery);
 
   // Platform-wide stats (cross-org). per integration guide §5
   const statsQuery = useQuery({
@@ -212,76 +200,12 @@ export default function AdminScoreRequestsPage() {
         )}
       </div>
 
-      {/* Per-org breakdown — only present on cross-org calls */}
-      {stats && stats.by_org.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle className="text-lg">By organisation</CardTitle>
-                <CardDescription>
-                  Top contributors {periodShort}. Click an org to drill into
-                  its profile.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Organisation</TableHead>
-                    <TableHead className="text-right">Requests</TableHead>
-                    <TableHead className="text-right">Decided</TableHead>
-                    <TableHead className="text-right">Approval rate</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stats.by_org.map((row: OrgBreakdownEntry) => (
-                    <TableRow key={row.organization_id}>
-                      <TableCell>
-                        <Link
-                          href={`${ROUTES.ADMIN.ORGANIZATIONS}/${row.organization_id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {row.name}
-                        </Link>
-                        {row.short_name && (
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {row.short_name}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatNumber(row.total_requests)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatNumber(row.decided)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {row.decided > 0
-                          ? formatPct(row.approval_rate_pct, 1)
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Link
-                          href={`${ROUTES.ADMIN.ORGANIZATIONS}/${row.organization_id}`}
-                          aria-label={`Open ${row.name}`}
-                        >
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* The per-org "by organisation" breakdown was removed on 2026-04-27
+          when the platform stats endpoint dropped its `by_org[]` field. The
+          admin-side org list at /organizations is the canonical place for a
+          paginated per-tenant view; bundling it into a stats response was
+          duplicate surface area. Per-row score-request counts can be added
+          there later via the fan-out pattern documented in the changelog. */}
 
       {/* Cross-org list */}
       <Card>

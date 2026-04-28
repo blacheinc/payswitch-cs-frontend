@@ -2,7 +2,6 @@
 
 import {
   Edit,
-  Loader2,
   MoreVertical,
   Shield,
   ShieldCheck,
@@ -22,6 +21,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -101,9 +101,17 @@ export function AdminsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        bordered={false}
+        headers={[
+          "Administrator",
+          "Role",
+          "Status",
+          "Last Active",
+          "Date Added",
+          "Actions",
+        ]}
+      />
     );
   }
 

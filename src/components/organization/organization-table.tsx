@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Eye, Loader2, MoreVertical } from "lucide-react";
+import { Eye, MoreVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -65,9 +66,20 @@ export function OrganizationTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        bordered={false}
+        headers={[
+          "Organization",
+          "Industry",
+          "Status",
+          "Contact Name",
+          "Contact Email",
+          "Contact Phone",
+          "Date Created",
+          "Last Updated",
+          "",
+        ]}
+      />
     );
   }
 

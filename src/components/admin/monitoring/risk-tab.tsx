@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   BarChart3,
-  Loader2,
   RefreshCcw,
   ShieldCheck,
   Target,
@@ -35,7 +34,15 @@ import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
 import { formatNumber, formatPct } from "@/lib/utils";
 import { MonitoringChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
 import { StatCard } from "@/components/shared/stat-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import {
+  MonitoringAlertBannerSkeleton,
+  MonitoringBreakdownCardSkeleton,
+  MonitoringChartCardSkeleton,
+  MonitoringFilterBarSkeleton,
+  MonitoringKpiSkeleton,
+} from "@/components/admin/monitoring/monitoring-skeletons";
 import type { RiskPeriod, ScoreGrade } from "@/types/monitoring-types";
 
 const PERIOD_OPTIONS: { value: RiskPeriod; label: string }[] = [
@@ -91,9 +98,51 @@ export function RiskTab() {
   });
 
   if (isLoading) {
+    // Loaded shape (mirror exactly):
+    //  1. Filter bar — 3 selects (segment, grade, period) + refresh, no input
+    //  2. Alert banner (one-line)
+    //  3. KPI grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 with 5 stat cards
+    //  4. Outcome breakdown — full-width Card containing 5 stat boxes
+    //  5. xl:grid-cols-2: Approvals-by-grade Card + Risk-level Card (each
+    //     renders a vertical list of progress-style rows)
+    //  6. Score spread — full-width Card with a histogram body
+    //  7. Approvals-over-time chart card
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <MonitoringFilterBarSkeleton selects={3} />
+        <MonitoringAlertBannerSkeleton />
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <MonitoringKpiSkeleton key={i} />
+          ))}
+        </div>
+        {/* Outcome breakdown — full-width Card with 5 inline stat boxes */}
+        <Card>
+          <CardHeader className="pb-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-2 h-3 w-72" />
+          </CardHeader>
+          <CardContent className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-md border p-3 space-y-1.5"
+              >
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-6 w-12" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        {/* Approvals-by-grade + Risk-level — 2-col grid of breakdown cards */}
+        <div className="grid gap-4 xl:grid-cols-2">
+          <MonitoringBreakdownCardSkeleton rows={6} />
+          <MonitoringBreakdownCardSkeleton rows={3} />
+        </div>
+        {/* Score-spread histogram — full-width chart-shaped card */}
+        <MonitoringChartCardSkeleton bodyHeight="h-40" />
+        {/* Approvals-over-time chart */}
+        <MonitoringChartCardSkeleton />
       </div>
     );
   }

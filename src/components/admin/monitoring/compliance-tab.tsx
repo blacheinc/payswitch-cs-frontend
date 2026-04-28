@@ -7,7 +7,6 @@ import {
   CheckCircle,
   Database,
   FileText,
-  Loader2,
   RefreshCcw,
   Scale,
   UserCheck,
@@ -33,7 +32,14 @@ import {
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
 import { formatNumber, formatPct } from "@/lib/utils";
 import { StatCard } from "@/components/shared/stat-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import {
+  MonitoringAlertBannerSkeleton,
+  MonitoringBreakdownCardSkeleton,
+  MonitoringFilterBarSkeleton,
+  MonitoringKpiSkeleton,
+} from "@/components/admin/monitoring/monitoring-skeletons";
 import type { CompliancePeriod } from "@/types/monitoring-types";
 
 const PERIOD_OPTIONS: { value: CompliancePeriod; label: string }[] = [
@@ -55,9 +61,63 @@ export function ComplianceTab() {
   });
 
   if (isLoading) {
+    // Loaded shape (mirror exactly):
+    //  1. Toolbar — single period select + refresh, right-aligned
+    //  2. Alert banner (one-line)
+    //  3. KPI grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 with 4 stats
+    //  4. xl:grid-cols-2 — Approval-rate-by-age card (vertical bars/rows) +
+    //     Data-subject-requests card (3 stat boxes + footer row)
+    //  5. Audit-log card — caption + percentage row + progress bar + footer
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <MonitoringFilterBarSkeleton />
+        </div>
+        <MonitoringAlertBannerSkeleton />
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <MonitoringKpiSkeleton key={i} />
+          ))}
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <MonitoringBreakdownCardSkeleton rows={5} />
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="mt-2 h-3 w-56" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="rounded-md border p-3 space-y-1.5">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-3 w-56" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+            <Skeleton className="h-2 w-full rounded-full" />
+            <Skeleton className="h-3 w-full max-w-md" />
+          </CardContent>
+        </Card>
       </div>
     );
   }

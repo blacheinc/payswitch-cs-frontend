@@ -1,13 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-  Building2,
-  Loader2,
-  Eye,
-  Trash2,
-  MoreVertical,
-} from "lucide-react";
+import { Building2, Eye, Trash2, MoreVertical } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -21,6 +15,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -55,9 +50,18 @@ export function DataSourceTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        bordered={false}
+        headers={[
+          "Source Name",
+          "Short Code",
+          "Type",
+          "Total Uploads",
+          "Last Upload",
+          "Created",
+          "Actions",
+        ]}
+      />
     );
   }
 

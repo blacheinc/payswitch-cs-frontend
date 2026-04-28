@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Clock,
   Filter,
-  Loader2,
   RefreshCcw,
   Zap,
 } from "lucide-react";
@@ -37,6 +36,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
@@ -48,7 +48,14 @@ import {
 } from "@/lib/utils";
 import { MonitoringChart } from "@/components/admin/monitoring/monitoring-timeseries-chart";
 import { StatCard } from "@/components/shared/stat-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import {
+  MonitoringAlertBannerSkeleton,
+  MonitoringChartCardSkeleton,
+  MonitoringFilterBarSkeleton,
+  MonitoringKpiSkeleton,
+} from "@/components/admin/monitoring/monitoring-skeletons";
 import type {
   InfrastructurePeriod,
   InfraTimeseriesPoint,
@@ -87,9 +94,52 @@ export function InfrastructureTab() {
   });
 
   if (isLoading) {
+    // Loaded shape (mirror exactly):
+    //  1. Filter bar — endpoint search input + period select + refresh
+    //  2. Alert banner (one-line)
+    //  3. KPI grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 with 5 stats
+    //  4. Traffic-over-time chart
+    //  5. xl:grid-cols-2 — Busiest-endpoints Card (3-col table) + Status-by
+    //     -code Card (variable layout, render the same shape as the table
+    //     placeholder it usually contains)
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <MonitoringFilterBarSkeleton showInput />
+        <MonitoringAlertBannerSkeleton />
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <MonitoringKpiSkeleton key={i} />
+          ))}
+        </div>
+        <MonitoringChartCardSkeleton />
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="mt-2 h-3 w-56" />
+            </CardHeader>
+            <CardContent>
+              <TableSkeleton
+                bordered={false}
+                headers={["Endpoint", "Method", "Requests"]}
+                rows={5}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="mt-2 h-3 w-56" />
+            </CardHeader>
+            <CardContent>
+              <TableSkeleton
+                bordered={false}
+                headers={["Status", "Count", "Share"]}
+                rows={5}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

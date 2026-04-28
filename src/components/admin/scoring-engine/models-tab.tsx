@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   BrainCircuit,
-  Loader2,
   Trophy,
   Clock,
   CheckCircle,
@@ -19,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -87,9 +87,38 @@ export function ModelsTab() {
   });
 
   if (isLoading) {
+    // Mirror the loaded layout: refresh row, 4-card summary grid, then a
+    // 2-column grid of full model detail cards (header + version row +
+    // training metrics + tags). 4 placeholders match the typical model count
+    // (credit_risk, fraud_detection, loan_amount, income_verification).
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-end gap-3">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-5 w-5 rounded" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-baseline gap-2">
+                  <Skeleton className="h-7 w-12" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <Skeleton className="mt-1 h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <ModelDetailCardSkeleton key={i} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -300,6 +329,52 @@ function ModelCard({ model }: { model: ChampionModelEntry }) {
             </p>
           </>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Skeleton replica of `<ModelCard>` — header row, version/created grid, then
+ *  a metrics block with progress bars and a tags block. */
+function ModelDetailCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-9 w-9 rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+          </div>
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+          ))}
+        </div>
+        <Separator />
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-32" />
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+                <Skeleton className="h-1.5 w-full rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

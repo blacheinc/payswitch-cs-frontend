@@ -100,8 +100,9 @@ export const API_ENDPOINTS = {
     ADMIN_BY_ID: (id: string) => `/admin/admins/${id}`,
     SUSPEND_ADMIN: (id: string) => `/admin/admins/${id}/suspend`,
     ACTIVATE_ADMIN: (id: string) => `/admin/admins/${id}/activate`,
-    // Cross-org platform stats. Returns the org-side `/v1/score-requests/stats`
-    // shape with an additional `by_org[]` breakdown when scoped to all orgs.
+    // Cross-org platform stats. Same shape as `/v1/score-requests/stats`
+    // (since 2026-04-27 — `by_org[]` was removed). Pass `organization_id`
+    // to scope to a single org; omit for platform-wide aggregates.
     SCORE_REQUESTS_STATS: "/admin/score-requests/stats",
   },
   MODELS: {

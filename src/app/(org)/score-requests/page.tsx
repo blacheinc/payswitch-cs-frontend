@@ -39,7 +39,7 @@ export default function ScoreRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [decisionFilter, setDecisionFilter] = useState<string>("all");
 
-  const debouncedSearch = useDebounce(searchQuery, 400);
+  const debouncedSearch = useDebounce(searchQuery);
 
   const listParams = {
     page,

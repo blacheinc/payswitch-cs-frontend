@@ -424,10 +424,19 @@ export interface ScoreRequestScoringResult {
   errors?: unknown | null;
 }
 
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  shortName: string | null;
+}
+
 export interface ScoreRequest {
   id: string;
   trackingId: string;
   organizationId: string;
+  /** Embedded org summary (since 2026-04-27). Optional for forward compat
+   *  with any cached response from before the change. */
+  organization?: OrganizationSummary;
   referenceId?: string;
   status: ScoreRequestStatus;
   requestSource: ScoreRequestSource;

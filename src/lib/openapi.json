@@ -3108,7 +3108,7 @@
       "get": {
         "tags": ["Platform Admin – Scoring"],
         "summary": "Get Platform Score Request Stats",
-        "description": "Platform-wide scoring stats with optional per-org scoping.\n\nWhen ``organization_id`` is provided, the response mirrors the org\nendpoint exactly (with ``by_org=[]``). When omitted, ``current`` and\n``previous`` aggregate across every organisation, and ``by_org``\ncarries one row per org for the current window.",
+        "description": "Platform-wide scoring stats with optional per-org scoping.\n\nResponse shape is exactly the same as the org-side endpoint\n(``/v1/score-requests/stats``).  When ``organization_id`` is omitted\nthe aggregates cover every organisation; when set, the response is\nscoped and indistinguishable from what an org user would see for\ntheir own org.\n\nThis endpoint does **not** return a per-org list — that would conflate\naggregate stats with a paginated resource and force unbounded\nresponses on platforms with many orgs.  Render per-org tables by:\n\n1. ``GET /admin/organizations?page=&per_page=`` for the paginated org\n   list (already supports sort/filter); then\n2. for each visible row, ``GET /admin/score-requests/stats?organization_id=…``.\n\nWith ~10 orgs per page the fan-out is well inside dashboard latency\nbudgets and gives the FE full control over sort/filter/pagination.",
         "operationId": "get_platform_score_request_stats_admin_score_requests_stats_get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -3143,7 +3143,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlatformScoreRequestStatsResponse"
+                  "$ref": "#/components/schemas/ScoreRequestStatsResponse"
                 }
               }
             }
@@ -5437,36 +5437,6 @@
         "type": "object",
         "title": "ModelInfo"
       },
-      "OrgBreakdownEntry": {
-        "properties": {
-          "organization_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Organization Id"
-          },
-          "name": { "type": "string", "title": "Name" },
-          "short_name": {
-            "anyOf": [{ "type": "string" }, { "type": "null" }],
-            "title": "Short Name"
-          },
-          "total_requests": { "type": "integer", "title": "Total Requests" },
-          "decided": { "type": "integer", "title": "Decided" },
-          "approval_rate_pct": {
-            "type": "number",
-            "title": "Approval Rate Pct"
-          }
-        },
-        "type": "object",
-        "required": [
-          "organization_id",
-          "name",
-          "total_requests",
-          "decided",
-          "approval_rate_pct"
-        ],
-        "title": "OrgBreakdownEntry",
-        "description": "One row of the platform-wide ``by_org`` breakdown.\n\nReturned only when an admin omits ``organization_id`` — gives the\nplatform overview a tile-friendly per-tenant slice."
-      },
       "OrgUserListResponse": {
         "properties": {
           "items": {
@@ -5586,6 +5556,20 @@
           "updated_at"
         ],
         "title": "OrganizationResponse"
+      },
+      "OrganizationSummary": {
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "title": "Id" },
+          "name": { "type": "string", "title": "Name" },
+          "short_name": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Short Name"
+          }
+        },
+        "type": "object",
+        "required": ["id", "name"],
+        "title": "OrganizationSummary",
+        "description": "Lightweight organisation reference embedded in scoring responses.\n\nAlways populated on list/detail responses so the FE can render an\norg name and short_name directly without a follow-up lookup.  This\nmatters most for the cross-org admin views (where the row's org may\ndiffer from the caller's context), but org-side responses include it\ntoo for shape consistency."
       },
       "OutcomeResponse": {
         "properties": {
@@ -5796,39 +5780,6 @@
           "scope"
         ],
         "title": "PermissionResponse"
-      },
-      "PlatformScoreRequestStatsResponse": {
-        "properties": {
-          "period": { "type": "string", "title": "Period" },
-          "generated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Generated At"
-          },
-          "current": { "$ref": "#/components/schemas/StatsCurrent" },
-          "previous": { "$ref": "#/components/schemas/StatsPrevious" },
-          "trend": { "$ref": "#/components/schemas/StatsTrend" },
-          "needs_attention": {
-            "$ref": "#/components/schemas/StatsNeedsAttention"
-          },
-          "by_org": {
-            "items": { "$ref": "#/components/schemas/OrgBreakdownEntry" },
-            "type": "array",
-            "title": "By Org"
-          }
-        },
-        "type": "object",
-        "required": [
-          "period",
-          "generated_at",
-          "current",
-          "previous",
-          "trend",
-          "needs_attention",
-          "by_org"
-        ],
-        "title": "PlatformScoreRequestStatsResponse",
-        "description": "Same shape as the org stats response plus a per-org breakdown.\n\nInherits the platform-wide aggregates (everything across all orgs in\nthe window) and adds ``by_org`` so the admin overview can render a\nsortable per-tenant table."
       },
       "ProvisionOrganizationRequest": {
         "properties": {
@@ -6276,6 +6227,12 @@
             "title": "Reference Id"
           },
           "status": { "type": "string", "title": "Status" },
+          "organization": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/OrganizationSummary" },
+              { "type": "null" }
+            ]
+          },
           "applicant": {
             "anyOf": [
               { "$ref": "#/components/schemas/ApplicantSummary" },
@@ -6387,6 +6344,12 @@
             "title": "Reference Id"
           },
           "status": { "type": "string", "title": "Status" },
+          "organization": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/OrganizationSummary" },
+              { "type": "null" }
+            ]
+          },
           "applicant_name": {
             "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Applicant Name"

@@ -22,7 +22,7 @@ export default function DataSourceDetailPage() {
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 500);
+  const debouncedSearch = useDebounce(search);
 
   // Queries
   const { data: source, isLoading: isLoadingSource } = useQuery({

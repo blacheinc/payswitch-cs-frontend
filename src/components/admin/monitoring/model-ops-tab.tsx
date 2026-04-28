@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   CheckCircle,
   GitBranch,
-  Loader2,
   RefreshCcw,
   Trophy,
   XCircle,
@@ -37,12 +36,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
 import { formatDate, formatMetric, prettyModelType } from "@/lib/utils";
 import { StatCard } from "@/components/shared/stat-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertInlineList } from "@/components/admin/monitoring/alert-inline";
+import {
+  MonitoringAlertBannerSkeleton,
+  MonitoringBreakdownCardSkeleton,
+  MonitoringFilterBarSkeleton,
+  MonitoringKpiSkeleton,
+} from "@/components/admin/monitoring/monitoring-skeletons";
 import type { ModelOpsPeriod } from "@/types/monitoring-types";
 
 const PERIOD_OPTIONS: { value: ModelOpsPeriod; label: string }[] = [
@@ -86,9 +93,52 @@ export function ModelOpsTab() {
   });
 
   if (isLoading) {
+    // Loaded shape (mirror exactly):
+    //  1. Filter bar — model-type select + period select + refresh
+    //  2. Alert banner (one-line)
+    //  3. Champion cards in lg:grid-cols-2 — each card has header (icon +
+    //     title + caption + status badge) and a 3-col body (AUC / change /
+    //     deployed) plus a row of small metric badges
+    //  4. Score-stability section: small heading + caption + 4-col KPI grid
+    //  5. xl:grid-cols-2 — Feature drift card + Retraining history card
+    //     (the retraining card contains a table)
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <MonitoringFilterBarSkeleton selects={2} />
+        <MonitoringAlertBannerSkeleton />
+        {/* Champion cards */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <ChampionCardSkeleton key={i} />
+          ))}
+        </div>
+        {/* Score stability — heading + caption + 4 KPI tiles */}
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-72" />
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <MonitoringKpiSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+        {/* Feature drift + Retraining history — 2-col grid */}
+        <div className="grid gap-4 xl:grid-cols-2">
+          <MonitoringBreakdownCardSkeleton rows={5} />
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="mt-2 h-3 w-56" />
+            </CardHeader>
+            <CardContent>
+              <TableSkeleton
+                bordered={false}
+                headers={["Run", "Model", "Result", "Accuracy change", "When"]}
+                rows={4}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -433,5 +483,38 @@ export function ModelOpsTab() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Skeleton replica of a champion card — header (title + caption + badge)
+ *  and a 3-col stat body + small metric badges row. */
+function ChampionCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-6 w-14" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-5 w-20 rounded-full" />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

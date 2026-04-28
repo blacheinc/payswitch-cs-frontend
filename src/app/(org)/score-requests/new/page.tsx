@@ -62,7 +62,6 @@ import {
   type CreateScoreRequestPayload,
 } from "@/lib/score-service";
 
-
 // =============================================================================
 // Date helpers — bureau API may return dates in various formats
 // =============================================================================
@@ -216,9 +215,15 @@ export default function NewScoreRequestPage() {
   const [showBureauDetails, setShowBureauDetails] = useState(false);
 
   // ── Step 1: Applicant form ──
+  // `shouldUnregister: false` (RHF default, set explicitly here) keeps every
+  // field's value alive in form state when its <Controller> is unmounted on
+  // step change. Without it, optional fields like nationalIdNumber would
+  // come back as `undefined` after a Step 1 → 2 → 1 round-trip and flip the
+  // input from controlled to uncontrolled, breaking editing.
   const applicantForm = useForm<ApplicantFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(applicantSchema) as any,
+    shouldUnregister: false,
     defaultValues: {
       fullName: "",
       dateOfBirth: "",
@@ -234,6 +239,7 @@ export default function NewScoreRequestPage() {
   const loanForm = useForm<LoanFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(loanSchema) as any,
+    shouldUnregister: false,
     defaultValues: {
       amount: "",
       tenureMonths: "",
@@ -385,7 +391,9 @@ export default function NewScoreRequestPage() {
                       autoComplete="name"
                       {...field}
                     />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -404,7 +412,9 @@ export default function NewScoreRequestPage() {
                       aria-invalid={fieldState.invalid}
                       {...field}
                     />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -419,13 +429,17 @@ export default function NewScoreRequestPage() {
                     <FieldLabel htmlFor="nationalIdNumber">
                       National ID / Ghana Card
                     </FieldLabel>
+
                     <Input
                       id="nationalIdNumber"
                       placeholder="GHA-123456789-0"
                       aria-invalid={fieldState.invalid}
+                      autoComplete="off"
                       {...field}
                     />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -442,7 +456,9 @@ export default function NewScoreRequestPage() {
                       autoComplete="tel"
                       {...field}
                     />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -454,14 +470,19 @@ export default function NewScoreRequestPage() {
                 control={applicantForm.control}
                 render={({ field, fieldState }) => (
                   <Field>
-                    <FieldLabel htmlFor="accountNumber">Account Number</FieldLabel>
+                    <FieldLabel htmlFor="accountNumber">
+                      Account Number
+                    </FieldLabel>
                     <Input
                       id="accountNumber"
                       placeholder="Bank account number (optional)"
                       aria-invalid={fieldState.invalid}
+                      autoComplete="off"
                       {...field}
                     />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -495,7 +516,9 @@ export default function NewScoreRequestPage() {
                     <FieldDescription>
                       Auto-generated. Edit or regenerate as needed.
                     </FieldDescription>
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -537,7 +560,9 @@ export default function NewScoreRequestPage() {
                   {...loanForm.register("tenureMonths")}
                 />
                 {loanForm.formState.errors.tenureMonths && (
-                  <FieldError errors={[loanForm.formState.errors.tenureMonths]} />
+                  <FieldError
+                    errors={[loanForm.formState.errors.tenureMonths]}
+                  />
                 )}
               </Field>
             </div>
@@ -553,7 +578,10 @@ export default function NewScoreRequestPage() {
                       value={field.value || undefined}
                       onValueChange={(value) => field.onChange(value)}
                     >
-                      <SelectTrigger id="purpose" aria-invalid={fieldState.invalid}>
+                      <SelectTrigger
+                        id="purpose"
+                        aria-invalid={fieldState.invalid}
+                      >
                         <SelectValue placeholder="Select purpose (optional)" />
                       </SelectTrigger>
                       <SelectContent>
@@ -570,7 +598,9 @@ export default function NewScoreRequestPage() {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -581,9 +611,7 @@ export default function NewScoreRequestPage() {
       // ─── Step 3: Bureau Data (Read-only) ─────────────────────────────
       case 3: {
         const features = bureauResult?.features;
-        const featureEntries = features
-          ? Object.entries(features)
-          : [];
+        const featureEntries = features ? Object.entries(features) : [];
 
         return (
           <div className="space-y-4">
@@ -785,14 +813,14 @@ export default function NewScoreRequestPage() {
                   <Separator className="mb-4" />
                   <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                     {Object.entries(reviewFeatures).map(([key, value]) => (
-                        <div key={key} className="flex justify-between gap-2">
-                          <span className="text-muted-foreground text-xs truncate">
-                            {getFeatureLabel(key)}
-                          </span>
-                          <span className="font-mono text-xs shrink-0 text-foreground">
-                            {formatFeatureValue(value)}
-                          </span>
-                        </div>
+                      <div key={key} className="flex justify-between gap-2">
+                        <span className="text-muted-foreground text-xs truncate">
+                          {getFeatureLabel(key)}
+                        </span>
+                        <span className="font-mono text-xs shrink-0 text-foreground">
+                          {formatFeatureValue(value)}
+                        </span>
+                      </div>
                     ))}
                   </div>
                 </CardContent>

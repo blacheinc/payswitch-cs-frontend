@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2, CheckCircle, Clock, XCircle } from "lucide-react";
+import { CheckCircle, Clock, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { TablePagination } from "@/components/shared/table-pagination";
@@ -13,6 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from "@/components/ui/table";
 
 import type { ScoreRequest } from "@/types/models";
@@ -115,9 +116,19 @@ export function AdminScoreRequestsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <TableSkeleton
+        bordered={false}
+        headers={[
+          "Request ID",
+          "Applicant",
+          "Organisation",
+          "Status",
+          "Score",
+          "Risk",
+          "Decision",
+          "Date",
+        ]}
+      />
     );
   }
 
@@ -136,7 +147,7 @@ export function AdminScoreRequestsTable({
           <TableRow>
             <TableHead>Request ID</TableHead>
             <TableHead>Applicant</TableHead>
-            <TableHead>Organization ID</TableHead>
+            <TableHead>Organisation</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-center">Score</TableHead>
             <TableHead>Risk</TableHead>
@@ -175,8 +186,21 @@ export function AdminScoreRequestsTable({
                 <TableCell className="font-medium">
                   {request.applicantName}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {request.organizationId}
+                <TableCell>
+                  {request.organization ? (
+                    <Link
+                      href={`${ROUTES.ADMIN.ORGANIZATIONS}/${request.organization.id}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {request.organization.name}
+                    </Link>
+                  ) : (
+                    // Back-compat: pre-2026-04-27 cached row had no embedded
+                    // org block. Render the UUID as a low-emphasis fallback.
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {request.organizationId}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>{getStatusBadge(request.status)}</TableCell>
                 <TableCell className="text-center">

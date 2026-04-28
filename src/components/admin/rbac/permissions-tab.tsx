@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -20,6 +21,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeletonRows,
 } from "@/components/ui/table";
 
 import { rbacService, RBAC_KEYS } from "@/lib/rbac-service";
@@ -64,9 +66,42 @@ export function PermissionsTab() {
   const grouped = groupPermissions(filtered);
 
   if (isLoading) {
+    // Mirror the loaded layout — header line + search input + 3 grouped cards
+    // (matching the typical shape of "Admin", "Cross-Org Read", "Monitoring"
+    // groups) each with a small table inside.
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            <Skeleton className="inline-block h-4 w-64 align-middle" />
+          </p>
+          <Skeleton className="h-9 w-64" />
+        </div>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-5 w-8 rounded-full" />
+              </div>
+              <Skeleton className="mt-1 h-3 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="w-[100px]">Scope</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableSkeletonRows columns={3} rows={3} />
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }

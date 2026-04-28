@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Loader2,
   RefreshCcw,
   UserCircle2,
 } from "lucide-react";
@@ -37,6 +36,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeletonRows,
 } from "@/components/ui/table";
 import {
   Tooltip,
@@ -264,8 +264,22 @@ export function ActivityTab() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead className="min-w-[240px]">Endpoint</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Latency</TableHead>
+                    <TableHead>Timestamp</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableSkeletonRows columns={6} rows={8} />
+                </TableBody>
+              </Table>
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

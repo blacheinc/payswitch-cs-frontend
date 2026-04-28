@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { trainingService, TRAINING_KEYS } from "@/lib/training-service";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -50,11 +51,11 @@ export default function TrainingPage() {
   // Search & Pagination State
   const [datasetPage, setDatasetPage] = useState(1);
   const [datasetSearch, setDatasetSearch] = useState("");
-  const debouncedDatasetSearch = useDebounce(datasetSearch, 500);
+  const debouncedDatasetSearch = useDebounce(datasetSearch);
 
   const [sourcePage, setSourcePage] = useState(1);
   const [sourceSearch, setSourceSearch] = useState("");
-  const debouncedSourceSearch = useDebounce(sourceSearch, 500);
+  const debouncedSourceSearch = useDebounce(sourceSearch);
 
   // Queries
   const {
@@ -147,7 +148,11 @@ export default function TrainingPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {datasets?.total ?? "—"}
+                  {isLoadingDatasets ? (
+                    <Skeleton className="h-7 w-12" />
+                  ) : (
+                    (datasets?.total ?? "—")
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -160,7 +165,11 @@ export default function TrainingPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {sources?.total ?? "—"}
+                  {isLoadingSources ? (
+                    <Skeleton className="h-7 w-12" />
+                  ) : (
+                    (sources?.total ?? "—")
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -172,12 +181,21 @@ export default function TrainingPage() {
                 <FileSpreadsheet className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-sm font-medium truncate">
-                  {datasets?.items[0]?.fileName ?? "—"}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {datasets?.items[0]?.status ?? ""}
-                </p>
+                {isLoadingDatasets ? (
+                  <>
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="mt-1.5 h-3 w-20" />
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-medium truncate">
+                      {datasets?.items[0]?.fileName ?? "—"}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {datasets?.items[0]?.status ?? ""}
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -189,10 +207,14 @@ export default function TrainingPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {datasets?.items &&
-                  datasets?.items?.some((u) => u.qualityScore > 0)
-                    ? `${Math.round(datasets?.items?.filter((u) => u.qualityScore > 0).reduce((a, b) => a + (b.qualityScore || 0), 0) / (datasets?.items?.filter((u) => u.qualityScore > 0).length || 1))}%`
-                    : "—"}
+                  {isLoadingDatasets ? (
+                    <Skeleton className="h-7 w-16" />
+                  ) : datasets?.items &&
+                    datasets?.items?.some((u) => u.qualityScore > 0) ? (
+                    `${Math.round(datasets?.items?.filter((u) => u.qualityScore > 0).reduce((a, b) => a + (b.qualityScore || 0), 0) / (datasets?.items?.filter((u) => u.qualityScore > 0).length || 1))}%`
+                  ) : (
+                    "—"
+                  )}
                 </div>
               </CardContent>
             </Card>

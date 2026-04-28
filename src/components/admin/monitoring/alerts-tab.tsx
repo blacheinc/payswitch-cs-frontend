@@ -8,7 +8,6 @@ import {
   BellOff,
   CheckCircle,
   Clock,
-  Loader2,
   RefreshCcw,
 } from "lucide-react";
 
@@ -29,6 +28,11 @@ import {
 import { monitoringService, MONITORING_KEYS } from "@/lib/monitoring-service";
 import { formatDate, prettyModelType } from "@/lib/utils";
 import { StatCard } from "@/components/shared/stat-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  MonitoringFilterBarSkeleton,
+  MonitoringKpiSkeleton,
+} from "@/components/admin/monitoring/monitoring-skeletons";
 import type {
   AlertDashboard,
   AlertDetail,
@@ -105,9 +109,33 @@ export function AlertsTab() {
   });
 
   if (isLoading) {
+    // Loaded shape (mirror exactly):
+    //  1. Summary KPIs FIRST (4 stats in grid-cols-2 sm:grid-cols-4)
+    //  2. Toolbar — 4 select skeletons (dashboard, severity, status, limit)
+    //     + refresh, ml-auto
+    //  3. Alerts list — each alert is a one-row card (title + meta + badge)
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <MonitoringKpiSkeleton key={i} />
+          ))}
+        </div>
+        <MonitoringFilterBarSkeleton selects={4} />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="py-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <Skeleton className="h-3 w-full max-w-md" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
