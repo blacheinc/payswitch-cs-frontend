@@ -1,6 +1,6 @@
 # Security
 
-The frontend's security posture, the threat model it's designed against, and the hardening backlog. The hard authority on every privileged action is the backend — the FE's job is to fail safely, not to act as a primary authorization boundary.
+The frontend's security posture and the threat model it's designed against. The hard authority on every privileged action is the backend — the FE's job is to fail safely, not to act as a primary authorization boundary.
 
 For runtime auth & RBAC mechanics, see [auth-and-rbac.md](./auth-and-rbac.md).
 
@@ -19,7 +19,7 @@ The application targets:
 | **Referrer leakage** | `Referrer-Policy: strict-origin-when-cross-origin`. |
 | **Powerful-API abuse** | `Permissions-Policy` denies camera, mic, geolocation, payment, usb, FLoC. |
 | **Wrong-scope navigation** | Edge proxy classifies routes; admin paths rewrite to not-found for org users (no path leak). |
-| **Token theft via XSS** | The app does not currently put tokens in `HttpOnly` cookies — see §3 for the hardening item. |
+| **Token theft via XSS** | Tokens live in an `HttpOnly` `__Host-` cookie set server-side; JavaScript cannot read them. See §3. |
 | **CSRF on state-changing API calls** | API uses `Authorization: Bearer <jwt>` headers, not cookies, so the classical CSRF vector doesn't apply. |
 | **Brute-force login / 2FA bypass** | Enforced by the backend (rate limits, lockouts, TOTP). FE simply renders the response. |
 | **Inactivity → account hijack** | 10-minute idle timer auto-logs the user out (see [auth-and-rbac.md §3.2](./auth-and-rbac.md#32-inactivity-timeout)). |
@@ -109,7 +109,7 @@ Two layers ensure every response carries the same headers — if the proxy match
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()` | next.config + proxy |
 | `X-DNS-Prefetch-Control` | `off` | next.config |
 
-A full nonce-based CSP (`script-src 'self' 'nonce-...'`) is **not** yet in place. Adding `'unsafe-inline'` / `'unsafe-eval'` to make Next.js work as-is would negate most of CSP's value, so we ship the other high-value headers first and leave a proper CSP as a follow-up. See `next.config.ts` for the comment explaining this trade-off.
+The CSP currently ships `frame-ancestors 'none'` only. A nonce-based `script-src` policy was evaluated but would require `'unsafe-inline'` / `'unsafe-eval'` to make Next.js's runtime work, which negates most of its value; the other high-value headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) provide the bulk of the protection. See `next.config.ts` for the comment explaining this trade-off.
 
 ---
 
@@ -149,4 +149,3 @@ Security issues should not be reported via GitHub Issues. Contact the platform-s
 
 - [auth-and-rbac.md](./auth-and-rbac.md) — runtime authentication, refresh, RBAC.
 - [data-flow.md](./data-flow.md) — how data flows between FE and BE.
-- [known-issues.md](./known-issues.md) — tracked follow-ups including the `HttpOnly` cookie migration.

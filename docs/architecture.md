@@ -5,7 +5,7 @@ A tour of the frontend application: how requests flow, what lives where, and how
 - [Auth & RBAC](./auth-and-rbac.md) — login, 2FA, token refresh, permission gating.
 - [Data flow](./data-flow.md) — service layer, TanStack Query, snake/camel mapping.
 - [Feature map](./feature-map.md) — every page → endpoints consumed.
-- [Security](./security.md) — threat model, hardening recommendations.
+- [Security](./security.md) — threat model, security headers, token storage.
 
 ---
 
@@ -85,9 +85,7 @@ src/
 │   ├── (org)/                    # Route group: organization portal
 │   │   ├── dashboard/
 │   │   ├── score-requests/       # List + new + bulk + [id] detail
-│   │   ├── developers/           # API keys, webhooks, logs
 │   │   ├── teams/                # Org user CRUD
-│   │   ├── reports/
 │   │   ├── settings/
 │   │   └── layout.tsx            # Org sidebar + topbar
 │   ├── layout.tsx                # Root layout: providers, fonts, theme
@@ -97,7 +95,6 @@ src/
 │   ├── shared/                   # Cross-cutting (StatCard, EmptyState, RolePicker)
 │   ├── auth/                     # LoginShell + 2FA + recovery
 │   ├── score-requests/           # Tables, override modal, batch upload
-│   ├── developers/               # API keys / webhooks / log views
 │   ├── organization/             # Provisioning, suspend, profile
 │   ├── teams/                    # Invite / edit user modals
 │   ├── settings/                 # Personal-account / security tabs

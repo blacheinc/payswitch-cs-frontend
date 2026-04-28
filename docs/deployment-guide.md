@@ -417,7 +417,7 @@ This removes everything in §1, including the registry. Anything outside the res
 | Login form submits but stalls | `BACKEND_API_URL` Container App secret is wrong / unset | `deploy/scripts/set-secrets.sh --backend-api-url …` then verify with `az containerapp logs show`. |
 | `tsc --noEmit` clean locally, fails in CI | Node version mismatch (CI is 20, local was 22) | Pin the Node engine in `package.json` and align CI to match. |
 | Revision flips to "Failed" with no obvious error | Liveness probe times out (cold start > 10 s) | Bump probe `initialDelaySeconds` in `main.bicep` or set `minReplicas: 1` to keep one warm. |
-| `Persisting failed: Unable to write SST file` in dev | Two Next.js processes writing to the same `.next/` (dev + Playwright build colliding) | See [known-issues.md](./known-issues.md) — use a separate `distDir` for Playwright. |
+| `Persisting failed: Unable to write SST file` in dev | Two Next.js processes writing to the same `.next/` (dev + Playwright build colliding) | Use a separate `distDir` for Playwright (the E2E config already does this via `.next-e2e`). |
 
 ---
 
@@ -425,5 +425,5 @@ This removes everything in §1, including the registry. Anything outside the res
 
 - **The backend API**: separate repository, separate deploy. The frontend's only relationship is the server-side `BACKEND_API_URL`. No CORS coordination is required because the browser never talks to the backend directly.
 - **Customer SSL termination**: the `azurecontainerapps.io` domain comes with a wildcard cert; for customer domains, see §6.
-- **Application Insights**: not provisioned. If observability beyond Log Analytics becomes a need, add it as a follow-up — there's a TODO note in [known-issues.md](./known-issues.md).
-- **Backend hardening**: backend-owned concerns (rate-limiting, JWT signing-key rotation, audit logs) are out of scope.
+- **Application Insights**: not provisioned. The Container App writes logs and metrics to Log Analytics; if richer APM is required later, attach Application Insights to the same workspace.
+- **Backend hardening**: backend-owned concerns (rate-limiting, JWT signing-key rotation, audit logs) are out of scope for this guide.

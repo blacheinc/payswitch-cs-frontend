@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Download, UploadCloud } from "lucide-react";
+import { Plus, Search, UploadCloud } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -82,10 +82,6 @@ export default function ScoreRequestsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
           {canBulkList && (
             <Button variant="outline" asChild>
               <Link href={`${ROUTES.ORG.SCORE_REQUESTS}/bulk`}>
@@ -156,8 +152,6 @@ export default function ScoreRequestsPage() {
           <CardTitle className="text-lg">Results</CardTitle>
           <CardDescription>
             {isLoading ? (
-              // Match the height of the loaded copy ("X requests found") so the
-              // header doesn't reflow when the count lands.
               <Skeleton className="inline-block h-4 w-32 align-middle" />
             ) : (
               <>

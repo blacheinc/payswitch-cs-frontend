@@ -177,7 +177,7 @@ PLAYWRIGHT_BASE_URL=https://staging.example.com npm run test:e2e
 
 The webServer block is skipped when `PLAYWRIGHT_BASE_URL` is set; Playwright assumes the URL is already serving and runs the specs against it.
 
-> **Note:** Login-form flows (real credentials, 2FA challenge UI, token-refresh-on-401) and **role-aware UI gating** that depends on real `permissions[]` from `GET /auth/me` need a live backend. Those will be added when staging credentials are available — tracked in [known-issues.md](./known-issues.md).
+> **Note:** Login-form flows (real credentials, 2FA challenge UI, token-refresh-on-401) and **role-aware UI gating** that depends on real `permissions[]` from `GET /auth/me` are exercised against a live backend by setting `PLAYWRIGHT_BASE_URL` to the target environment.
 
 ### Why prod build?
 
@@ -247,18 +247,7 @@ The unit suite must stay green to merge. The E2E suite should be required for `m
 
 ---
 
-## 7. Known gaps
-
-Tracked alongside other follow-ups in [known-issues.md](./known-issues.md):
-
-- No tests for `src/lib/auth-service.ts` mutation flows (login, 2FA, password reset). Easy to add once we agree on the MSW fixtures for those endpoints.
-- No tests for `src/lib/monitoring-service.ts` — its responses pass through unmapped, so the value-add of a unit test is small; covered better by E2E.
-- No tests for individual page components yet. The suite scaffolding (`renderWithProviders`) is ready; pick page-by-page based on incident history.
-- E2E suite is single-browser (Chromium). Add `firefox` and `webkit` projects if cross-browser regression becomes a concern.
-
----
-
-## 8. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
@@ -267,10 +256,3 @@ Tracked alongside other follow-ups in [known-issues.md](./known-issues.md):
 | Playwright fails with `Unable to acquire lock at .next/dev/lock` | Stale `npm run dev` running. | The config now uses `next build && next start -p 3100` to avoid the lock. If you customized it, free port 3100 first. |
 | Login E2E fails with timeout filling email | The form input is found by `#email` (id selector), not `getByLabel` — the FieldLabel/Controller pairing isn't a standard label association. |
 
----
-
-## 9. Future work
-
-- **Visual regression** — happy with the current Playwright coverage; add `toHaveScreenshot` for the dashboard and admin-monitoring pages once the design stabilises.
-- **Mutation coverage** — once the staging API is reachable, add E2E for create-score-request, override, batch-upload, invite-user.
-- **Accessibility** — `@axe-core/playwright` audit on every page is cheap and worth wiring in.

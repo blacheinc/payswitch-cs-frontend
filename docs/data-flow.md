@@ -145,7 +145,6 @@ export const scoreService = {
 | `organizationService` | [`organization-service.ts`](../src/lib/organization-service.ts) | `/admin/organizations/*`, `/org/profile` |
 | `userManagementService` | [`user-management-service.ts`](../src/lib/user-management-service.ts) | `/org/users/*` |
 | `adminManagementService` | [`admin-management-service.ts`](../src/lib/admin-management-service.ts) | `/admin/admins/*` |
-| `developerService` | [`developer-service.ts`](../src/lib/developer-service.ts) | `/org/api-keys`, `/org/webhooks`, `/org/api-logs` |
 | `trainingService` | [`training-service.ts`](../src/lib/training-service.ts) | `/admin/training-data/*`, `/admin/sources/*` |
 | `rbacService` | [`rbac-service.ts`](../src/lib/rbac-service.ts) | `/v1/permissions`, `/v1/roles/*` |
 
@@ -281,7 +280,7 @@ Schemas in `src/lib/schemas/`:
 
 - `admin-management.ts` — invite/edit admin
 - `batch-scoring.ts` — bulk upload payload
-- `developer-training-management.ts` — webhook + training upload
+- `developer-training-management.ts` — training upload
 - `organization-management.ts` — org profile + provisioning
 - `settings-management.ts` — change password, 2FA, personal account
 - `team-management.ts` — invite/edit org user

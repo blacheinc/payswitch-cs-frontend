@@ -6,7 +6,6 @@ This doc summarizes those integrations and explains where each one is consumed i
 
 - A new contributor can find the implementation surface for any feature in one place.
 - Backend changes can be cross-referenced to the FE files that need updating.
-- Outstanding follow-ups against any integration are visible.
 
 > The original integration markdowns lived under `docs/integration-guides/` during development but were not retained at handoff. The summaries below capture the contracts; the source-of-truth contracts now live in the backend OpenAPI spec mirrored at [`src/lib/openapi.json`](../src/lib/openapi.json).
 
@@ -51,10 +50,10 @@ This doc summarizes those integrations and explains where each one is consumed i
 - `/score-requests/stats?period=7d|30d|90d` — 5 min.
 - Referral queue (`?decision=REFER`) — refetch on tab focus + after mutations; not time-polled.
 
-**Open follow-ups**
+**Notes**
 
-- The guide's `today` window is documented as UTC-only (`00:00 UTC`). For Ghana orgs (UTC+0) this is functionally identical, but if the platform expands to other timezones the BE will need a `tz` query param.
-- `decision_counts.FRAUD_HOLD` is included in responses even though our PRD originally listed only five buckets — the dashboard's outcome-mix card folds it in as a coloured row when present.
+- The `today` window is UTC-aligned (`00:00 UTC`). Ghana operates at UTC+0, so this matches the operational day.
+- `decision_counts.FRAUD_HOLD` is folded into the dashboard's outcome-mix card as a coloured row when present in responses.
 
 ---
 

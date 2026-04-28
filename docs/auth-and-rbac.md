@@ -194,7 +194,7 @@ Implementation: [`src/hooks/use-permissions.ts`](../src/hooks/use-permissions.ts
 
 ### 5.2 Where it's used
 
-- **Conditional buttons** — "New score request", "Override", "Invite admin", "Revoke API key", etc.
+- **Conditional buttons** — "New score request", "Override", "Invite admin", etc.
 - **Conditional menu items** in sidebars and dropdowns.
 - **Page-level fallback** — pages that should be entirely unreachable for a permission-less user get a soft-deny message rather than a 404 (so the user knows the page exists but they can't view its data).
 - **Query-enable** — some `useQuery` calls set `enabled: can(...)` so we don't even fire requests we know will 403.
