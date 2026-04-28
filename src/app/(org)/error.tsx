@@ -8,10 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constant";
 
 /**
- * Error boundary for the organization portal. See (admin)/error.tsx for the
- * rationale — keeps the shell interactive while isolating failures.
- *
- * Next.js file convention: https://nextjs.org/docs/app/api-reference/file-conventions/error
+ * Error boundary for the organization portal. Keeps the shell interactive
+ * while isolating render failures inside the route segment.
  */
 export default function OrgError({
   error,

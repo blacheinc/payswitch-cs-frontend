@@ -98,8 +98,6 @@ export function OrgProfileTab() {
   }
 
   if (profileLoading) {
-    // Mirror the loaded shape — same two cards, same 4-field grid, same
-    // Save button on the right — so the layout doesn't shift on data arrival.
     return (
       <div className="space-y-6">
         <Card>
@@ -303,9 +301,7 @@ export function OrgProfileTab() {
 }
 
 /**
- * Skeleton replica of a `<Field>` (label + input). Matches the spacing &
- * heights of the loaded form rows so the grid doesn't reflow on data
- * arrival.
+ * Skeleton placeholder for a single `<Field>` (label + input).
  */
 function FormFieldSkeleton() {
   return (

@@ -1,26 +1,26 @@
 # Backend integrations
 
-The frontend has been built incrementally against a series of backend integration guides written by the API team. Each guide documents a vertical slice (RBAC, monitoring, batch scoring, dashboards) and was used as the spec for the corresponding FE work.
+The frontend has been built incrementally against a series of backend integration specs written by the API team. Each spec documents a vertical slice (RBAC, monitoring, batch scoring, dashboards) and was used as the brief for the corresponding FE work.
 
-This doc indexes those guides and explains where each one is consumed in the codebase, so that:
+This doc summarizes those integrations and explains where each one is consumed in the codebase, so that:
 
-- A new contributor can find the spec for any feature in one place.
-- Backend changes that update a guide can be cross-referenced to the FE files that need updating.
-- Outstanding follow-ups against any guide are visible.
+- A new contributor can find the implementation surface for any feature in one place.
+- Backend changes can be cross-referenced to the FE files that need updating.
+- Outstanding follow-ups against any integration are visible.
 
-The guides themselves live under [`docs/integration-guides/`](./integration-guides/).
+> The original integration markdowns lived under `docs/integration-guides/` during development but were not retained at handoff. The summaries below capture the contracts; the source-of-truth contracts now live in the backend OpenAPI spec mirrored at [`src/lib/openapi.json`](../src/lib/openapi.json).
 
 ---
 
 ## 1. Index
 
-| Guide | Scope | Status on FE | Where consumed |
+| Integration | Scope | Status on FE | Where consumed |
 |---|---|---|---|
-| [Dashboard integration](./integration-guides/fe_dashboard_integration_guide.md) | `GET /v1/score-requests/stats`, `decision=` filter, `promoted_at` field | ✅ Fully integrated | Org dashboard, score-requests list, admin dashboard |
-| [Monitoring integration](./integration-guides/fe_monitoring_integration_guide.md) | `/v1/monitoring/{infrastructure,risk,model-ops,compliance,alerts}` | ✅ Fully integrated | Admin dashboard, admin monitoring page |
-| [RBAC (org)](./integration-guides/fe_rbac_integration_guide.md) | Org-side roles + permissions, `/v1/permissions`, `/v1/roles/*`, `/auth/me` permissions | ✅ Fully integrated | `usePermissions`, role pickers, every gated UI element |
-| [RBAC (admin)](./integration-guides/fe_admin_rbac_integration_guide.md) | Platform-admin roles, admin invite/CRUD, `/admin/admins/*` | ✅ Fully integrated | `/admin-access-control`, admin invite/edit modals |
-| [Batch scoring](./integration-guides/fe_batch_scoring_integration_guide.md) | `/v1/score/batch/*` — submit, status, results, cancel | ✅ Fully integrated | Bulk-upload pages, dashboard active-jobs widget |
+| Dashboard | `GET /v1/score-requests/stats`, `decision=` filter, `promoted_at` field | ✅ Fully integrated | Org dashboard, score-requests list, admin dashboard |
+| Monitoring | `/v1/monitoring/{infrastructure,risk,model-ops,compliance,alerts}` | ✅ Fully integrated | Admin dashboard, admin monitoring page |
+| RBAC (org) | Org-side roles + permissions, `/v1/permissions`, `/v1/roles/*`, `/auth/me` permissions | ✅ Fully integrated | `usePermissions`, role pickers, every gated UI element |
+| RBAC (admin) | Platform-admin roles, admin invite/CRUD, `/admin/admins/*` | ✅ Fully integrated | `/admin-access-control`, admin invite/edit modals |
+| Batch scoring | `/v1/score/batch/*` — submit, status, results, cancel | ✅ Fully integrated | Bulk-upload pages, dashboard active-jobs widget |
 
 ---
 
@@ -156,12 +156,12 @@ The seeded system roles are not editable; this is enforced visually (read-only r
 
 Backend updates that change a contract should:
 
-1. Update the corresponding markdown under [`docs/integration-guides/`](./integration-guides/).
+1. Re-export the OpenAPI snapshot at [`src/lib/openapi.json`](../src/lib/openapi.json) and diff against the previous version.
 2. Update the matching FE files listed in §2 above.
-3. Run `npx tsc --noEmit` and `npm run build` — type drift between the BE shape and the FE service is the most common cause of dashboard breakage.
+3. Run `npm run typecheck` and `npm run build` — type drift between the BE shape and the FE service is the most common cause of dashboard breakage.
 4. Update [feature-map.md](./feature-map.md) if a page's endpoint list changes.
 
-For breaking changes, prefer a feature flag (`NEXT_PUBLIC_*`) gate so the FE can roll back independently. The dashboard guide (§7) used this approach during the cutover from client-side aggregation to the new stats endpoint.
+For breaking changes, prefer a runtime feature flag (server-side env var, since the FE has no `NEXT_PUBLIC_*` configuration) so the FE can roll back independently of a backend deploy.
 
 ---
 
@@ -170,4 +170,4 @@ For breaking changes, prefer a feature flag (`NEXT_PUBLIC_*`) gate so the FE can
 Two non-integration documents in the repo root capture the broader product spec — useful for understanding *why* an endpoint looks the way it does:
 
 - [`prd_credit_scoring_platform.md`](../prd_credit_scoring_platform.md) — top-level product requirements.
-- [`dashboard_backend_requirements.md`](../dashboard_backend_requirements.md) — the original FE → BE requirements doc that produced [fe_dashboard_integration_guide.md](./integration-guides/fe_dashboard_integration_guide.md).
+- [`dashboard_backend_requirements.md`](../dashboard_backend_requirements.md) — the original FE → BE requirements doc that drove the dashboard integration.

@@ -49,7 +49,7 @@ export function RolesTable({
 }: RolesTableProps) {
   const colCount = showScope ? 5 : 4;
   if (isLoading) {
-    // Match the loaded table — no surrounding `rounded-md border`.
+    // No surrounding border — matches the rendered table chrome.
     return (
       <TableSkeleton
         bordered={false}

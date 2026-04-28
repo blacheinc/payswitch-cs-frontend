@@ -87,10 +87,6 @@ export function ModelsTab() {
   });
 
   if (isLoading) {
-    // Mirror the loaded layout: refresh row, 4-card summary grid, then a
-    // 2-column grid of full model detail cards (header + version row +
-    // training metrics + tags). 4 placeholders match the typical model count
-    // (credit_risk, fraud_detection, loan_amount, income_verification).
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-end gap-3">
@@ -334,8 +330,7 @@ function ModelCard({ model }: { model: ChampionModelEntry }) {
   );
 }
 
-/** Skeleton replica of `<ModelCard>` — header row, version/created grid, then
- *  a metrics block with progress bars and a tags block. */
+/** Skeleton placeholder for a single model detail card. */
 function ModelDetailCardSkeleton() {
   return (
     <Card>

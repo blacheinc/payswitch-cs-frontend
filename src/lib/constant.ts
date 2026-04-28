@@ -77,9 +77,7 @@ export const API_ENDPOINTS = {
     CANCEL: (jobId: string) => `/v1/score/batch/${jobId}/cancel`,
   },
   USAGE: "/v1/usage",
-  HEALTH: "/health", // Specific endpoint from spec
-  READY: "/ready", // Specific endpoint from spec
-  ADMIN: {
+  HEALTH: "/health",  READY: "/ready",  ADMIN: {
     ORGANIZATIONS: "/admin/organizations",
     PROVISION: (id: string) => `/admin/organizations/${id}/provision`,
     SUSPEND: (id: string) => `/admin/organizations/${id}/suspend`,
@@ -100,9 +98,8 @@ export const API_ENDPOINTS = {
     ADMIN_BY_ID: (id: string) => `/admin/admins/${id}`,
     SUSPEND_ADMIN: (id: string) => `/admin/admins/${id}/suspend`,
     ACTIVATE_ADMIN: (id: string) => `/admin/admins/${id}/activate`,
-    // Cross-org platform stats. Same shape as `/v1/score-requests/stats`
-    // (since 2026-04-27 — `by_org[]` was removed). Pass `organization_id`
-    // to scope to a single org; omit for platform-wide aggregates.
+    // Cross-org platform stats. Pass `organization_id` to scope to a
+    // single org; omit for platform-wide aggregates.
     SCORE_REQUESTS_STATS: "/admin/score-requests/stats",
   },
   MODELS: {

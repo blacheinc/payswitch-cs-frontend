@@ -83,7 +83,7 @@ export default function DashboardPage() {
     queryFn: () => authService.getMe(),
   });
 
-  // Server-aggregated KPIs — replaces the old client-side 200-row pass.
+  // KPI aggregates fetched server-side.
   const statsQuery = useQuery({
     queryKey: SCORE_KEYS.stats(period),
     queryFn: () => scoreService.getScoreRequestsStats(period),
@@ -92,7 +92,7 @@ export default function DashboardPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Referral queue — server-side filter rather than client-side slicing.
+  // Referral queue — backend filters by `decision=REFER`.
   const referralQueueQuery = useQuery({
     queryKey: SCORE_KEYS.list({
       page: 1,

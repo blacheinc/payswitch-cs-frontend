@@ -1,6 +1,5 @@
-// Monitoring / Model / Rules types.
-// Shapes track the FE integration guide (fe_monitoring_integration_guide.md)
-// and the OpenAPI spec — snake_case is preserved at the API boundary.
+// Monitoring / model / rules types. snake_case is preserved at the API
+// boundary so request and response shapes match the wire format directly.
 
 // ==================== MODEL ====================
 

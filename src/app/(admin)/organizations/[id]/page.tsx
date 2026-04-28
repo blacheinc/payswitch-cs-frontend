@@ -170,7 +170,7 @@ export default function OrganizationDetailPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        {/* Back button + header — same vertical rhythm as the loaded view */}
+        {/* Back button + header */}
         <div className="flex flex-col gap-4">
           <Button
             variant="ghost"
@@ -199,7 +199,7 @@ export default function OrganizationDetailPage() {
           </div>
         </div>
 
-        {/* Two detail cards: Org Info + Primary Contact */}
+        {/* Detail cards */}
         <div className="grid gap-6 md:grid-cols-2">
           {[0, 1].map((card) => (
             <Card key={card}>
@@ -283,7 +283,7 @@ export default function OrganizationDetailPage() {
             </div>
           </div>
 
-          {/* Actions — visibility depends on status AND on RBAC perms */}
+          {/* Actions — visibility depends on status and RBAC perms */}
           <div className="flex items-center gap-2 flex-wrap">
             {canUpdate && (
               <Button variant="outline" onClick={() => setIsEditOpen(true)}>
@@ -597,7 +597,7 @@ export default function OrganizationDetailPage() {
   );
 }
 
-// ---- Helper component ----
+// ---- Helper components ----
 
 function DetailRow({
   label,

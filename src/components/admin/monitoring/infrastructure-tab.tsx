@@ -69,7 +69,7 @@ const PERIOD_OPTIONS: { value: InfrastructurePeriod; label: string }[] = [
   { value: "30d", label: "Last 30 days" },
 ];
 
-const POLL_MS = 30_000; // per integration guide
+const POLL_MS = 30_000;
 
 function statusCodeTone(code: number): "success" | "warning" | "danger" {
   if (code >= 500) return "danger";
@@ -94,14 +94,6 @@ export function InfrastructureTab() {
   });
 
   if (isLoading) {
-    // Loaded shape (mirror exactly):
-    //  1. Filter bar — endpoint search input + period select + refresh
-    //  2. Alert banner (one-line)
-    //  3. KPI grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 with 5 stats
-    //  4. Traffic-over-time chart
-    //  5. xl:grid-cols-2 — Busiest-endpoints Card (3-col table) + Status-by
-    //     -code Card (variable layout, render the same shape as the table
-    //     placeholder it usually contains)
     return (
       <div className="space-y-6">
         <MonitoringFilterBarSkeleton showInput />

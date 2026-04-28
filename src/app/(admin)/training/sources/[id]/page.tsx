@@ -52,7 +52,7 @@ export default function DataSourceDetailPage() {
   if (isLoadingSource) {
     return (
       <div className="space-y-6">
-        {/* Back button + header — same vertical rhythm as the loaded view */}
+        {/* Back button + header */}
         <div className="flex flex-col gap-4">
           <Button
             variant="ghost"
@@ -250,7 +250,7 @@ export default function DataSourceDetailPage() {
   );
 }
 
-// ---- Helper component (matches organization detail pattern) ----
+// ---- Helper component ----
 
 function DetailRow({
   label,

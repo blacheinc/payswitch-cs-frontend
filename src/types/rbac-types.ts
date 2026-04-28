@@ -1,5 +1,5 @@
 // ==================== RBAC TYPES ====================
-// Roles & Permissions types aligned with OpenAPI spec.
+// Roles and permission shapes used by the role-management endpoints.
 
 export interface PermissionResponse {
   id: string;

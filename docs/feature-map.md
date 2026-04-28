@@ -6,7 +6,7 @@ Notation:
 
 - **Endpoints** are listed using the constants from [`src/lib/constant.ts`](../src/lib/constant.ts). Where a page consumes many endpoints, only the primary ones are listed; supporting calls (lookups, dropdown options) are omitted.
 - **Permissions** show the `PERMISSION_CODES` keys (not the literal dotted strings). A blank cell means the page is reachable by anyone in the right portal scope.
-- **Status legend**: 🟢 stable · 🟡 partial / placeholder content · ⚪ scaffolded but not yet wired.
+- **Status legend**: 🟢 stable · 🟡 partial / placeholder content · ⚪ scaffolded but not yet wired · ⚫ disabled (folder hidden, route not registered).
 
 ---
 
@@ -36,10 +36,9 @@ Available to org users. Per-action gating via `PERMISSION_CODES`.
 | `/score-requests/[id]` | [`(org)/score-requests/[id]/page.tsx`](../src/app/(org)/score-requests/[id]/page.tsx) | Score request detail: bureau, score, decision, override, outcome, performance reporting. | `SCORE_REQUESTS.BY_ID`, `SCORE_REQUESTS.SCORING_RESULT`, `SCORE_REQUESTS.OVERRIDE`, `SCORE_REQUESTS.OUTCOME`, `SCORE_REQUESTS.PERFORMANCE` | `SCORE_REQUESTS.READ`, `SCORE_REQUESTS.OVERRIDE`, `SCORE_REQUESTS.REPORT_OUTCOME`, `SCORE_REQUESTS.REPORT_PERFORMANCE` | 🟢 |
 | `/score-requests/bulk` | [`(org)/score-requests/bulk/page.tsx`](../src/app/(org)/score-requests/bulk/page.tsx) | CSV/Excel batch upload + active-job list. | `BATCH_SCORING.BASE` | `BATCH_SCORING.CREATE`, `BATCH_SCORING.LIST` | 🟢 |
 | `/score-requests/bulk/[jobId]` | [`(org)/score-requests/bulk/[jobId]/page.tsx`](../src/app/(org)/score-requests/bulk/[jobId]/page.tsx) | Per-job progress + per-row results + cancel. | `BATCH_SCORING.BY_ID`, `BATCH_SCORING.RESULTS`, `BATCH_SCORING.CANCEL` | `BATCH_SCORING.READ`, `BATCH_SCORING.CANCEL` | 🟢 |
-| `/developers` | [`(org)/developers/page.tsx`](../src/app/(org)/developers/page.tsx) | API keys, webhooks, API logs. | `ORG.API_KEYS`, `ORG.WEBHOOKS`, `ORG.LOGS`, `ORG.WEBHOOK_EVENTS` | `API_KEYS.{LIST,CREATE,REVOKE}`, `WEBHOOKS.{LIST,MANAGE}`, `API_LOGS.READ` | 🟢 |
+| `/developers` | [`(org)/_developers/page.tsx`](../src/app/(org)/_developers/page.tsx) | API keys, webhooks, API logs. **Folder is `_developers/` — Next ignores underscore-prefixed folders, so the route is currently not registered.** | `ORG.API_KEYS`, `ORG.WEBHOOKS`, `ORG.LOGS`, `ORG.WEBHOOK_EVENTS` | `API_KEYS.{LIST,CREATE,REVOKE}`, `WEBHOOKS.{LIST,MANAGE}`, `API_LOGS.READ` | ⚫ |
 | `/teams` | [`(org)/teams/page.tsx`](../src/app/(org)/teams/page.tsx) | Org user CRUD: invite, edit role, suspend, delete. | `ORG.USERS`, `ORG.SUSPEND_USER`, `ORG.ACTIVATE_USER`, `RBAC.ROLES` | `USERS.{LIST,INVITE,UPDATE,SUSPEND,DELETE}`, `ROLES.{READ,ASSIGN}` | 🟢 |
 | `/settings` | [`(org)/settings/page.tsx`](../src/app/(org)/settings/page.tsx) | Personal-account tab + Org-profile tab (rename, contact details). | `AUTH.ME`, `AUTH.CHANGE_PASSWORD`, `AUTH.SETUP_2FA`, `AUTH.VERIFY_2FA`, `AUTH.REMOVE_2FA`, `ORG.PROFILE` | — | 🟢 |
-| `/reports` | [`(org)/reports/page.tsx`](../src/app/(org)/reports/page.tsx) | Long-form analytics view (placeholder content + skeleton charts). | — | — | 🟡 |
 
 ---
 
@@ -70,17 +69,18 @@ Some endpoints are consumed app-wide rather than from a specific page:
 | Endpoint | Where called | Purpose |
 |---|---|---|
 | `AUTH.ME` | `AuthContext.initializeAuth` ([`auth-context.tsx`](../src/contexts/auth-context.tsx)) | Resolve `permissions[]` on every load and after refresh. |
-| `AUTH.REFRESH` | `apiClient` 401 interceptor ([`api-client.ts`](../src/lib/api-client.ts)) | Transparent token refresh. |
+| `AUTH.REFRESH` | Proxy Route Handler ([`app/api/proxy/[...path]/route.ts`](../src/app/api/proxy/[...path]/route.ts)) | Server-side transparent token refresh on 401. |
 | `AUTH.LOGOUT` | `authService.logout` (called by `AuthContext.logout` if used; the inactivity timer also clears the session) | Server-side session invalidation. |
 
 ---
 
-## Missing or planned
+## Missing, disabled, or planned
 
-The following pages from the original PRD are not yet implemented or are scaffolded with placeholder content:
+The following pages from the original PRD are not currently routable or are scaffolded with placeholder content:
 
-- **`/reports`** — present as a scaffold but the backend endpoints aren't wired. Needs a reports service.
+- **`/developers`** — page code lives under `(org)/_developers/`. The leading underscore makes it a private folder in Next 16, so the route is not exposed. To re-enable, rename the folder back to `developers/` and uncomment `ROUTES.ORG.DEVELOPERS` in [`src/lib/constant.ts`](../src/lib/constant.ts).
+- **`/reports`** — not implemented; the folder under `(org)/` does not exist. Was on the original PRD; needs both a reports service and UI.
 - **`/scoring-engine`** — partial; the model-routing UI hasn't landed.
-- A dedicated **audit-log** view for org admins (currently surfaced only via `/developers` API logs).
+- A dedicated **audit-log** view for org admins (only surfaced via `/developers` API logs, which is currently disabled).
 
 See [known-issues.md](./known-issues.md) for the broader follow-up backlog.

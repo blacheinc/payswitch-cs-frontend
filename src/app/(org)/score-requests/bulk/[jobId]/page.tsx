@@ -150,9 +150,6 @@ export default function BatchJobDetailPage() {
   }
 
   if (statusQuery.isLoading) {
-    // Mirror the loaded layout: header (back + title + status + actions),
-    // a Progress card, then an Items card with table inside. Items table
-    // skeleton is provided by `<BatchItemsTable isLoading />`.
     return (
       <div className="space-y-6">
         {/* Header */}

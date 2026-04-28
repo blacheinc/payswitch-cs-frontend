@@ -109,11 +109,6 @@ export function AlertsTab() {
   });
 
   if (isLoading) {
-    // Loaded shape (mirror exactly):
-    //  1. Summary KPIs FIRST (4 stats in grid-cols-2 sm:grid-cols-4)
-    //  2. Toolbar — 4 select skeletons (dashboard, severity, status, limit)
-    //     + refresh, ml-auto
-    //  3. Alerts list — each alert is a one-row card (title + meta + badge)
     return (
       <div className="space-y-6">
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">

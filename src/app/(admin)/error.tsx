@@ -9,10 +9,8 @@ import { ROUTES } from "@/lib/constant";
 
 /**
  * Error boundary for the admin area. Isolates crashes to the route segment so
- * the sidebar + shell stay interactive. A full-page crash above this should be
- * caught by the root global-error.tsx.
- *
- * Next.js file convention: https://nextjs.org/docs/app/api-reference/file-conventions/error
+ * the sidebar and shell stay interactive; a full-page crash above this is
+ * handled by the root global-error boundary.
  */
 export default function AdminError({
   error,
@@ -22,7 +20,6 @@ export default function AdminError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Hook for error reporting — pipe to Sentry / Logtail here later.
     console.error("[admin] route error:", error);
   }, [error]);
 

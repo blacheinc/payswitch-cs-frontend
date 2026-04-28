@@ -10,23 +10,25 @@ How the frontend talks to the backend, where types live, and the conventions eve
 flowchart TB
     Page[Page or component<br/>uses useQuery / useMutation]
     Service["*-service.ts<br/>typed methods · snake↔camel mapping"]
-    Client[apiClient<br/>axios instance + interceptors]
-    Storage[session-storage<br/>access / refresh tokens]
+    Client[apiClient<br/>axios → /api/proxy]
+    Proxy["/api/proxy/[...path]<br/>Route Handler (server)"]
+    Cookie[__Host-session<br/>HttpOnly cookie]
     API[(Backend HTTPS API)]
 
     Page -->|queryKey + queryFn| Service
     Service --> Client
-    Client -->|GET / POST / ...| API
-    Client -.read.-> Storage
-    API -.401.-> Client
-    Client -->|refresh + retry| API
+    Client -->|same-origin GET / POST / ...| Proxy
+    Proxy -.read.-> Cookie
+    Proxy -->|Bearer JWT| API
+    API -.401.-> Proxy
+    Proxy -->|refresh + retry| API
 ```
 
 Three rules keep this clean:
 
 1. **Pages call services.** They never touch axios directly and never inline `fetch()`.
 2. **Services own types and mapping.** Every method returns a camelCase domain type. Snake-case is contained to private types inside the service.
-3. **The client is shared.** A single `apiClient` (axios instance) handles bearer-token attach and 401 refresh for everything.
+3. **The browser-side client is token-free.** The shared `apiClient` only points at same-origin `/api/proxy` and normalizes errors — bearer-attach and 401 refresh live server-side in the proxy Route Handler.
 
 ---
 
@@ -37,17 +39,14 @@ Three rules keep this clean:
 - `baseURL = "/api/proxy"` — same-origin Next Route Handler that forwards to the upstream `BACKEND_API_URL` server-side
 - `timeout = 30000` ms
 - `Content-Type: application/json` by default
+- `withCredentials: true` so the HttpOnly session cookie travels with each request
 
-Two interceptors do most of the work:
-
-### Request interceptor
-
-Reads the access token from `session-storage` and stamps it on as `Authorization: Bearer <jwt>`. Logs every request in development.
+The browser-side client is intentionally minimal: it carries **no** bearer-token logic and **no** refresh logic — those live in the proxy Route Handler at [`src/app/api/proxy/[...path]/route.ts`](../src/app/api/proxy/[...path]/route.ts) (see [auth-and-rbac.md §3.1](./auth-and-rbac.md#31-token-refresh-on-401)).
 
 ### Response interceptor
 
 - **2xx** — pass through, log in dev.
-- **401 (non-auth path)** — call `POST /auth/refresh` with the refresh token, update the access token, retry the original request once. On failure, clear the session and redirect to `/login`. (See [auth-and-rbac.md §3.1](./auth-and-rbac.md#31-token-refresh-on-401) for the sequence.)
+- **401 (non-auth path)** — refresh already failed server-side; the interceptor redirects the browser to `/login`.
 - **No response** (timeout / network error) — return a normalized `ApiError` with a user-friendly message.
 - **FastAPI 422** — peel off the `detail[]` array and surface the first message, exposing the full validation list under `details.validationErrors`.
 - **Anything else** — normalize into `ApiError { code, message, details, statusCode }` with sensible HTTP-status fallbacks.
@@ -311,7 +310,7 @@ Don't skip the mapper layer even when fields look identical — the API has chan
 
 | Symptom | Likely culprit |
 |---|---|
-| 401 loop / repeated redirects to `/login` | `api-client.ts` interceptor — refresh token expired or backend rejected refresh |
+| 401 loop / repeated redirects to `/login` | Server-side refresh in `app/api/proxy/[...path]/route.ts` failing — refresh token expired or backend rejected refresh |
 | Numbers off / wrong on a dashboard | Stats endpoint period mismatch, or stale query key |
 | "Validation error" with no specifics | FastAPI 422 — open the network tab, check `details.validationErrors[0]` |
 | Mutation succeeded but list didn't update | Missing `invalidateQueries` in `onSuccess` |

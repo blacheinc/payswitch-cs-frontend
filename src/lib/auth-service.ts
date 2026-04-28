@@ -8,9 +8,9 @@ import type {
 } from "@/types/auth-type";
 import { API_ENDPOINTS } from "@/lib/constant";
 
-// `mergeUserFromMeProfile` was extracted to its own pure module so server-side
-// Route Handlers can import it without dragging in axios. Kept exported here
-// for backward compatibility with existing callers.
+// `mergeUserFromMeProfile` lives in its own pure module so server-side Route
+// Handlers can import it without dragging in axios. Re-exported here so
+// existing callers can continue importing it from `auth-service`.
 export { mergeUserFromMeProfile } from "./user-merge";
 
 // =============================================================================

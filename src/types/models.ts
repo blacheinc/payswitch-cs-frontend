@@ -63,7 +63,7 @@ export interface User {
   organization?: Organization;
   lastLoginAt?: string;
   createdAt: string;
-  /** Resolved RBAC codes from GET /auth/me `permissions` (or refreshed via GET /auth/me/permissions). */
+  /** Resolved RBAC permission codes for the signed-in user. */
   permissions?: string[];
 }
 
@@ -183,9 +183,9 @@ export interface BureauCreditAccount {
 }
 
 /**
- * All 30 DE contract features — aligned with OpenAPI `BureauFeatures`.
- * Most values are string passthrough from XDS (same format for reverse mapping).
- * Account-status flags are booleans from the bureau mapper.
+ * The 30 bureau features the scoring model consumes. Most values are string
+ * passthrough from XDS (same format for reverse mapping); account-status
+ * flags arrive as booleans from the bureau mapper.
  */
 export interface BureauFeatures {
   highest_delinquency_rating?: string | null;
@@ -258,7 +258,7 @@ export interface RequestMetadata {
   callback_url?: string | null;
 }
 
-/** Payload for POST /v1/score-requests — matches CreateScoreRequestInput in the OpenAPI spec. */
+/** Payload for POST /v1/score-requests. */
 export interface ScoreRequestPayload {
   reference_id?: string | null;
   applicant: ApplicantInfo;
@@ -361,8 +361,8 @@ export interface ScoreResponse {
 // ==================== SCORE REQUEST RECORD ====================
 
 /**
- * Inline `scoring_result` — **snake_case**, same shape as the API and as
- * `score-requests/[id]/page.tsx` (`sr.scoring_result`, `result?.scoring_metadata?.credit_score`).
+ * Per-feature SHAP contribution returned inside `scoring_result`. snake_case
+ * is preserved at the API boundary so payloads flow through untouched.
  */
 export interface ScoreRequestShapContribution {
   feature: string;
@@ -434,8 +434,8 @@ export interface ScoreRequest {
   id: string;
   trackingId: string;
   organizationId: string;
-  /** Embedded org summary (since 2026-04-27). Optional for forward compat
-   *  with any cached response from before the change. */
+  /** Embedded org summary so cross-org reads can render the org name without
+   *  a separate lookup. Optional to remain tolerant of older cached rows. */
   organization?: OrganizationSummary;
   referenceId?: string;
   status: ScoreRequestStatus;
@@ -443,7 +443,7 @@ export interface ScoreRequest {
   applicantName: string;
   /** Top-level list field `score_value` (model / internal scale) — not the bureau credit score. */
   scoreValue?: number | null;
-  /** Inline scoring payload — snake_case, same as detail page `sr.scoring_result`. */
+  /** Inline scoring payload returned alongside the request (snake_case). */
   scoring_result?: ScoreRequestScoringResult | null;
   riskCategory?: RiskCategory;
   modelVersion?: string;

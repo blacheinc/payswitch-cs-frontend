@@ -8,14 +8,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 // =============================================================================
-// Building blocks for monitoring-tab loading states.
-//
-// Each tab (infrastructure / risk / model-ops / compliance) composes these
-// to match its own loaded shape. The goal is consistency across tabs without
-// forcing every tab into one rigid layout.
+// Building blocks for monitoring-tab loading states. Each tab composes
+// these to match its own layout.
 // =============================================================================
 
-/** Replica of `<StatCard>` — small label, large value, caption. */
+/** Placeholder for `<StatCard>` — small label, large value, caption. */
 export function MonitoringKpiSkeleton() {
   return (
     <Card>
@@ -69,12 +66,8 @@ export function MonitoringBreakdownCardSkeleton({ rows = 4 }: { rows?: number })
 }
 
 /**
- * Compact filter bar — N select skeletons + refresh icon button. Matches the
- * loaded filter bars across monitoring tabs which are plain flex rows
- * (no Card wrapper).
- *
- * `selects` = number of select dropdowns (most tabs have 1, some have 2 or 3).
- * `showInput` = also render a flex-1 input placeholder (Infrastructure tab).
+ * Compact filter bar — N select placeholders + refresh button, with an
+ * optional flex-1 input for tabs that include a search field.
  */
 export function MonitoringFilterBarSkeleton({
   selects = 1,
@@ -95,9 +88,8 @@ export function MonitoringFilterBarSkeleton({
 }
 
 /**
- * Replica of `<AlertInlineList>` in its compact "no alerts firing" state —
- * a single-line bordered notice. Not the firing-alerts card layout, which
- * is taller; we mimic the common case to avoid over-shaping the loader.
+ * Single-line bordered placeholder shaped like the compact, no-firing-alerts
+ * state of `<AlertInlineList>` — the common case during initial load.
  */
 export function MonitoringAlertBannerSkeleton() {
   return (

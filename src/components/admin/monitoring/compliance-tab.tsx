@@ -61,13 +61,6 @@ export function ComplianceTab() {
   });
 
   if (isLoading) {
-    // Loaded shape (mirror exactly):
-    //  1. Toolbar — single period select + refresh, right-aligned
-    //  2. Alert banner (one-line)
-    //  3. KPI grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 with 4 stats
-    //  4. xl:grid-cols-2 — Approval-rate-by-age card (vertical bars/rows) +
-    //     Data-subject-requests card (3 stat boxes + footer row)
-    //  5. Audit-log card — caption + percentage row + progress bar + footer
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">

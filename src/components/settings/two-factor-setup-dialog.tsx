@@ -84,8 +84,7 @@ export function TwoFactorSetupDialog({
     },
   });
 
-  // Step 2: Verify the code the user enters
-  // with the temporary token. We call verify2FA with the code and tempToken.
+  // Step 2: Verify the code the user enters using the temporary token.
   const verifyMutation = useMutation({
     mutationFn: (values: TwoFactorVerifyValues) =>
       authService.verify2FA({ code: values.code, tempToken }),

@@ -248,8 +248,10 @@ Both pages are unauthenticated and live under `(auth)`.
 |---|---|
 | [`src/components/auth/login-shell.tsx`](../src/components/auth/login-shell.tsx) | Login form, 2FA challenge UI |
 | [`src/lib/auth-service.ts`](../src/lib/auth-service.ts) | All `/auth/*` calls + the `mergeUserFromMeProfile` helper |
-| [`src/lib/api-client.ts`](../src/lib/api-client.ts) | Bearer attach, 401 refresh, error normalization |
-| [`src/lib/session-storage.ts`](../src/lib/session-storage.ts) | Cookie/localStorage persistence + AES envelope |
+| [`src/app/api/proxy/[...path]/route.ts`](../src/app/api/proxy/[...path]/route.ts) | Server-side bearer attach, 401 refresh + retry |
+| [`src/lib/api-client.ts`](../src/lib/api-client.ts) | Browser-side axios → `/api/proxy`; error normalization only |
+| [`src/lib/server-session.ts`](../src/lib/server-session.ts) | HttpOnly cookie helpers (server-only) |
+| [`src/lib/session-storage.ts`](../src/lib/session-storage.ts) | Non-sensitive `localStorage` user cache for instant rehydration |
 | [`src/contexts/auth-context.tsx`](../src/contexts/auth-context.tsx) | React-side session state, hydration, inactivity timer |
 | [`src/proxy.ts`](../src/proxy.ts) | Edge middleware: zone routing + security headers |
 | [`src/hooks/use-permissions.ts`](../src/hooks/use-permissions.ts) | `can()` API |

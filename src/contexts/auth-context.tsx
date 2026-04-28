@@ -177,16 +177,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // but DO NOT clear the React `user` yet — between this setState and the
     // browser navigation below, every gated page would otherwise re-render
     // once with empty permissions and flash the NoPermission placeholder.
-    // We just flip `isLoading: true` so any auth-dependent UI knows a
-    // transition is in flight; the full reset happens when the new page
-    // mounts after `window.location.href` lands.
+    // Flipping `isLoading: true` lets auth-dependent UI know a transition is
+    // in flight; the full reset happens when the new page mounts after
+    // `window.location.href` lands.
     clearUserCache();
     setState((prev) => ({ ...prev, isLoading: true }));
 
     try {
       await authService.logout();
     } catch {
-      // Best-effort: even if the server fails, we still navigate away.
+      // Best-effort — navigate away even if the server logout fails.
     }
 
     if (typeof window !== "undefined") {

@@ -98,15 +98,6 @@ export function RiskTab() {
   });
 
   if (isLoading) {
-    // Loaded shape (mirror exactly):
-    //  1. Filter bar — 3 selects (segment, grade, period) + refresh, no input
-    //  2. Alert banner (one-line)
-    //  3. KPI grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 with 5 stat cards
-    //  4. Outcome breakdown — full-width Card containing 5 stat boxes
-    //  5. xl:grid-cols-2: Approvals-by-grade Card + Risk-level Card (each
-    //     renders a vertical list of progress-style rows)
-    //  6. Score spread — full-width Card with a histogram body
-    //  7. Approvals-over-time chart card
     return (
       <div className="space-y-6">
         <MonitoringFilterBarSkeleton selects={3} />

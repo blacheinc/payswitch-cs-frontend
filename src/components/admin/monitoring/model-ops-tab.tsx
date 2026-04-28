@@ -93,15 +93,6 @@ export function ModelOpsTab() {
   });
 
   if (isLoading) {
-    // Loaded shape (mirror exactly):
-    //  1. Filter bar — model-type select + period select + refresh
-    //  2. Alert banner (one-line)
-    //  3. Champion cards in lg:grid-cols-2 — each card has header (icon +
-    //     title + caption + status badge) and a 3-col body (AUC / change /
-    //     deployed) plus a row of small metric badges
-    //  4. Score-stability section: small heading + caption + 4-col KPI grid
-    //  5. xl:grid-cols-2 — Feature drift card + Retraining history card
-    //     (the retraining card contains a table)
     return (
       <div className="space-y-6">
         <MonitoringFilterBarSkeleton selects={2} />
@@ -486,8 +477,7 @@ export function ModelOpsTab() {
   );
 }
 
-/** Skeleton replica of a champion card — header (title + caption + badge)
- *  and a 3-col stat body + small metric badges row. */
+/** Skeleton placeholder for a single champion-model card. */
 function ChampionCardSkeleton() {
   return (
     <Card>

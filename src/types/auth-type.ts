@@ -1,5 +1,5 @@
 // ==================== AUTH API TYPES ====================
-// Types derived from OpenAPI spec for all /auth/* endpoints.
+// Request and response shapes for all /auth/* endpoints.
 // snake_case → camelCase mapping is handled in the service layer.
 
 import type { User } from "./models";

@@ -50,7 +50,9 @@ tests/
 │   ├── vitest.setup.ts        # global lifecycle, env stubs, polyfills
 │   ├── msw-server.ts          # shared MSW server
 │   ├── msw-handlers.ts        # canonical happy-path handlers
-│   └── render.tsx             # renderWithProviders helper
+│   ├── render.tsx             # renderWithProviders helper
+│   ├── server-only-stub.ts    # stub for "server-only" import in JSDOM
+│   └── scaffold.test.ts       # smoke test confirming the harness is wired
 ├── lib/
 │   ├── api-client.test.ts
 │   ├── score-service.test.ts
@@ -58,12 +60,20 @@ tests/
 │   └── schemas/
 │       ├── settings-management.test.ts
 │       └── team-management.test.ts
+├── api/                       # Next Route Handler tests (server-side)
+│   ├── auth-login.test.ts
+│   └── proxy-route.test.ts
+├── components/
+│   ├── admin/admin-rbac-gating.test.tsx
+│   └── org/org-rbac-gating.test.tsx
 ├── hooks/
 │   ├── use-debounce.test.tsx
 │   └── use-permissions.test.tsx
 ├── contexts/
 │   └── auth-context.test.tsx
-└── proxy.test.ts
+├── proxy.test.ts
+└── e2e/
+    └── auth.spec.ts           # Playwright portal-isolation specs
 ```
 
 ### Conventions
@@ -103,19 +113,19 @@ describe("fooService.getFoos", () => {
 
 ### What's covered today
 
-| File | Tests | Notes |
-|---|---|---|
-| `src/lib/schemas/settings-management.ts` | 23 | change-password, 2FA verify/remove, org profile zod schemas |
-| `src/lib/schemas/team-management.ts` | 9 | invite + edit org user schemas |
-| `src/lib/score-service.ts` | 10 | snake↔camel mapping, `decision` filter (string + array), stats endpoint, `null` trend, query-key uniqueness |
-| `src/lib/session-storage.ts` | 11 | encrypt/decrypt round-trip, persistence, cookie wiring, token updates |
-| `src/lib/api-client.ts` | 10 | bearer attach, **401 refresh + retry**, refresh failure → clear, no-refresh on `/auth/*`, FastAPI 422 + nested errors + status fallbacks + network errors |
-| `src/hooks/use-debounce.ts` | 5 | initial value, delay, collision-with-rapid-changes, default delay |
-| `src/hooks/use-permissions.ts` | 7 | empty list, exact-code match, `*` wildcard, mock users, isLoading semantics |
-| `src/contexts/auth-context.tsx` | 8 | hydration (anon, org, admin), `/auth/me` failure fallback, setSession, logout, mock seeding |
-| `src/proxy.ts` | 15 | every route-zone branch (auth/admin/org/public), wrong-scope rewrite, security headers, garbage cookie |
-
-**Total: 100 unit/integration tests.**
+| File | Notes |
+|---|---|
+| `src/lib/schemas/settings-management.ts` | change-password, 2FA verify/remove, org profile zod schemas |
+| `src/lib/schemas/team-management.ts` | invite + edit org user schemas |
+| `src/lib/score-service.ts` | snake↔camel mapping, `decision` filter (string + array), stats endpoint, `null` trend, query-key uniqueness |
+| `src/lib/session-storage.ts` | non-sensitive `localStorage` user-cache round-trip, missing/malformed entries, clear semantics |
+| `src/lib/api-client.ts` | base-URL points at `/api/proxy`, **no** Authorization header on the wire (proxy attaches it server-side), FastAPI 422 + nested errors + status fallbacks + network errors |
+| `src/hooks/use-debounce.ts` | initial value, delay, collision-with-rapid-changes, default delay |
+| `src/hooks/use-permissions.ts` | empty list, exact-code match, `*` wildcard, mock users, isLoading semantics |
+| `src/contexts/auth-context.tsx` | hydration (anon, org, admin), `/auth/me` failure fallback, setSession, logout, mock seeding |
+| `src/proxy.ts` | every route-zone branch (auth/admin/org/public), wrong-scope rewrite, security headers, garbage cookie |
+| Next Route Handlers (`tests/api/*`) | `/api/auth/login` flow + cookie minting; `/api/proxy/[...path]` bearer-attach, 401 → refresh → retry, refresh failure clears cookie |
+| RBAC component gating (`tests/components/*`) | admin and org permission-gated UI elements render / hide as `usePermissions().can()` dictates |
 
 ### Coverage thresholds
 
@@ -138,13 +148,13 @@ The `include` list scopes coverage to the surfaces that benefit most from unit t
 
 - **[Playwright 1.59](https://playwright.dev/)** — single browser project (Chromium) by default.
 - Runs against a **production build** of the Next app on a dedicated port (`3100`) to avoid colliding with `npm run dev`.
-- Specs **seed the session cookie directly** (AES-encrypted with the same secret as the proxy) so they exercise the FE proxy + RBAC routing without depending on a backend.
+- Specs **seed the `__Host-session` cookie directly** with a JSON session blob (no encryption — the proxy reads JSON), so they exercise the FE proxy + RBAC routing without depending on a backend.
 
 ### Layout
 
 ```
 tests/e2e/
-└── auth.spec.ts          # portal isolation, security headers
+└── auth.spec.ts          # portal isolation + security headers
 ```
 
 ### What's covered today
@@ -156,8 +166,6 @@ tests/e2e/
 - A logged-in org user revisiting `/login` is bounced to `/dashboard`.
 - A logged-in admin revisiting `/admin-login` is bounced to `/admin-dashboard`.
 - The proxy attaches `X-Frame-Options`, `X-Content-Type-Options`, `Strict-Transport-Security`, and `Referrer-Policy` on every response.
-
-**Total: 7 E2E specs.**
 
 ### Running against a deployed backend
 

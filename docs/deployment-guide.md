@@ -77,7 +77,7 @@ openssl rand -hex 64
 
 Save the output. You'll paste it into the parameters file in §2.4 (and into your CI environment secret if you wire CI/CD).
 
-> Per [security.md §3](./security.md#3-token-storage-and-the-open-hardening-item), this secret is currently shipped to the browser; treat it as obfuscation, not a real key. Use a different value per environment and rotate when staff leave.
+> The secret is read **server-side only** by the Next Route Handlers under `src/app/api/auth/*` to seal the HttpOnly session cookie. It never reaches the browser. Use a different value per environment and rotate when staff leave. See [security.md §3](./security.md#3-token-storage).
 
 ### 2.3 Create the resource group
 
@@ -328,7 +328,7 @@ Then in a browser:
 
 1. Open `https://$FQDN` — you should land on `/login` (the proxy redirects unauthenticated requests).
 2. Sign in with a real backend account.
-3. Open DevTools → Network → look for `auth/login` request hitting the **backend** origin (CORS pre-flight should be 204).
+3. Open DevTools → Network → confirm the login POST goes to **same-origin** `/api/auth/login` (the Next Route Handler), not directly to the backend. The HttpOnly `__Host-session` cookie should appear under Application → Cookies.
 4. Hit a wrong-scope path (e.g. `/admin-dashboard` as an org user) — confirm it renders the not-found page **without changing the URL** (proxy rewrite, see [auth-and-rbac.md §4](./auth-and-rbac.md#4-route-level-enforcement-edge-proxy)).
 
 ---
@@ -413,7 +413,7 @@ This removes everything in §1, including the registry. Anything outside the res
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `ImagePullBackOff` on the Container App | Managed identity hasn't received AcrPull yet | Wait 30 s — the role-assignment is async; or `az role assignment create` manually. |
-| Browser shows `Unable to connect` after a clean deploy | Backend origin not in CORS allowlist | Add the FE's FQDN (and custom domain) to the BE's CORS config. |
+| Browser shows `Unable to connect` after a clean deploy | `BACKEND_API_URL` unreachable from the Container App | Verify the URL with `curl` from a sidecar / `az containerapp exec`; the browser never talks to the backend directly so this is always a server-side reachability issue. |
 | Login form submits but stalls | `BACKEND_API_URL` Container App secret is wrong / unset | `deploy/scripts/set-secrets.sh --backend-api-url …` then verify with `az containerapp logs show`. |
 | `tsc --noEmit` clean locally, fails in CI | Node version mismatch (CI is 20, local was 22) | Pin the Node engine in `package.json` and align CI to match. |
 | Revision flips to "Failed" with no obvious error | Liveness probe times out (cold start > 10 s) | Bump probe `initialDelaySeconds` in `main.bicep` or set `minReplicas: 1` to keep one warm. |
@@ -426,4 +426,4 @@ This removes everything in §1, including the registry. Anything outside the res
 - **The backend API**: separate repository, separate deploy. The frontend's only relationship is the server-side `BACKEND_API_URL`. No CORS coordination is required because the browser never talks to the backend directly.
 - **Customer SSL termination**: the `azurecontainerapps.io` domain comes with a wildcard cert; for customer domains, see §6.
 - **Application Insights**: not provisioned. If observability beyond Log Analytics becomes a need, add it as a follow-up — there's a TODO note in [known-issues.md](./known-issues.md).
-- **HttpOnly-cookie auth migration**: the long-term hardening item described in [security.md §3](./security.md#3-token-storage-and-the-open-hardening-item) requires backend changes and is out of scope for this deploy guide.
+- **Backend hardening**: backend-owned concerns (rate-limiting, JWT signing-key rotation, audit logs) are out of scope.

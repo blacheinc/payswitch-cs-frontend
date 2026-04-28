@@ -23,7 +23,8 @@ interface ApiRawScoreRequest {
   request_id: string;
   tracking_id: string;
   organization_id: string;
-  /** Embedded org summary added 2026-04-27. Optional for back-compat. */
+  /** Embedded org summary so cross-org reads can render the org name without
+   *  a separate lookup. */
   organization?: ApiRawOrganizationSummary | null;
   reference_id?: string | null;
   status: string;
@@ -438,10 +439,9 @@ export interface ScoreRequestStatsResponse {
   needs_attention: StatsNeedsAttention;
 }
 
-// `OrgBreakdownEntry` and `PlatformScoreRequestStatsResponse` were removed
-// on 2026-04-27 — the platform stats endpoint now returns the same shape
-// as the org-side endpoint (`ScoreRequestStatsResponse`). Per-org tables
-// fan out via `/admin/organizations` + a stats query per visible row.
+// The platform stats endpoint returns the same shape as the org-side
+// endpoint (`ScoreRequestStatsResponse`). For per-org tables, page orgs via
+// `/admin/organizations` and run a stats query per visible row.
 
 // ===================== BATCH SCORING TYPES =====================
 
@@ -490,7 +490,7 @@ export interface BatchItemCounts {
 export interface BatchJobStatusResponse {
   jobId: string;
   status: BatchJobStatus;
-  /** Embedded org summary (since 2026-04-27). Always own-org for org users. */
+  /** Embedded org summary. Always the caller's own org for org users. */
   organization?: OrganizationSummary;
   total: number;
   progressPct: number;
@@ -503,7 +503,7 @@ export interface BatchJobStatusResponse {
 export interface BatchJobListItem {
   jobId: string;
   status: BatchJobStatus;
-  /** Embedded org summary (since 2026-04-27). Always own-org for org users. */
+  /** Embedded org summary. Always the caller's own org for org users. */
   organization?: OrganizationSummary;
   total: number;
   completed: number;
@@ -762,10 +762,10 @@ export const scoreService = {
   /**
    * GET /admin/score-requests/stats — platform-wide aggregate stats.
    *
-   * Since 2026-04-27 the response shape is identical to the org-side stats
-   * endpoint (no more `by_org[]`). For per-org tables, page orgs via
-   * `/admin/organizations` and call this endpoint with `organizationId`
-   * once per visible row (fan-out pattern). Requires `admin.score_requests.read`.
+   * Pass `organizationId` to scope the response to a single org; omit it for
+   * platform-wide aggregates. For per-org tables, page orgs via
+   * `/admin/organizations` and call this endpoint once per visible row.
+   * Requires `admin.score_requests.read`.
    */
   async getPlatformScoreRequestsStats(
     period: ScoreDashboardPeriod,

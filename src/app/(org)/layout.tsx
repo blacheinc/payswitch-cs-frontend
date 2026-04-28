@@ -87,9 +87,10 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-// See admin/layout.tsx — hoisted for the same "sidebar logo flash on nav"
-// fix. A component defined inside its parent's body is a fresh type on every
-// render, forcing React to unmount + remount the whole sidebar subtree.
+// Hoisted out of OrgLayout so React treats it as a stable component type
+// across renders. Declaring it inside the parent would re-create the type on
+// every render, forcing the sidebar (logo and all) to remount and causing a
+// brief empty-sidebar flash during navigation.
 interface SidebarContentProps {
   isMobile?: boolean;
   collapsed: boolean;

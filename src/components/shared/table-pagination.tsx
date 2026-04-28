@@ -11,10 +11,9 @@ import {
 } from "@/components/ui/select";
 
 /**
- * Canonical "items per page" choices.
- * `per_page` in [1, 100] (see `src/lib/openapi.json`); these are the four
- * options that map to the typical 10-row, 20-row (default), 50-row, and
- * "show me everything I can fit" buckets.
+ * Canonical "rows per page" choices for every list view. Backend list
+ * endpoints accept any value in [1, 100]; these four cover the typical
+ * 10-row, 20-row (default), 50-row, and full-page-density buckets.
  */
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];

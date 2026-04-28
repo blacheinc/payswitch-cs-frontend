@@ -81,7 +81,7 @@ export default function AdminMonitoringPage() {
     (visibleTabs[0]?.value as TabValue) ?? "infrastructure",
   );
 
-  // Global "firing" banner — polls every 60s per integration guide.
+  // Global "firing" banner — polls every 60 seconds.
   const firingQuery = useQuery({
     queryKey: MONITORING_KEYS.alerts({ status: "firing", limit: 5 }),
     queryFn: () =>

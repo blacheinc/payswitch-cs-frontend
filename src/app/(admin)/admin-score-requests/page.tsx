@@ -101,9 +101,8 @@ export default function AdminScoreRequestsPage() {
   const [scopedSearch, setScopedSearch] = useState("");
   const debouncedScopedSearch = useDebounce(scopedSearch);
 
-  // KPI scope follows the active tab + selection. When tab 2 has an org
-  // selected, KPIs reflect THAT org so the user immediately sees the
-  // scoped activity tile they care about. Otherwise platform-wide.
+  // KPI scope follows the active tab + selection: in tab 2 with an org
+  // selected the KPIs reflect that org; otherwise they're platform-wide.
   const statsOrgId =
     activeTab === "by-org" && selectedOrg ? selectedOrg.id : undefined;
 
@@ -458,9 +457,9 @@ export default function AdminScoreRequestsPage() {
 }
 
 // =============================================================================
-// Org picker table — minimal three-column list with a chevron action.
-// Intentionally NOT the shared `<OrganizationTable>` because that one's row
-// click navigates to /organizations/{id}; we want it to set local state.
+// Org picker table — minimal organisation list with a chevron action.
+// Distinct from the shared `<OrganizationTable>` whose row click hard-
+// navigates to `/organizations/{id}`; this one only sets local state.
 // =============================================================================
 
 interface OrgPickerTableProps {

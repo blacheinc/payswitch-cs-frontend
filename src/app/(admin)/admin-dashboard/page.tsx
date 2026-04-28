@@ -58,12 +58,12 @@ const RISK_POLL_MS = 5 * 60_000;
 const MODEL_OPS_POLL_MS = 10 * 60_000;
 
 // =============================================================================
-// Single global time-range selector for the whole admin overview.
-//
-// Each backend endpoint supports a slightly different set of period values
-// (infra: 1h..30d · risk: 24h..90d · model-ops: 7d..90d). We expose the union
-// of values that every section can render meaningfully and map "non-native"
-// periods to the closest supported value per endpoint.
+// Single global time-range selector for the whole admin overview. Each
+// backend endpoint supports a slightly different set of period values
+// (infra: 1h..30d · risk: 24h..90d · model-ops: 7d..90d). The selector
+// exposes the union of values that every section can render meaningfully,
+// and the helpers below map any "non-native" period to the closest
+// supported value per endpoint.
 // =============================================================================
 
 type DashboardPeriod = "24h" | "7d" | "30d" | "90d";
@@ -162,8 +162,9 @@ export default function AdminDashboardPage() {
   const modelOps = modelOpsQuery.data;
   const alerts = alertsQuery.data;
 
-  // Only treat the alert summary as authoritative once the request resolves.
-  // Showing "All systems healthy" before the alerts call returns is misleading.
+  // Only treat the alert summary as authoritative once the request resolves —
+  // the "All systems healthy" badge would otherwise appear during the brief
+  // window before the alerts call returns.
   const alertsResolved = alertsQuery.isSuccess;
   const firingCount = alerts?.summary?.total_firing ?? 0;
   const criticalCount = alerts?.summary?.critical_firing ?? 0;

@@ -199,8 +199,7 @@ export function AdminScoreRequestsTable({
                       {request.organization.name}
                     </Link>
                   ) : (
-                    // Back-compat: pre-2026-04-27 cached row had no embedded
-                    // org block. Render the UUID as a low-emphasis fallback.
+                    // Fallback when the row arrives without an embedded org.
                     <span className="text-xs text-muted-foreground font-mono">
                       {request.organizationId}
                     </span>

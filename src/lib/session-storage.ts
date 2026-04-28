@@ -3,7 +3,6 @@
 //
 // The HARD session — access + refresh tokens — lives in an HttpOnly cookie set
 // by Next Route Handlers (`src/app/api/auth/*`) and is never exposed to JS.
-// See docs/security.md and docs/auth-and-rbac.md for the full story.
 //
 // What still lives client-side: a tiny non-sensitive cache of the user shape
 // (id, name, email, permissions, userType) so the UI can render immediately on

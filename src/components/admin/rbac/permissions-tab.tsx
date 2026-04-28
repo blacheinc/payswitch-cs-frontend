@@ -66,9 +66,6 @@ export function PermissionsTab() {
   const grouped = groupPermissions(filtered);
 
   if (isLoading) {
-    // Mirror the loaded layout — header line + search input + 3 grouped cards
-    // (matching the typical shape of "Admin", "Cross-Org Read", "Monitoring"
-    // groups) each with a small table inside.
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">

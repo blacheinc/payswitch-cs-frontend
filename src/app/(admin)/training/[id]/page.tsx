@@ -71,7 +71,7 @@ export default function TrainingDetailPage() {
   if (isLoadingUpload) {
     return (
       <div className="space-y-6">
-        {/* Back button + header — same vertical rhythm as the loaded view */}
+        {/* Back button + header */}
         <div className="flex flex-col gap-4">
           <Button
             variant="ghost"
@@ -341,7 +341,7 @@ export default function TrainingDetailPage() {
   );
 }
 
-// ---- Helper component (matches organization detail pattern) ----
+// ---- Helper components ----
 
 function DetailRow({
   label,
@@ -367,14 +367,11 @@ function DetailRow({
 // =============================================================================
 // Quality-report formatter
 //
-// `quality_report` is a heterogeneous payload from the backend — top-level
-// values include scalars (`timestamp`, `quality_score`) AND nested objects
-// (`pii_quality`, `data_quality`, `file_quality`, `schema_quality`). The
-// previous loop printed every value via `String(value)`, which produced
-// "[object Object]" for the nested sections.
-//
-// This formatter walks the known shape and produces a flat list of human-
-// readable {label, value} pairs, summarising each nested section.
+// `quality_report` is a heterogeneous payload — top-level values mix scalars
+// (`timestamp`, `quality_score`) with nested sections (`pii_quality`,
+// `data_quality`, `file_quality`, `schema_quality`). This formatter walks
+// the known shape and flattens it into a list of human-readable
+// {label, value} pairs, summarising each nested section.
 // =============================================================================
 
 interface QualityMetric {

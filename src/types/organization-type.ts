@@ -1,5 +1,5 @@
 // ==================== ORGANIZATION API TYPES ====================
-// Types derived from OpenAPI spec for /admin/organizations endpoints.
+// Request and response shapes for the /admin/organizations endpoints.
 
 // ---- Requests ----
 

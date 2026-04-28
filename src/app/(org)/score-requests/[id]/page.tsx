@@ -247,11 +247,6 @@ export default function ScoreRequestDetailPage() {
   }
 
   if (isLoading) {
-    // Mirrors the loaded layout — header row (back button + title/status +
-    // action buttons), then the 3-column main/sidebar grid that
-    // <ScoreRequestDetailBody /> renders. Each placeholder "card" reproduces
-    // the header (icon + title + caption) + body content shape so nothing
-    // shifts when data lands.
     return (
       <div className="space-y-6">
         {/* Page header */}
@@ -713,11 +708,7 @@ export default function ScoreRequestDetailPage() {
   );
 }
 
-/**
- * Skeleton replica of a Card with header (icon + title + caption) and a
- * body of `lines` text rows. Used inside the loading layout to stand in for
- * the various model-breakdown cards inside `<ScoreRequestDetailBody />`.
- */
+/** Skeleton placeholder for a generic Card with `lines` body rows. */
 function DetailCardSkeleton({ lines = 4 }: { lines?: number }) {
   return (
     <Card>

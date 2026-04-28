@@ -32,12 +32,13 @@ flowchart LR
     User -- HTTPS --> Edge
     Edge --> SSR
     SSR --> Client
-    Client -- "axios + Bearer JWT" --> API
+    Client -- "axios → /api/proxy" --> SSR
+    SSR -- "Bearer JWT (server-side)" --> API
     API --> DB
     API --> ML
 ```
 
-The browser and the backend never share a session cookie. The frontend stores its own AES-encrypted session cookie locally; the backend trusts only the signed JWT bearer token attached to each request. See [security.md](./security.md) for why this layering matters and what's still on the hardening backlog.
+The browser never talks to the backend directly. Tokens live in an `HttpOnly` `__Host-` session cookie set by Next Route Handlers under `src/app/api/auth/*`; every authenticated call from the browser goes to the same-origin catch-all `/api/proxy/[...path]` Route Handler, which reads the cookie server-side and attaches the bearer token before forwarding to the backend. See [security.md](./security.md) for the full token-storage story.
 
 ---
 
@@ -51,12 +52,12 @@ The browser and the backend never share a session cookie. The frontend stores it
 | Server state | [TanStack Query 5](https://tanstack.com/query/latest) | Single `QueryClientProvider` at the root |
 | Client state | React Context | Auth + theme only — no global store |
 | Forms | [react-hook-form](https://react-hook-form.com/) + [zod](https://zod.dev/) | Schemas under `src/lib/schemas/` |
-| HTTP | [axios](https://axios-http.com/) | Interceptors handle bearer-attach + 401 refresh |
+| HTTP | [axios](https://axios-http.com/) | Browser-side; targets same-origin `/api/proxy`. Bearer-attach + 401 refresh live in the proxy Route Handler, server-side. |
 | Toasts | [sonner](https://sonner.emilkowal.ski/) | Top-right, rich colors |
 | Theme | [next-themes](https://github.com/pacocoursey/next-themes) | `light` / `dark` / `system` |
 | Icons | [lucide-react](https://lucide.dev/) | |
 
-There is no E2E or unit test suite checked in — see [known-issues.md](./known-issues.md).
+A Vitest unit/integration suite and a Playwright E2E suite ship with the repo — see [testing.md](./testing.md).
 
 ---
 
@@ -106,10 +107,11 @@ src/
 ├── contexts/                     # AuthContext, ThemeContext
 ├── hooks/                        # usePermissions, useDebounce, ...
 ├── lib/
-│   ├── api-client.ts             # axios instance + interceptors
+│   ├── api-client.ts             # axios instance pointed at /api/proxy
 │   ├── *-service.ts              # One file per backend domain
 │   ├── auth-service.ts           # /auth/* — login, 2FA, password
-│   ├── session-storage.ts        # AES-encrypted session cookie helpers
+│   ├── server-session.ts         # HttpOnly cookie helpers (server-only)
+│   ├── session-storage.ts        # Non-sensitive user-cache (localStorage)
 │   ├── schemas/                  # zod validation schemas
 │   ├── constant.ts               # ROUTES, API_ENDPOINTS, PERMISSION_CODES
 │   └── utils.ts                  # formatters, helpers
@@ -130,7 +132,7 @@ The application serves two audiences from a single Next.js app:
 
 Isolation is enforced at three layers:
 
-1. **Edge middleware** ([`src/proxy.ts`](../src/proxy.ts)) decrypts the session cookie, classifies the requested path as `auth | admin | org | public`, and either lets it through, redirects to the right login, or rewrites to the not-found page if a user attempts a wrong-scope route.
+1. **Edge middleware** ([`src/proxy.ts`](../src/proxy.ts)) reads the HttpOnly session cookie, classifies the requested path as `auth | admin | org | public`, and either lets it through, redirects to the right login, or rewrites to the not-found page if a user attempts a wrong-scope route.
 2. **Backend authorization** is the hard boundary — every API call carries a JWT and the backend re-checks both `userType` and per-action permissions. The middleware is defense-in-depth, never the sole gate.
 3. **Client-side `usePermissions()`** hides UI elements the user cannot use (buttons, menu items, columns), so a user with `score_requests.list` but not `score_requests.override` doesn't see the override action.
 
@@ -149,22 +151,23 @@ sequenceDiagram
     participant RQ as TanStack Query
     participant Svc as Service (e.g. scoreService)
     participant Axios as apiClient (axios)
+    participant Proxy as /api/proxy/[...path]<br/>(Route Handler)
     participant API as Backend API
-    participant Session as session-storage
 
     Page->>RQ: useQuery({ queryKey, queryFn })
     RQ->>Svc: queryFn() → scoreService.getScoreRequestsStats('7d')
     Svc->>Axios: apiClient.get('/v1/score-requests/stats', { params })
-    Axios->>Session: getAccessToken()
-    Session-->>Axios: <jwt>
-    Axios->>API: GET /v1/score-requests/stats?period=7d<br/>Authorization: Bearer <jwt>
-    API-->>Axios: 200 { current, previous, trend, ... }
+    Axios->>Proxy: GET /api/proxy/v1/score-requests/stats?period=7d
+    Proxy->>Proxy: read HttpOnly cookie → accessToken
+    Proxy->>API: GET /v1/score-requests/stats?period=7d<br/>Authorization: Bearer <jwt>
+    API-->>Proxy: 200 { current, previous, trend, ... }
+    Proxy-->>Axios: 200 (relayed)
     Axios-->>Svc: response.data
     Svc-->>RQ: ScoreRequestStatsResponse (typed)
     RQ-->>Page: { data, isLoading, isError, ... }
 ```
 
-If the backend returns **401**, the response interceptor (1) calls `POST /auth/refresh` with the stored refresh token, (2) updates the access token, and (3) retries the original request once. On refresh failure or any 401 from `/auth/*` endpoints, the interceptor clears the session and forces a redirect to `/login`. See [`src/lib/api-client.ts`](../src/lib/api-client.ts) for the implementation.
+If the backend returns **401**, the proxy Route Handler (1) calls `POST /auth/refresh` with the stored refresh token, (2) rewrites the cookie with the new access token, and (3) retries the original request once. On refresh failure the cookie is cleared and the response goes back as 401, which the browser-side axios picks up and redirects to `/login`. See [`src/app/api/proxy/[...path]/route.ts`](../src/app/api/proxy/[...path]/route.ts) for the implementation.
 
 For mutations, the same path applies but the page component uses `useMutation` and is responsible for invalidating the relevant query keys after success.
 
@@ -210,7 +213,7 @@ The app builds to a Next.js production bundle via `npm run build`. Routes split 
 - **Static** (`○`) — pre-rendered at build time, served from CDN. Most authenticated routes still appear as static here because RSC defers data fetching to the client; the static shell renders a loading state.
 - **Dynamic** (`ƒ`) — server-rendered per request (the `[id]` routes and the proxy middleware itself).
 
-A deployment guide will be added in a separate document. The current build verifies clean on Node 20+ and produces a deploy-ready `.next/` directory plus the proxy middleware.
+See [deployment-guide.md](./deployment-guide.md) for the full Azure Container Apps deployment story. The current build verifies clean on Node 20+ and produces a deploy-ready `.next/` directory plus the proxy middleware.
 
 ---
 

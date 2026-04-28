@@ -135,7 +135,6 @@ All FE configuration is server-only — no `NEXT_PUBLIC_*` variables. The image 
 
 - All runtime dependencies are pinned in `package.json` (`^` allows patch + minor — keep tightening before releases).
 - Run `npm audit --omit=dev` before each release. There are no known high/critical advisories at the time of writing.
-- `crypto-js` is used today; once we remove client-side encryption (§3), this dependency goes away too.
 - The vendor list is intentionally short: shadcn/ui (vendored, not a runtime dep), Radix primitives, TanStack Query, axios, react-hook-form, zod, sonner, lucide, qrcode.react, next-themes, date-fns. No tracking SDKs, ads, or experimentation libraries.
 
 ---
