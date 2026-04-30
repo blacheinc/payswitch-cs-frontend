@@ -644,17 +644,6 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
               )}
             </CardContent>
           </Card>
-
-          <div className="text-center text-sm text-muted-foreground space-y-1">
-            <p>
-              <Link
-                href={copy.switchHref}
-                className="text-primary hover:underline"
-              >
-                {copy.switchLabel}
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
     </div>
