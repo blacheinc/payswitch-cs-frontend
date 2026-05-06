@@ -210,7 +210,7 @@ The app builds to a Next.js production bundle via `npm run build`. Routes split 
 - **Static** (`○`) — pre-rendered at build time, served from CDN. Most authenticated routes still appear as static here because RSC defers data fetching to the client; the static shell renders a loading state.
 - **Dynamic** (`ƒ`) — server-rendered per request (the `[id]` routes and the proxy middleware itself).
 
-See [deployment-guide.md](./deployment-guide.md) for the full Azure Container Apps deployment story. The current build verifies clean on Node 20+ and produces a deploy-ready `.next/` directory plus the proxy middleware.
+See [deployment-guide.md](./deployment-guide.md) for deployment options and operational workflows. For client-managed Kubernetes platforms, see [kubernetes-argo-gitlab-guide.md](./kubernetes-argo-gitlab-guide.md). The current build verifies clean on Node 20+ and produces a deploy-ready `.next/` directory plus the proxy middleware.
 
 ---
 

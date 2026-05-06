@@ -1,0 +1,11 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: credit-scoring-fe
+spec:
+  tls:
+    - hosts:
+        - fe-dev.example.com
+      secretName: credit-scoring-fe-dev-tls
+  rules:
+    - host: fe-dev.example.com

@@ -1,0 +1,70 @@
+stages:
+  - validate
+  - build
+  - gitops
+
+variables:
+  IMAGE_NAME: $CI_REGISTRY_IMAGE/credit-scoring-fe
+  DOCKER_TLS_CERTDIR: "/certs"
+
+validate:
+  image: node:20-alpine
+  stage: validate
+  script:
+    - npm ci
+    - npm run typecheck
+    - npm run lint
+    - npm run test:coverage
+
+build_image:
+  image: docker:27
+  services:
+    - name: docker:27-dind
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_TAG =~ /^v.*/
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  script:
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        export IMAGE_TAG="${CI_COMMIT_TAG#v}"
+      else
+        export IMAGE_TAG="dev-${CI_COMMIT_SHORT_SHA}"
+      fi
+      echo "IMAGE_TAG=${IMAGE_TAG}" >> build.env
+      docker build -t "$IMAGE_NAME:$IMAGE_TAG" .
+      docker push "$IMAGE_NAME:$IMAGE_TAG"
+  artifacts:
+    reports:
+      dotenv: build.env
+
+update_gitops_manifest:
+  image: alpine:3.20
+  stage: gitops
+  needs: ["build_image"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      variables:
+        KUSTOMIZE_PATH: deploy/k8s/overlays/dev/kustomization.yaml
+    - if: $CI_COMMIT_TAG =~ /^v.*/
+      variables:
+        KUSTOMIZE_PATH: deploy/k8s/overlays/prod/kustomization.yaml
+  before_script:
+    - apk add --no-cache git yq
+    - git config user.email "gitlab-ci@local"
+    - git config user.name "GitLab CI"
+    - git fetch origin "$CI_COMMIT_REF_NAME"
+    - git checkout "$CI_COMMIT_REF_NAME"
+  script:
+    - yq -i "(.images[] | select(.name == \"registry.example.com/credit-scoring/fe\") ).newName = \"$IMAGE_NAME\"" "$KUSTOMIZE_PATH"
+    - yq -i "(.images[] | select(.name == \"$IMAGE_NAME\") ).newTag = strenv(IMAGE_TAG)" "$KUSTOMIZE_PATH"
+    - git add "$KUSTOMIZE_PATH"
+    - |
+      if git diff --cached --quiet; then
+        echo "No manifest changes to commit."
+        exit 0
+      fi
+    - git commit -m "chore(gitops): update image tag to ${IMAGE_TAG}"
+    - git push origin HEAD:"$CI_COMMIT_REF_NAME"
