@@ -1,6 +1,11 @@
 # Deployment guide
 
-How to deploy the PaySwitch Credit Scoring frontend to **Azure Container Apps** using the Bicep stack and helper scripts that ship in this repository.
+How to deploy the PaySwitch Credit Scoring frontend.
+
+This repository now supports two deployment paths:
+
+- **Path A (default): Azure Container Apps** using the Bicep stack and helper scripts in this repository.
+- **Path B (client platform): Kubernetes + Argo CD + GitLab** using Kustomize overlays and GitOps templates in this repository.
 
 This guide is the canonical reference for the client engineering team. It assumes only:
 
@@ -10,6 +15,19 @@ This guide is the canonical reference for the client engineering team. It assume
 - The backend API is already deployed at a known URL (the FE talks to it as a separate origin).
 
 It does **not** assume anything about the FE codebase that isn't already documented in [architecture.md](./architecture.md) or [security.md](./security.md).
+
+---
+
+## 0. Which path should I use?
+
+- Use **Path A (Azure Container Apps)** when this frontend is hosted in our Azure subscription and deployed from Azure/GitHub pipelines.
+- Use **Path B (Kubernetes + Argo CD + GitLab)** when the client owns a Kubernetes platform and enforces GitOps via Argo CD.
+
+Both paths keep the same runtime-security model:
+
+- no browser-exposed `NEXT_PUBLIC_*` secrets,
+- runtime-only server config,
+- `BACKEND_API_URL` read server-side only.
 
 ---
 
@@ -58,6 +76,10 @@ Source files:
 - [`deploy/scripts/set-secrets.sh`](../deploy/scripts/set-secrets.sh) — rotate runtime secrets.
 - [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) — GitHub Actions CD.
 - [`azure-pipelines.yml`](../azure-pipelines.yml) — Azure DevOps CD (alternative to GHA).
+- [`docs/kubernetes-argo-gitlab-guide.md`](./kubernetes-argo-gitlab-guide.md) — Kubernetes + Argo CD + GitLab implementation blueprint.
+- [`deploy/k8s/`](../deploy/k8s/) — Kustomize base and overlays (`dev`/`prod`) for Kubernetes deployments.
+- [`deploy/argocd/`](../deploy/argocd/) — Argo CD `Application` manifests for `dev` and `prod`.
+- [`deploy/gitlab/.gitlab-ci.k8s.yml`](../deploy/gitlab/.gitlab-ci.k8s.yml) — GitLab CI template for build + GitOps image updates.
 
 ---
 
@@ -248,6 +270,36 @@ Triggers (same semantics as GitHub):
 - Push to `develop` → dev.
 - Push of `v*` tag → prod.
 - Manual run with the `targetEnvironment` parameter.
+
+### Option C — GitLab CI + Argo CD (Kubernetes GitOps)
+
+Files:
+
+- [`deploy/gitlab/.gitlab-ci.k8s.yml`](../deploy/gitlab/.gitlab-ci.k8s.yml)
+- [`deploy/argocd/application-dev.yaml`](../deploy/argocd/application-dev.yaml)
+- [`deploy/argocd/application-prod.yaml`](../deploy/argocd/application-prod.yaml)
+- [`deploy/k8s/overlays/dev/kustomization.yaml`](../deploy/k8s/overlays/dev/kustomization.yaml)
+- [`deploy/k8s/overlays/prod/kustomization.yaml`](../deploy/k8s/overlays/prod/kustomization.yaml)
+
+Flow:
+
+1. GitLab validates the app (`typecheck`, `lint`, tests).
+2. GitLab builds and pushes the frontend image.
+3. GitLab updates the overlay image tag in Git (`kustomization.yaml`).
+4. Argo CD syncs that Git change to the target cluster namespace.
+
+Recommended release mapping:
+
+- `develop` branch -> `dev` overlay / namespace.
+- `v*` tags -> `prod` overlay / namespace.
+
+Secret model (recommended):
+
+- Keep runtime secrets in Azure Key Vault.
+- Sync them into Kubernetes using External Secrets (`ExternalSecret` resources in overlays).
+- Read `BACKEND_API_URL` from Kubernetes Secret at runtime; do not hardcode in manifests.
+
+See [kubernetes-argo-gitlab-guide.md](./kubernetes-argo-gitlab-guide.md) for the full checklist and dry-run plan.
 
 ---
 

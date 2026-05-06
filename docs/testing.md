@@ -237,6 +237,12 @@ Once a CI environment is available, this set of jobs is the minimum:
 
 The unit suite must stay green to merge. The E2E suite should be required for `main`/`develop` and run on every PR — flaky tests should be quarantined immediately rather than retried into oblivion.
 
+Concrete CI implementations in this repository now include:
+
+- GitHub Actions (`.github/workflows/ci.yml`, `.github/workflows/deploy.yml`),
+- Azure DevOps (`azure-pipelines.yml`),
+- GitLab GitOps starter (`deploy/gitlab/.gitlab-ci.k8s.yml`).
+
 ---
 
 ## 6. What's intentionally NOT tested

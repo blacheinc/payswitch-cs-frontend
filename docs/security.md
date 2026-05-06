@@ -119,7 +119,7 @@ The CSP currently ships `frame-ancestors 'none'` only. A nonce-based `script-src
 |---|---|---|
 | `BACKEND_API_URL` | Server-only | Read by Next Route Handlers; never reaches the browser. |
 
-All FE configuration is server-only — no `NEXT_PUBLIC_*` variables. The image is therefore environment-portable: the same tag promotes from dev → prod with only a runtime env-var change. The backend remains the keeper of all upstream secrets (DB credentials, ML model keys, JWT signing keys).
+All FE configuration is server-only — no `NEXT_PUBLIC_*` variables. The image is therefore environment-portable: the same tag promotes from dev → prod with only a runtime env-var change. For Kubernetes deployments, `BACKEND_API_URL` should be injected via Kubernetes Secret synced from Azure Key Vault (External Secrets), not committed into manifests or baked into images. The backend remains the keeper of all upstream secrets (DB credentials, ML model keys, JWT signing keys).
 
 ---
 

@@ -19,9 +19,10 @@ Detailed docs live under [`docs/`](./docs/).
 | [Integrations](./docs/integrations.md) | How the FE consumes each backend integration guide. |
 | [Security](./docs/security.md) | Token storage, threat model, security headers. |
 | [Testing](./docs/testing.md) | Vitest + MSW + Playwright — how to run, write, and extend tests. |
-| [Deployment](./docs/deployment-guide.md) | Azure Container Apps + Bicep + GitHub Actions / ADO Pipelines — full one-shot deploy guide. |
+| [Deployment](./docs/deployment-guide.md) | Deployment options: Azure Container Apps (Bicep) or Kubernetes GitOps (Argo CD + GitLab). |
+| [Kubernetes GitOps Blueprint](./docs/kubernetes-argo-gitlab-guide.md) | Client-platform deployment reference for Kubernetes + Argo CD + GitLab CI. |
 
-For a one-shot Azure deploy, jump straight to [`docs/deployment-guide.md`](./docs/deployment-guide.md).
+For the Azure path, jump straight to [`docs/deployment-guide.md`](./docs/deployment-guide.md). For Kubernetes + Argo CD + GitLab, use [`docs/kubernetes-argo-gitlab-guide.md`](./docs/kubernetes-argo-gitlab-guide.md).
 
 ---
 
