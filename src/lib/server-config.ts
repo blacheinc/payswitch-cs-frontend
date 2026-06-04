@@ -12,3 +12,38 @@ const RAW_BACKEND_API_URL =
 
 /** Backend base URL with no trailing slash. */
 export const BACKEND_API_URL = RAW_BACKEND_API_URL.replace(/\/+$/, "");
+
+// =============================================================================
+// Connection pre-warm
+//
+// Cold-start observation: the very first proxy call after server boot pays a
+// ~150–200 ms TLS handshake + connection-establish cost to the upstream. Every
+// subsequent call reuses the connection via undici's keep-alive pool (Node's
+// default fetch dispatcher) and is much faster.
+//
+// We trigger one cheap request at module load so that, by the time the first
+// user request arrives, the TCP+TLS connection to the backend is already warm
+// in the pool.
+//
+// Environment-agnostic notes:
+//   - We use `HEAD /` so the pre-warm doesn't depend on any specific path
+//     (`/health`, `/ready`, etc.) being exposed by whichever backend the
+//     deployment points at. Many gateways respond 404 / 405 to a root HEAD —
+//     **that's fine**. What we care about is the TCP+TLS handshake, which
+//     completes regardless of the HTTP status.
+//   - Failures are silently swallowed: pre-warm is purely an optimisation.
+//     If the backend is offline at boot or doesn't accept HEAD at all, the
+//     proxy still works on demand.
+//   - The short timeout keeps a slow/offline backend from holding any
+//     resources on the Next process.
+// =============================================================================
+
+if (typeof globalThis.fetch === "function") {
+  void fetch(BACKEND_API_URL, {
+    method: "HEAD",
+    cache: "no-store",
+    signal: AbortSignal.timeout(2000),
+  }).catch(() => {
+    // Intentionally swallowed — pre-warm is best-effort.
+  });
+}

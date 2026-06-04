@@ -77,7 +77,8 @@ describe("scoreService.getScoreRequests", () => {
     expect(capturedParams?.get("decision")).toBe("REFER");
   });
 
-  it("comma-joins an array of decisions on the wire", async () => {
+  it("serialises an array of decisions as repeated params per the BE spec", async () => {
+    // The BE expects `?decision=REFER&decision=DECLINE` — NOT `?decision=REFER,DECLINE`.
     let capturedParams: URLSearchParams | undefined;
     server.use(
       http.get(`${API}/v1/score-requests`, ({ request }) => {
@@ -93,7 +94,7 @@ describe("scoreService.getScoreRequests", () => {
     );
 
     await scoreService.getScoreRequests({ decision: ["REFER", "DECLINE"] });
-    expect(capturedParams?.get("decision")).toBe("REFER,DECLINE");
+    expect(capturedParams?.getAll("decision")).toEqual(["REFER", "DECLINE"]);
   });
 
   it("omits an empty decision array from the wire", async () => {

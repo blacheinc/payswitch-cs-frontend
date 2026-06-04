@@ -595,6 +595,21 @@ export interface ApiError {
   message: string;
   details?: Record<string, unknown>;
   statusCode: number;
+  /** True when the caller should hide / disable the action that produced this
+   *  error (403). The user lacks permission; retrying won't help. */
+  forbidden?: boolean;
+  /** True for 404 — resource doesn't exist or isn't visible to the caller. */
+  notFound?: boolean;
+  /** True for 422 (request-body validation). `field` is set when the BE
+   *  emitted a single-field-shaped string error like
+   *  `"loan_request → amount: Input should be greater than 0"`. */
+  fieldError?: boolean;
+  field?: string;
+  /** True for transport-level errors and 502/SCORING_ERROR — the caller may
+   *  safely retry (reusing the same `Idempotency-Key` on POSTs that mutate). */
+  retryable?: boolean;
+  /** Seconds to wait before retrying — set on 429 from the `Retry-After` header. */
+  retryAfter?: number;
 }
 
 /** Extract a human-readable message from any error thrown by apiClient. */

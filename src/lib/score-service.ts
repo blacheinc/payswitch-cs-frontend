@@ -711,9 +711,15 @@ export const scoreService = {
   async getScoreRequests(
     params?: PaginationParams,
   ): Promise<PaginatedResponse<ScoreRequestItem>> {
-    const decision = Array.isArray(params?.decision)
+    // Per spec, `decision` is repeatable — `?decision=REFER&decision=DECLINE`.
+    // Axios serialises arrays as repeated params by default with the qs
+    // paramsSerializer, but we set it explicitly for clarity and so a single
+    // string still works.
+    const decisionParam: string[] | string | undefined = Array.isArray(
+      params?.decision,
+    )
       ? params.decision.length
-        ? params.decision.join(",")
+        ? params.decision
         : undefined
       : params?.decision || undefined;
     const response = await apiClient.get<ApiPaginatedScoreRequests>(
@@ -724,8 +730,15 @@ export const scoreService = {
           per_page: params?.perPage || TABLE_ITEM_PER_PAGE,
           search: params?.search || undefined,
           status: params?.status || undefined,
-          decision,
+          decision: decisionParam,
+          // `organization_id` is admin-only — callers from `(org)` routes
+          // must never pass it (the BE returns 403 if they do).
           organization_id: params?.organizationId || undefined,
+        },
+        // Use the `repeat` style so `decision=[A,B]` serialises to
+        // `decision=A&decision=B` rather than `decision=A,B`.
+        paramsSerializer: {
+          indexes: null,
         },
       },
     );
@@ -811,8 +824,20 @@ export const scoreService = {
     return mapBureauLookup(response.data);
   },
 
-  /** POST /v1/score-requests — Step 2: create score request */
-  async createScoreRequest(payload: CreateScoreRequestPayload) {
+  /**
+   * POST /v1/score-requests — Step 2: create score request.
+   *
+   * **Always** send an `Idempotency-Key`. Reuse the same key when retrying
+   * the same logical submission (e.g. retrying after a `502 SCORING_ERROR`)
+   * so the BE collapses duplicates. A new key per fresh submission.
+   *
+   * On 409 IDEMPOTENCY_CONFLICT the BE treats the call as already-done; the
+   * interceptor rejects with that code, callers can interpret it as success.
+   */
+  async createScoreRequest(
+    payload: CreateScoreRequestPayload,
+    options?: { idempotencyKey: string },
+  ) {
     const response = await apiClient.post(
       API_ENDPOINTS.SCORE_REQUESTS.BASE,
       {
@@ -841,16 +866,46 @@ export const scoreService = {
           ? { channel: payload.channel }
           : undefined,
       },
+      options?.idempotencyKey
+        ? { headers: { "Idempotency-Key": options.idempotencyKey } }
+        : undefined,
     );
     return response.data;
   },
 
-  /** GET /v1/score-requests/{id}/scoring-result */
+  /**
+   * GET /v1/score-requests/{id}/scoring-result
+   *
+   * The BE distinguishes two 404 cases on this endpoint:
+   *   - genuine NOT_FOUND (unknown id / not in caller's org)
+   *   - "not scored yet" — body: `{ detail: "Scoring result not yet available. Current status: processing" }`
+   *
+   * The interceptor flattens both into a NOT_FOUND rejection. We re-classify
+   * here by inspecting the rejected error's `details.raw` / `message`, so
+   * the caller can branch cleanly.
+   *
+   * Returns `null` for "not scored yet"; rethrows for all other errors.
+   */
   async getScoringResult(id: string) {
-    const response = await apiClient.get(
-      API_ENDPOINTS.SCORE_REQUESTS.SCORING_RESULT(id),
-    );
-    return response.data;
+    try {
+      const response = await apiClient.get(
+        API_ENDPOINTS.SCORE_REQUESTS.SCORING_RESULT(id),
+      );
+      return response.data;
+    } catch (err) {
+      const e = err as {
+        statusCode?: number;
+        message?: string;
+        details?: { raw?: string };
+      };
+      const stillProcessing =
+        e?.statusCode === 404 &&
+        /not yet available|not.*scored/i.test(
+          (e.message || "") + " " + (e.details?.raw || ""),
+        );
+      if (stillProcessing) return null;
+      throw err;
+    }
   },
 
   /** POST /v1/score-requests/{id}/override */

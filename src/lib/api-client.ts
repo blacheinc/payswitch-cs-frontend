@@ -71,28 +71,66 @@ apiClient.interceptors.response.use(
         code: error.code || "NETWORK_ERROR",
         message: userMessage,
         statusCode: 0,
+        retryable: true,        // transport blip — safe to try again
       });
     }
 
     // ---- Server responded with an error status ----
+    const status = error.response.status;
     const body = error.response?.data;
+    const bodyRec = (body as unknown as Record<string, unknown>) ?? {};
 
-    // FastAPI 422 validation envelope
-    const detail = (body as unknown as Record<string, unknown>)?.detail;
+    // ── Validation envelope (422) ─────────────────────────────────────────
+    //
+    // Two shapes ship from the backend at status 422:
+    //
+    //   (a) FastAPI's array-form  →  { detail: [{ loc, msg, type }, ...] }
+    //   (b) Our spec's string form →  { error: "validation_error", detail: "loan_request → amount: Input should be greater than 0" }
+    //
+    // Both are routed through the same VALIDATION_ERROR branch so callers
+    // get a uniform shape with `fieldError: true` and (when we can parse it)
+    // a `field` key the form can attach the error to.
+    // ─────────────────────────────────────────────────────────────────────
+    const detail = bodyRec.detail;
+
+    // Shape (a) — array form
     if (Array.isArray(detail) && detail.length > 0) {
-      const first = detail[0] as { msg?: string };
+      const first = detail[0] as { msg?: string; loc?: unknown[] };
+      const loc = Array.isArray(first.loc) ? first.loc.join(".") : undefined;
       return Promise.reject<ApiError>({
         code: "VALIDATION_ERROR",
         message: first.msg || "Validation error",
         details: { validationErrors: detail },
-        statusCode: error.response?.status || 422,
+        statusCode: status || 422,
+        fieldError: true,
+        field: loc,
       });
     }
 
-    // Business-logic error (nested or flat)
-    const nested = (body as unknown as Record<string, unknown>)?.error as
-      | Record<string, unknown>
-      | undefined;
+    // Shape (b) — string form. The spec emits messages of the form
+    // "<path> → <reason>" — split once on the arrow if it's there.
+    if (
+      typeof bodyRec.error === "string" &&
+      bodyRec.error === "validation_error" &&
+      typeof detail === "string"
+    ) {
+      const arrowIdx = detail.indexOf("→");
+      const field =
+        arrowIdx >= 0 ? detail.slice(0, arrowIdx).trim() : undefined;
+      const reason =
+        arrowIdx >= 0 ? detail.slice(arrowIdx + 1).trim() : detail;
+      return Promise.reject<ApiError>({
+        code: "VALIDATION_ERROR",
+        message: reason,
+        details: { raw: detail },
+        statusCode: status || 422,
+        fieldError: true,
+        field,
+      });
+    }
+
+    // ── Business-logic error (Shape A — nested `error.code/message`) ──────
+    const nested = bodyRec.error as Record<string, unknown> | undefined;
 
     const httpFallback: Record<number, string> = {
       400: "Invalid request. Please check your input and try again.",
@@ -110,22 +148,34 @@ apiClient.interceptors.response.use(
     let errorMessage =
       (nested?.message as string) ||
       body?.message ||
-      httpFallback[error.response?.status || 0] ||
+      httpFallback[status || 0] ||
       "An unexpected error occurred. Please try again.";
 
-    if (
-      error.response?.status === 403 &&
-      errorCode === "AUTHORIZATION_ERROR"
-    ) {
+    if (status === 403 && errorCode === "AUTHORIZATION_ERROR") {
       errorMessage =
         errorMessage || "You don't have permission to perform this action.";
     }
+
+    // Status-derived UX flags so callers don't have to switch on numbers.
+    const forbidden = status === 403;
+    const notFound = status === 404;
+    const retryAfterHeader = error.response.headers?.["retry-after"];
+    const retryAfter =
+      status === 429 && retryAfterHeader
+        ? Number(retryAfterHeader) || 1
+        : undefined;
+    // 502 SCORING_ERROR (and any plain 502/503) are retryable per spec.
+    const retryable = status === 502 || status === 503;
 
     return Promise.reject<ApiError>({
       code: errorCode,
       message: errorMessage,
       details: (nested?.details as Record<string, unknown>) || body?.details,
-      statusCode: error.response?.status || 500,
+      statusCode: status || 500,
+      forbidden,
+      notFound,
+      retryable,
+      retryAfter,
     });
   },
 );

@@ -214,6 +214,16 @@ export default function NewScoreRequestPage() {
   // ── Bureau details expand/collapse in review ──
   const [showBureauDetails, setShowBureauDetails] = useState(false);
 
+  // ── Idempotency key ──
+  //
+  // The BE requires `Idempotency-Key` on POST /v1/score-requests and uses it
+  // to collapse duplicate submissions (incl. retries after `502 SCORING_ERROR`).
+  // One key per form session; regenerated when the user starts a fresh
+  // submission after a permanent failure.
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() =>
+    crypto.randomUUID(),
+  );
+
   // ── Step 1: Applicant form ──
   // `shouldUnregister: false` (RHF default, set explicitly here) keeps every
   // field's value alive in form state when its <Controller> is unmounted on
@@ -283,13 +293,23 @@ export default function NewScoreRequestPage() {
   /** Score request creation — triggered from Step 4 */
   const createScoreRequestMutation = useMutation({
     mutationFn: (payload: CreateScoreRequestPayload) =>
-      scoreService.createScoreRequest(payload),
+      scoreService.createScoreRequest(payload, { idempotencyKey }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SCORE_KEYS.all });
       toast.success("Credit score generated successfully!");
       router.push(ROUTES.ORG.SCORE_REQUESTS);
     },
     onError: (error) => {
+      // Permanent (non-retryable) failures invalidate the current idempotency
+      // key — a subsequent attempt is a new logical submission. Transient
+      // failures (502 SCORING_ERROR / network / 429) keep the same key so the
+      // BE can collapse the duplicate.
+      const e = error as { retryable?: boolean; statusCode?: number };
+      const isRetryable =
+        e?.retryable === true || e?.statusCode === 429;
+      if (!isRetryable) {
+        setIdempotencyKey(crypto.randomUUID());
+      }
       toast.error(
         (error as any)?.message ||
           "Failed to generate credit score. Please try again.",
