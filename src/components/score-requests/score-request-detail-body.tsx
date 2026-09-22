@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -11,8 +12,11 @@ import {
   CheckCircle,
   Clock,
   CreditCard,
+  Eye,
+  EyeOff,
   FileQuestion,
   Fingerprint,
+  Loader2,
   Minus,
   ShieldAlert,
   ShieldOff,
@@ -34,7 +38,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { scoreService, type ApplicantPii } from "@/lib/score-service";
 
 // =============================================================================
 // Helpers — exported so page-level headers can render a matching status badge
@@ -212,6 +219,68 @@ const fmtGHS = (v?: number | null) =>
 const fmtPercent = (v?: number | null) =>
   v != null ? `${(v * 100).toFixed(2)}%` : "—";
 
+/**
+ * Identity fields arrive masked; we render them as-is. Revealing hits an
+ * audit-logged endpoint, hence one control for all three fields, click-only,
+ * and cached after the first fetch so toggling doesn't re-log.
+ */
+function useApplicantReveal(requestId: string | undefined) {
+  const [revealed, setRevealed] = useState(false);
+  const [pii, setPii] = useState<ApplicantPii | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const toggle = async () => {
+    if (revealed) {
+      setRevealed(false);
+      return;
+    }
+    // Already fetched — re-show without another audited call.
+    if (pii) {
+      setRevealed(true);
+      return;
+    }
+    if (!requestId) {
+      toast.error("Cannot reveal — this record has no request ID.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await scoreService.getApplicantPii(requestId);
+      setPii(result);
+      setRevealed(true);
+    } catch (error) {
+      const message =
+        (error as { message?: string })?.message ||
+        "Could not retrieve applicant details.";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { revealed, pii, isLoading, toggle };
+}
+
+function IdentityRow({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn(mono ? "font-mono text-xs" : "font-semibold")}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
 // =============================================================================
 // Body component
 //
@@ -258,6 +327,11 @@ export function ScoreRequestDetailBody({
   const reasonCodes: string[] = creditRisk?.decision_reason_codes || [];
 
   const applicant = sr.applicant;
+
+  const reveal = useApplicantReveal(sr.request_id || sr.id);
+  const hasMaskedIdentity = Boolean(
+    applicant?.national_id_number || applicant?.phone || applicant?.account_number,
+  );
   const loanRequest = sr.loan_request;
 
   // Legacy fields (older requests)
@@ -934,25 +1008,61 @@ export function ScoreRequestDetailBody({
                   </div>
                 )}
                 {applicant.national_id_number && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">National ID</span>
-                    <span className="font-mono text-xs">
-                      {applicant.national_id_number}
-                    </span>
-                  </div>
+                  <IdentityRow
+                    label="National ID"
+                    value={
+                      (reveal.revealed && reveal.pii?.nationalIdNumber) ||
+                      applicant.national_id_number
+                    }
+                    mono
+                  />
                 )}
                 {applicant.phone && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Phone</span>
-                    <span className="font-semibold">{applicant.phone}</span>
-                  </div>
+                  <IdentityRow
+                    label="Phone"
+                    value={
+                      (reveal.revealed && reveal.pii?.phone) || applicant.phone
+                    }
+                  />
                 )}
                 {applicant.account_number && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Account No.</span>
-                    <span className="font-mono text-xs">
-                      {applicant.account_number}
-                    </span>
+                  <IdentityRow
+                    label="Account No."
+                    value={
+                      (reveal.revealed && reveal.pii?.accountNumber) ||
+                      applicant.account_number
+                    }
+                    mono
+                  />
+                )}
+
+                {hasMaskedIdentity && (
+                  <div className="pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={reveal.toggle}
+                      disabled={reveal.isLoading}
+                      aria-pressed={reveal.revealed}
+                    >
+                      {reveal.isLoading ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : reveal.revealed ? (
+                        <EyeOff className="mr-1.5 h-3.5 w-3.5" />
+                      ) : (
+                        <Eye className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      {reveal.revealed
+                        ? "Hide full details"
+                        : "Reveal full details"}
+                    </Button>
+                    {!reveal.revealed && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Revealing is recorded in the audit log.
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>

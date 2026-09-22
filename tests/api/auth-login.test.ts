@@ -157,4 +157,72 @@ describe("POST /api/auth/login", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  // Forced first-login password change. The backend sends a scoped token with
+  // an empty refresh_token; the old "missing tokens" guard 502'd on it, so
+  // these accounts couldn't sign in at all.
+
+  it("accepts a scoped session when requires_password_change is set", async () => {
+    let profileCalled = false;
+    server.use(
+      http.post("http://backend.test/auth/login", () =>
+        HttpResponse.json({
+          access_token: "scoped-token",
+          refresh_token: "",
+          requires_password_change: true,
+          user_type: "org",
+          email: "new.user@example.com",
+        }),
+      ),
+      http.get("http://backend.test/auth/me", () => {
+        profileCalled = true;
+        return HttpResponse.json({}, { status: 401 });
+      }),
+    );
+
+    const { POST } = await import("@/app/api/auth/login/route");
+    const res = await POST(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: "new.user@example.com",
+          password: "temp",
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      requires_password_change: true,
+      userType: "org",
+      email: "new.user@example.com",
+    });
+
+    // Scoped token only works against /auth/change-password — no profile load.
+    expect(profileCalled).toBe(false);
+
+    const session = JSON.parse(cookieJar.get("__Host-session")!.value);
+    expect(session.accessToken).toBe("scoped-token");
+    expect(session.refreshToken).toBe("");
+    expect(session.passwordChangeRequired).toBe(true);
+  });
+
+  it("still 502s when a normal login response is missing its refresh token", async () => {
+    server.use(
+      http.post("http://backend.test/auth/login", () =>
+        HttpResponse.json({ access_token: "a", refresh_token: "" }),
+      ),
+    );
+
+    const { POST } = await import("@/app/api/auth/login/route");
+    const res = await POST(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: "x", password: "y" }),
+      }),
+    );
+
+    expect(res.status).toBe(502);
+    expect(cookiesMock.set).not.toHaveBeenCalled();
+  });
 });

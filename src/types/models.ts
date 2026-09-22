@@ -65,6 +65,8 @@ export interface User {
   createdAt: string;
   /** Resolved RBAC permission codes for the signed-in user. */
   permissions?: string[];
+  /** Live 2FA enrollment state from /auth/me. Must survive the merge layer. */
+  totp_enabled?: boolean;
 }
 
 export interface AdminUser extends User {
@@ -610,6 +612,8 @@ export interface ApiError {
   retryable?: boolean;
   /** Seconds to wait before retrying — set on 429 from the `Retry-After` header. */
   retryAfter?: number;
+  /** 403 REAUTH_REQUIRED — which proof the server wants. */
+  reauthReason?: "2fa_already_enabled" | "bad_password" | "bad_totp_code";
 }
 
 /** Extract a human-readable message from any error thrown by apiClient. */

@@ -655,6 +655,14 @@ function mapBatchResultItem(raw: ApiBatchResultItem): BatchResultItem {
 
 // ===================== QUERY KEYS =====================
 
+/** Unmasked applicant identity from the audited applicant-pii endpoint. */
+export interface ApplicantPii {
+  requestId: string;
+  nationalIdNumber: string | null;
+  phone: string | null;
+  accountNumber: string | null;
+}
+
 export const SCORE_KEYS = {
   all: ["score-requests"] as const,
   lists: () => [...SCORE_KEYS.all, "list"] as const,
@@ -701,6 +709,27 @@ export const BUREAU_KEYS = {
 // ===================== SERVICE =====================
 
 export const scoreService = {
+  /**
+   * GET /v1/score-requests/{id}/applicant-pii — unmasked identity fields.
+   * AUDITED per call: explicit reveal action only, never on mount or inside a
+   * query that can refetch.
+   */
+  async getApplicantPii(requestId: string): Promise<ApplicantPii> {
+    const response = await apiClient.get<{
+      request_id: string;
+      national_id_number?: string | null;
+      phone?: string | null;
+      account_number?: string | null;
+    }>(API_ENDPOINTS.SCORE_REQUESTS.APPLICANT_PII(requestId));
+
+    return {
+      requestId: response?.data?.request_id ?? requestId,
+      nationalIdNumber: response?.data?.national_id_number ?? null,
+      phone: response?.data?.phone ?? null,
+      accountNumber: response?.data?.account_number ?? null,
+    };
+  },
+
   /**
    * GET /v1/score-requests — paginated list.
    *

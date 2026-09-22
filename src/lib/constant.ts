@@ -10,6 +10,8 @@ export const ROUTES = {
     ADMIN_LOGIN: "/admin-login",
     FORGOT_PASSWORD: "/forgot-password",
     RESET_PASSWORD: "/reset-password",
+    /** Forced first-login change; only reachable with a scoped session (see src/proxy.ts). */
+    CHANGE_PASSWORD: "/change-password",
   },
   ADMIN: {
     DASHBOARD: "/admin-dashboard",
@@ -66,6 +68,8 @@ export const API_ENDPOINTS = {
     OVERRIDE: (id: string) => `/v1/score-requests/${id}/override`,
     OUTCOME: (id: string) => `/v1/score-requests/${id}/outcome`,
     PERFORMANCE: (id: string) => `/v1/score-requests/${id}/performance`,
+    /** Unmasked applicant PII. Audit-logged per call — user action only, never prefetch. */
+    APPLICANT_PII: (id: string) => `/v1/score-requests/${id}/applicant-pii`,
   },
   BUREAU: {
     LOOKUP: "/v1/bureau-lookup",

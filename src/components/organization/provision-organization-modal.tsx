@@ -34,7 +34,8 @@ export function ProvisionOrganizationModal({
 
   const provisionMutation = useMutation({
     mutationFn: (id: string) => {
-      const callbackUrl = `${window.location.origin}${ROUTES.AUTH.LOGIN}`;
+      // Path only — the proxy rebuilds this against a server-decided origin.
+      const callbackUrl = ROUTES.AUTH.LOGIN;
       return organizationService.provision(id, { callbackUrl });
     },
     onSuccess: (data) => {

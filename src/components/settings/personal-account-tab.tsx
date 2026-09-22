@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authService } from "@/lib/auth-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import { RemoveTwoFactorDialog } from "@/components/settings/remove-two-factor-d
 
 export function PersonalAccountTab() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: userProfile } = useQuery({
     queryKey: ["auth-me"],
@@ -28,19 +29,24 @@ export function PersonalAccountTab() {
   });
 
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false);
   const [removeTwoFactorOpen, setRemoveTwoFactorOpen] = useState(false);
 
-  useEffect(() => {
-    if (userProfile !== undefined) {
-      setTwoFactorEnabled(userProfile.totp_enabled);
-    }
-  }, [userProfile]);
+  // Read enrollment from /auth/me; mirroring it in local state let the toggle
+  // claim "off" while 2FA was active, offering the wizard again (VAPT §2.3).
+  const profileLoaded = userProfile !== undefined;
+  const twoFactorEnabled = userProfile?.totp_enabled ?? false;
+
+  // Both dialogs change enrollment server-side — re-read, don't assume.
+  const refreshProfile = () => {
+    queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+  };
 
   const handleTwoFactorToggle = (checked: boolean) => {
     if (checked) {
-      // Open setup dialog to enable 2FA
+      // Rebinding over an active factor goes through the disable flow, which
+      // re-authenticates with password + current TOTP.
+      if (twoFactorEnabled) return;
       setTwoFactorSetupOpen(true);
     } else {
       // Open remove dialog to disable 2FA
@@ -106,6 +112,8 @@ export function PersonalAccountTab() {
             <Switch
               checked={twoFactorEnabled}
               onCheckedChange={handleTwoFactorToggle}
+              disabled={!profileLoaded}
+              aria-label="Two-factor authentication"
             />
           </div>
         </CardContent>
@@ -119,13 +127,13 @@ export function PersonalAccountTab() {
       <TwoFactorSetupDialog
         open={twoFactorSetupOpen}
         onOpenChange={setTwoFactorSetupOpen}
-        onEnabled={() => setTwoFactorEnabled(true)}
+        onEnabled={refreshProfile}
       />
 
       <RemoveTwoFactorDialog
         open={removeTwoFactorOpen}
         onOpenChange={setRemoveTwoFactorOpen}
-        onDisabled={() => setTwoFactorEnabled(false)}
+        onDisabled={refreshProfile}
       />
     </div>
   );

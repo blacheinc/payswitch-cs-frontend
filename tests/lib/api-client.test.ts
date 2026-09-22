@@ -137,3 +137,68 @@ describe("apiClient error normalization", () => {
     }
   });
 });
+
+describe("403 re-auth errors", () => {
+  // 2FA endpoints answer 403 REAUTH_REQUIRED with a machine-readable reason.
+  // Callers must branch on that, never on message text.
+  it("surfaces reauthReason from details", async () => {
+    server.use(
+      http.post(`${ORIGIN}/api/proxy/auth/2fa/setup`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "REAUTH_REQUIRED",
+              message: "Re-authentication required",
+              details: { reason: "2fa_already_enabled" },
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    );
+
+    await expect(apiClient.post("/auth/2fa/setup")).rejects.toMatchObject({
+      code: "REAUTH_REQUIRED",
+      statusCode: 403,
+      reauthReason: "2fa_already_enabled",
+      forbidden: true,
+    });
+  });
+
+  it("leaves reauthReason unset on an ordinary 403", async () => {
+    server.use(
+      http.get(`${ORIGIN}/api/proxy/v1/secret`, () =>
+        HttpResponse.json(
+          { error: { code: "AUTHORIZATION_ERROR", message: "Nope" } },
+          { status: 403 },
+        ),
+      ),
+    );
+
+    await expect(apiClient.get("/v1/secret")).rejects.toMatchObject({
+      code: "AUTHORIZATION_ERROR",
+      reauthReason: undefined,
+    });
+  });
+
+  it("does not mark a 403 retryable", async () => {
+    server.use(
+      http.post(`${ORIGIN}/api/proxy/auth/2fa/remove`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "REAUTH_REQUIRED",
+              message: "Bad password",
+              details: { reason: "bad_password" },
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    );
+
+    await expect(
+      apiClient.post("/auth/2fa/remove", {}),
+    ).rejects.toMatchObject({ reauthReason: "bad_password", retryable: false });
+  });
+});

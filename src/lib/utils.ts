@@ -65,3 +65,15 @@ export function prettyModelType(value?: string | null): string {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+// ─── PII masking ────────────────────────────────────────────────────────────
+
+/** Mask to the last `visible` chars. Fixed-width bullets so length doesn't leak. */
+export function maskTail(value?: string | null, visible = 4): string {
+  if (!value) return "—";
+  const trimmed = String(value).trim();
+  if (!trimmed) return "—";
+  // Too short to mask meaningfully.
+  if (trimmed.length <= visible) return "••••";
+  return `•••• ${trimmed.slice(-visible)}`;
+}

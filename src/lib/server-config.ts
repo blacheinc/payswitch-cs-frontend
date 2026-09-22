@@ -13,6 +13,20 @@ const RAW_BACKEND_API_URL =
 /** Backend base URL with no trailing slash. */
 export const BACKEND_API_URL = RAW_BACKEND_API_URL.replace(/\/+$/, "");
 
+/**
+ * This application's own public base URL, e.g. `https://payswitch-cs.vercel.app`.
+ *
+ * Origin for links the backend emails (reset, invites) — see callback-url.ts.
+ *
+ * MUST match the backend's DASHBOARD_BASE_URL exactly; it rejects mismatches
+ * silently. Leave unset on previews and locally — the proxy then omits the
+ * callback and the backend uses its own. Server-only, read at runtime.
+ */
+const RAW_APP_BASE_URL = process.env.APP_BASE_URL || "";
+
+/** App base URL with no trailing slash; empty string when not configured. */
+export const APP_BASE_URL = RAW_APP_BASE_URL.replace(/\/+$/, "");
+
 // =============================================================================
 // Connection pre-warm
 //

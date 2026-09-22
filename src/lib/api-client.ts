@@ -17,6 +17,7 @@
 
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { ApiError } from "@/types/models";
+import { ROUTES } from "@/lib/constant";
 
 const API_BASE_URL = "/api/proxy";
 
@@ -45,7 +46,9 @@ apiClient.interceptors.response.use(
       const isAuthEndpoint =
         error.config?.url?.includes("/auth/login") ||
         error.config?.url?.includes("/auth/2fa/verify") ||
-        error.config?.url?.includes("/auth/refresh");
+        error.config?.url?.includes("/auth/refresh") ||
+        // A 401 here means a wrong temporary password, not a dead session.
+        error.config?.url?.includes("/auth/change-password");
       if (!isAuthEndpoint && typeof window !== "undefined") {
         window.location.href = "/login";
       }
@@ -156,26 +159,65 @@ apiClient.interceptors.response.use(
         errorMessage || "You don't have permission to perform this action.";
     }
 
+    const details =
+      (nested?.details as Record<string, unknown>) || body?.details;
+
+    // 403 PASSWORD_CHANGE_REQUIRED — the account is still on a temporary
+    // password, so every other endpoint refuses it. Treating this as a
+    // permissions error strands the user; send them where they can fix it.
+    if (
+      status === 403 &&
+      errorCode === "PASSWORD_CHANGE_REQUIRED" &&
+      typeof window !== "undefined" &&
+      window.location.pathname !== ROUTES.AUTH.CHANGE_PASSWORD
+    ) {
+      window.location.href = ROUTES.AUTH.CHANGE_PASSWORD;
+    }
+
+    // 403 REAUTH_REQUIRED — the server wants proof of the current factor.
+    // Surface `reason` so callers branch on the code, not on message text.
+    const reauthReason =
+      status === 403 && errorCode === "REAUTH_REQUIRED"
+        ? (details?.reason as ApiError["reauthReason"])
+        : undefined;
+
     // Status-derived UX flags so callers don't have to switch on numbers.
     const forbidden = status === 403;
     const notFound = status === 404;
+    // Rate limiting. `retryable` stays false on purpose: rejected attempts
+    // still count against the limit, so retrying can lock the user out.
     const retryAfterHeader = error.response.headers?.["retry-after"];
+    const retryAfterBody = bodyRec.retry_after ?? nested?.retry_after;
     const retryAfter =
-      status === 429 && retryAfterHeader
-        ? Number(retryAfterHeader) || 1
+      status === 429
+        ? Number(retryAfterHeader ?? retryAfterBody) || undefined
         : undefined;
+
+    if (status === 429) {
+      const wait =
+        retryAfter && retryAfter > 0
+          ? retryAfter >= 60
+            ? `${Math.ceil(retryAfter / 60)} minute${Math.ceil(retryAfter / 60) === 1 ? "" : "s"}`
+            : `${retryAfter} second${retryAfter === 1 ? "" : "s"}`
+          : null;
+      errorMessage = wait
+        ? `Too many attempts. Please try again in ${wait}.`
+        : "Too many attempts. Please wait a moment before trying again.";
+    }
+
     // 502 SCORING_ERROR (and any plain 502/503) are retryable per spec.
     const retryable = status === 502 || status === 503;
 
     return Promise.reject<ApiError>({
       code: errorCode,
       message: errorMessage,
-      details: (nested?.details as Record<string, unknown>) || body?.details,
+      details,
       statusCode: status || 500,
       forbidden,
       notFound,
       retryable,
       retryAfter,
+      reauthReason,
     });
   },
 );

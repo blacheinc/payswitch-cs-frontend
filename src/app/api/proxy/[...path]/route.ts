@@ -21,6 +21,7 @@ import {
   updateServerAccessToken,
 } from "@/lib/server-session";
 import { BACKEND_API_URL } from "@/lib/server-config";
+import { rewriteCallbackUrlInBody } from "@/lib/callback-url";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -111,10 +112,13 @@ async function proxy(
 
   // Build the upstream request from the inbound one.
   const upstreamHeaders = copyHeaders(request.headers);
-  const body =
+  const rawBody =
     request.method === "GET" || request.method === "HEAD"
       ? undefined
       : await request.arrayBuffer();
+
+  // The browser doesn't get to pick where a reset token is delivered.
+  const body = rewriteCallbackUrlInBody(rawBody, request);
   const upstreamInit: RequestInit = {
     method: request.method,
     headers: upstreamHeaders,

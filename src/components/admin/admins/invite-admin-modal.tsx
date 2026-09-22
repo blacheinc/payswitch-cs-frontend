@@ -83,7 +83,8 @@ export function InviteAdminModal({
   });
 
   const onSubmit = (values: InviteAdminValues) => {
-    const callbackUrl = `${window.location.origin}${ROUTES.AUTH.ADMIN_LOGIN}`;
+    // Path only — the proxy rebuilds this against a server-decided origin.
+    const callbackUrl = ROUTES.AUTH.ADMIN_LOGIN;
     inviteMutation.mutate({
       email: values.email,
       name: values.name,

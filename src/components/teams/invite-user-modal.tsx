@@ -85,7 +85,8 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       return;
     }
 
-    const callbackUrl = `${window.location.origin}${ROUTES.AUTH.LOGIN}`;
+    // Path only — the proxy rebuilds this against a server-decided origin.
+    const callbackUrl = ROUTES.AUTH.LOGIN;
     inviteMutation.mutate({
       email: values.email,
       name: values.name,

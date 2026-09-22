@@ -263,6 +263,13 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
         return;
       }
 
+      // Scoped session is already set; everything else 401s until changed.
+      if (result?.requiresPasswordChange) {
+        toast.info("Please set a new password to continue.");
+        router.push(ROUTES.AUTH.CHANGE_PASSWORD);
+        return;
+      }
+
       if (!verifyScope(result?.userType)) {
         toast.error(
           audience === "admin"
@@ -295,6 +302,13 @@ export function LoginShell({ audience }: { audience: LoginAudience }) {
   const verify2FAMutation = useMutation({
     mutationFn: authService.verify2FA,
     onSuccess: (result) => {
+      // Scoped session is already set; everything else 401s until changed.
+      if (result?.requiresPasswordChange) {
+        toast.info("Please set a new password to continue.");
+        router.push(ROUTES.AUTH.CHANGE_PASSWORD);
+        return;
+      }
+
       if (!verifyScope(result?.userType)) {
         toast.error(
           audience === "admin"

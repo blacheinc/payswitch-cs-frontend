@@ -17,6 +17,7 @@ interface BackendVerifyResponse {
   expires_in?: number;
   token_type?: string;
   message?: string;
+  requires_password_change?: boolean;
 }
 
 interface BackendUserProfile {
@@ -70,6 +71,40 @@ export async function POST(request: Request) {
   }
 
   const d = data as BackendVerifyResponse;
+
+  // Same scoped-token branch as the login route.
+  if (d.requires_password_change) {
+    if (!d.access_token) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "UPSTREAM_ERROR",
+            message: "2FA response missing access token",
+          },
+        },
+        { status: 502 },
+      );
+    }
+    await setServerSession({
+      accessToken: d.access_token,
+      refreshToken: "",
+      userType: "org",
+      user: {
+        id: "",
+        email: "",
+        name: "",
+        roleLabel: "" as User["roleLabel"],
+        status: "active",
+        createdAt: new Date().toISOString(),
+        permissions: [],
+      },
+      expiresAt: d.expires_in ? Date.now() + d.expires_in * 1000 : undefined,
+      passwordChangeRequired: true,
+    });
+
+    return NextResponse.json({ requires_password_change: true });
+  }
+
   if (!d.access_token || !d.refresh_token) {
     return NextResponse.json(
       {

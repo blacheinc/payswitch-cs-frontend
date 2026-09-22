@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 import { useMutation } from "@tanstack/react-query";
 import { authService } from "@/lib/auth-service";
+import { PASSWORD_RULES, strongPasswordSchema } from "@/lib/schemas/password";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constant";
 import { Input } from "@/components/ui/input";
@@ -33,16 +34,7 @@ import {
 
 const resetPasswordSchema = z
   .object({
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number")
-      .regex(
-        /[^a-zA-Z0-9]/,
-        "Password must contain at least one special character",
-      ),
+    password: strongPasswordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -173,26 +165,10 @@ export default function ResetPasswordPage() {
                       Password requirements:
                     </p>
                     <ul className="space-y-1">
-                      {[
-                        {
-                          label: "At least 8 characters",
-                          met: (form.watch("password") || "").length >= 8,
-                        },
-                        {
-                          label: "Uppercase & lowercase letters",
-                          met:
-                            /[A-Z]/.test(form.watch("password") || "") &&
-                            /[a-z]/.test(form.watch("password") || ""),
-                        },
-                        {
-                          label: "At least one number",
-                          met: /[0-9]/.test(form.watch("password") || ""),
-                        },
-                        {
-                          label: "At least one special character",
-                          met: /[^a-zA-Z0-9]/.test(form.watch("password") || ""),
-                        },
-                      ].map((req, index) => (
+                      {PASSWORD_RULES.map((rule) => ({
+                        label: rule.label,
+                        met: rule.test(form.watch("password") || ""),
+                      })).map((req, index) => (
                         <li
                           key={index}
                           className={`text-xs flex items-center gap-2 ${

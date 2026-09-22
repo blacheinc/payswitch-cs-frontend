@@ -26,6 +26,7 @@ export function mergeUserFromMeProfile(
     createdAt: profile.created_at || existing.createdAt,
     organizationId: profile.organization_id ?? existing.organizationId,
     permissions,
+    totp_enabled: profile.totp_enabled ?? existing.totp_enabled,
   };
 
   if (effectiveType === "admin") {
