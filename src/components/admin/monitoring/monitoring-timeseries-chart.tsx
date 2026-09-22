@@ -39,8 +39,9 @@ interface MonitoringChartProps<T extends object> {
   headerAction?: React.ReactNode;
 }
 
+// Tokens are hex, not HSL triplets — hsl() around them is an invalid colour.
 const DEFAULT_COLORS = [
-  "hsl(var(--primary))",
+  "var(--primary)",
   "#ef4444",
   "#f59e0b",
   "#10b981",
@@ -129,7 +130,21 @@ export function MonitoringChart<T extends object>({
                   />
                 )}
                 <Tooltip
-                  contentStyle={{ fontSize: 12 }}
+                  // Recharts defaults to a white panel. Item colours come
+                  // from each series, so only the container is themed.
+                  contentStyle={{
+                    fontSize: 12,
+                    background: "var(--popover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius)",
+                    color: "var(--popover-foreground)",
+                    boxShadow: "0 4px 12px rgb(0 0 0 / 0.15)",
+                  }}
+                  labelStyle={{
+                    color: "var(--muted-foreground)",
+                    marginBottom: 4,
+                  }}
+                  cursor={{ stroke: "var(--border)" }}
                   formatter={(value, name) => {
                     const n = Number(value ?? 0);
                     const key = String(name);
