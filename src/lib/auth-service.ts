@@ -32,6 +32,8 @@ interface LoginResponseShape {
   requires_2fa?: boolean;
   temp_token?: string;
   email?: string;
+  // Forced first-login password change branch:
+  requires_password_change?: boolean;
   // Error branch:
   error?: { code?: string; message?: string };
 }
@@ -108,6 +110,14 @@ export const authService = {
       };
     }
 
+    // Scoped session set — caller must route to /change-password.
+    if (data.requires_password_change) {
+      return {
+        requiresPasswordChange: true,
+        userType: data.userType,
+      };
+    }
+
     return {
       requires2FA: false,
       user: data.user,
@@ -123,10 +133,19 @@ export const authService = {
     code: string;
     tempToken: string;
   }): Promise<AuthResult> {
-    const data = await postJson<{ user?: User; userType?: string }>(
-      "/api/auth/2fa/verify",
-      { code: payload.code, temp_token: payload.tempToken },
-    );
+    const data = await postJson<{
+      user?: User;
+      userType?: string;
+      requires_password_change?: boolean;
+    }>("/api/auth/2fa/verify", {
+      code: payload.code,
+      temp_token: payload.tempToken,
+    });
+
+    if (data.requires_password_change) {
+      return { requiresPasswordChange: true, userType: data.userType };
+    }
+
     return {
       user: data.user,
       userType: data.userType,

@@ -122,6 +122,12 @@ export interface SuccessResponse {
  */
 export interface AuthResult {
   requires2FA?: boolean;
+  /**
+   * The account is still on its system-generated password. The session that
+   * was just established is scoped to `/auth/change-password` only — send the
+   * user there before anything else.
+   */
+  requiresPasswordChange?: boolean;
   accessToken?: string;
   refreshToken?: string;
   user?: User;

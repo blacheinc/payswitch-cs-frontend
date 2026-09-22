@@ -21,6 +21,7 @@ import {
   updateServerAccessToken,
 } from "@/lib/server-session";
 import { BACKEND_API_URL } from "@/lib/server-config";
+import { rewriteCallbackUrlInBody } from "@/lib/callback-url";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -35,10 +36,23 @@ const HOP_BY_HOP = new Set([
   "content-length",
 ]);
 
+// Inbound headers we explicitly drop before forwarding to the upstream.
+// - `cookie`         : the browser's request carries our `__Host-session`
+//                      cookie (~1.7 KB of JSON). The upstream doesn't need
+//                      it — we attach the bearer token via Authorization
+//                      ourselves — and shipping it on every call wastes
+//                      bandwidth and leaks the session payload.
+// - `authorization`  : if a stale Authorization arrives from the browser
+//                      we don't want to honour it; we set our own below.
+const DROP_INBOUND = new Set(["cookie", "authorization"]);
+
 function copyHeaders(src: Headers): Headers {
   const out = new Headers();
   src.forEach((value, key) => {
-    if (!HOP_BY_HOP.has(key.toLowerCase())) out.set(key, value);
+    const lower = key.toLowerCase();
+    if (HOP_BY_HOP.has(lower)) return;
+    if (DROP_INBOUND.has(lower)) return;
+    out.set(key, value);
   });
   return out;
 }
@@ -98,10 +112,13 @@ async function proxy(
 
   // Build the upstream request from the inbound one.
   const upstreamHeaders = copyHeaders(request.headers);
-  const body =
+  const rawBody =
     request.method === "GET" || request.method === "HEAD"
       ? undefined
       : await request.arrayBuffer();
+
+  // The browser doesn't get to pick where a reset token is delivered.
+  const body = rewriteCallbackUrlInBody(rawBody, request);
   const upstreamInit: RequestInit = {
     method: request.method,
     headers: upstreamHeaders,
@@ -136,14 +153,24 @@ async function proxy(
     }
   }
 
-  // Stream the upstream response straight back. We strip hop-by-hop headers
-  // and any Set-Cookie the backend might issue (we don't want backend cookies
-  // bleeding through to the browser).
+  // Stream the upstream response straight back. We strip:
+  //   - hop-by-hop headers (per RFC 7230)
+  //   - Set-Cookie (don't bleed backend cookies into the browser)
+  //   - Content-Encoding + Content-Length: Node's fetch implementation
+  //     auto-decodes gzip/br/deflate when we read `upstream.body`, so the
+  //     bytes we forward are already plain. Forwarding the original
+  //     Content-Encoding header would make the browser try to decode plain
+  //     JSON as gzip and fail with ERR_CONTENT_DECODING_FAILED. Similarly,
+  //     the original Content-Length refers to the compressed payload.
+  const SKIP = new Set([
+    ...HOP_BY_HOP,
+    "set-cookie",
+    "content-encoding",
+    "content-length",
+  ]);
   const responseHeaders = new Headers();
   upstream.headers.forEach((value, key) => {
-    const lower = key.toLowerCase();
-    if (HOP_BY_HOP.has(lower)) return;
-    if (lower === "set-cookie") return;
+    if (SKIP.has(key.toLowerCase())) return;
     responseHeaders.set(key, value);
   });
 

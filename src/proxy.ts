@@ -27,6 +27,8 @@ interface SessionShape {
   refreshToken: string;
   userType: string;
   user: Record<string, unknown>;
+  /** Scoped session — only valid against /auth/change-password. */
+  passwordChangeRequired?: boolean;
 }
 
 function readSessionCookie(request: NextRequest): SessionShape | null {
@@ -146,6 +148,20 @@ export function proxy(request: NextRequest): NextResponse {
   const isAuthed = session !== null;
   const isAdmin = isAdminScope(session);
   const zone = classifyRoute(path);
+  const changePasswordPath = ROUTES.AUTH.CHANGE_PASSWORD;
+
+  // ── 0. Forced first-login password change ────────────────────────────────
+  // The token only works against /auth/change-password; pin the user there.
+  if (session?.passwordChangeRequired) {
+    if (path === changePasswordPath) return next();
+    return redirect(request, changePasswordPath);
+  }
+
+  // Nobody else belongs there — ordinary users change theirs from Settings.
+  if (path === changePasswordPath) {
+    if (!isAuthed) return redirectToLogin(request, ROUTES.AUTH.LOGIN);
+    return redirect(request, isAdmin ? ROUTES.ADMIN.DASHBOARD : ROUTES.ORG.DASHBOARD);
+  }
 
   // ── 1. Auth pages ────────────────────────────────────────────────────────
   // Already-authenticated users bounce to *their* dashboard. A logged-in org

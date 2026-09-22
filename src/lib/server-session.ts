@@ -27,6 +27,12 @@ export interface ServerSession {
   user: User;
   /** Unix epoch ms when the access token is expected to expire. */
   expiresAt?: number;
+  /**
+   * Account is still on its system-generated password. The token only works
+   * against /auth/change-password, refreshToken is empty, and the route guard
+   * pins the session to that page.
+   */
+  passwordChangeRequired?: boolean;
 }
 
 /**

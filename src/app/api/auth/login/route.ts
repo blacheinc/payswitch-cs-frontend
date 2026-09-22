@@ -23,6 +23,20 @@ interface BackendLoginResponse {
   user_type?: string;
   email?: string;
   requires_2fa?: boolean;
+  requires_password_change?: boolean;
+}
+
+/** Stand-in for a scoped session: /auth/me 401s, so we can't load the real profile. */
+function placeholderUser(email: string): User {
+  return {
+    id: "",
+    email,
+    name: "",
+    roleLabel: "" as User["roleLabel"],
+    status: "active",
+    createdAt: new Date().toISOString(),
+    permissions: [],
+  };
 }
 
 interface BackendUserProfile {
@@ -35,6 +49,7 @@ interface BackendUserProfile {
   organization_id?: string | null;
   permissions?: string[];
   created_at?: string;
+  totp_enabled?: boolean;
 }
 
 async function fetchProfile(
@@ -61,6 +76,7 @@ function buildUser(
     status: (profile.status as User["status"]) || "active",
     createdAt: profile.created_at || new Date().toISOString(),
     permissions: profile.permissions ?? [],
+    totp_enabled: profile.totp_enabled ?? false,
   };
   if (profile.organization_id) base.organizationId = profile.organization_id;
 
@@ -114,6 +130,41 @@ export async function POST(request: Request) {
   }
 
   const d = data as BackendLoginResponse;
+
+  // Scoped token, empty refresh_token. Don't demand one, and don't load the
+  // profile — /auth/me 401s on this token.
+  if (d.requires_password_change) {
+    if (!d.access_token) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "UPSTREAM_ERROR",
+            message: "Login response missing access token",
+          },
+        },
+        { status: 502 },
+      );
+    }
+
+    const email = d.email || body.email || "";
+    const userType = d.user_type || "org";
+
+    await setServerSession({
+      accessToken: d.access_token,
+      refreshToken: "",
+      userType,
+      user: placeholderUser(email),
+      expiresAt: d.expires_in ? Date.now() + d.expires_in * 1000 : undefined,
+      passwordChangeRequired: true,
+    });
+
+    return NextResponse.json({
+      requires_password_change: true,
+      userType,
+      email,
+    });
+  }
+
   if (!d.access_token || !d.refresh_token) {
     return NextResponse.json(
       {

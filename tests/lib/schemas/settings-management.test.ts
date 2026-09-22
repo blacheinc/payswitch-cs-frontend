@@ -9,8 +9,8 @@ import {
 describe("changePasswordSchema", () => {
   const valid = {
     currentPassword: "old-password",
-    newPassword: "new-password-123",
-    confirmPassword: "new-password-123",
+    newPassword: "New-Password-123!",
+    confirmPassword: "New-Password-123!",
   };
 
   it("accepts a valid payload", () => {
@@ -25,11 +25,30 @@ describe("changePasswordSchema", () => {
     }
   });
 
+  // Change-password used to require length 8 only while reset-password
+  // enforced full complexity. Both now share strongPasswordSchema.
+  it.each([
+    ["nouppercase-1!", "no uppercase"],
+    ["NOLOWERCASE-1!", "no lowercase"],
+    ["No-Digits-Here!", "no digit"],
+    ["NoSpecialChar1", "no special character"],
+  ])("rejects a new password with %s (%s)", (newPassword) => {
+    const result = changePasswordSchema.safeParse({
+      ...valid,
+      newPassword,
+      confirmPassword: newPassword,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("newPassword"))).toBe(true);
+    }
+  });
+
   it("rejects when new password equals current password", () => {
     const result = changePasswordSchema.safeParse({
-      currentPassword: "same-password",
-      newPassword: "same-password",
-      confirmPassword: "same-password",
+      currentPassword: "Same-Password-1!",
+      newPassword: "Same-Password-1!",
+      confirmPassword: "Same-Password-1!",
     });
     expect(result.success).toBe(false);
     if (!result.success) {

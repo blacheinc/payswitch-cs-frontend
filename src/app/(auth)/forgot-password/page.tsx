@@ -52,7 +52,9 @@ export default function ForgotPasswordPage() {
   });
 
   const onSubmit = (data: FormData) => {
-    const callbackUrl = `${window.location.origin}${ROUTES.AUTH.RESET_PASSWORD}`;
+    // Path only — the proxy rebuilds this against a server-decided origin so
+    // the reset link can never be pointed off-site (VAPT v1 §2.2).
+    const callbackUrl = ROUTES.AUTH.RESET_PASSWORD;
     forgotPasswordMutation.mutate({
       email: data.email,
       callbackUrl,

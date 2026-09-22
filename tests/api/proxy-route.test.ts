@@ -29,6 +29,9 @@ vi.mock("next/headers", () => ({
 }));
 
 vi.stubEnv("BACKEND_API_URL", "http://backend.test");
+// Configured origin — the rebuild branch. The unconfigured branch (field
+// dropped) is covered in tests/lib/callback-url.test.ts.
+vi.stubEnv("APP_BASE_URL", "https://payswitch-cs.vercel.app");
 
 function seedSession(opts?: {
   accessToken?: string;
@@ -174,5 +177,83 @@ describe("/api/proxy/[...path]", () => {
     const res = await callProxy("GET", ["v1", "things"]);
     expect(res.headers.get("set-cookie")).toBeNull();
     expect(res.headers.get("x-custom")).toBe("kept");
+  });
+
+  // callback_url rewriting (VAPT §2.2). Asserts on the body the UPSTREAM
+  // receives — the only thing that matters.
+
+  it("rewrites an attacker-supplied callback_url to the configured origin", async () => {
+    let received: Record<string, unknown> | null = null;
+    server.use(
+      http.post("http://backend.test/auth/forgot-password", async ({ request }) => {
+        received = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ message: "sent" });
+      }),
+    );
+
+    const res = await callProxy("POST", ["auth", "forgot-password"], {
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "payswitch-cs.vercel.app",
+      },
+      body: JSON.stringify({
+        email: "victim@example.com",
+        callback_url: "https://simar.space/reset-password",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(received).toEqual({
+      email: "victim@example.com",
+      callback_url: "https://payswitch-cs.vercel.app/reset-password",
+    });
+  });
+
+  it("collapses an unknown callback path to the default route", async () => {
+    let received: Record<string, unknown> | null = null;
+    server.use(
+      http.post("http://backend.test/v1/users/invite", async ({ request }) => {
+        received = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+
+    seedSession();
+    await callProxy("POST", ["v1", "users", "invite"], {
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "payswitch-cs.vercel.app",
+      },
+      body: JSON.stringify({
+        email: "new@example.com",
+        callback_url: "https://simar.space/harvest",
+      }),
+    });
+
+    expect(received).toEqual({
+      email: "new@example.com",
+      callback_url: "https://payswitch-cs.vercel.app/login",
+    });
+  });
+
+  it("forwards bodies without a callback_url byte-for-byte", async () => {
+    let received: unknown = null;
+    server.use(
+      http.post("http://backend.test/v1/score-requests", async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+
+    seedSession();
+    const payload = { applicant: { full_name: "Ada" }, amount: 5000 };
+    await callProxy("POST", ["v1", "score-requests"], {
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    expect(received).toEqual(payload);
   });
 });

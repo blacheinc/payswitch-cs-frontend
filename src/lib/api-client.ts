@@ -17,6 +17,7 @@
 
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { ApiError } from "@/types/models";
+import { ROUTES } from "@/lib/constant";
 
 const API_BASE_URL = "/api/proxy";
 
@@ -45,7 +46,9 @@ apiClient.interceptors.response.use(
       const isAuthEndpoint =
         error.config?.url?.includes("/auth/login") ||
         error.config?.url?.includes("/auth/2fa/verify") ||
-        error.config?.url?.includes("/auth/refresh");
+        error.config?.url?.includes("/auth/refresh") ||
+        // A 401 here means a wrong temporary password, not a dead session.
+        error.config?.url?.includes("/auth/change-password");
       if (!isAuthEndpoint && typeof window !== "undefined") {
         window.location.href = "/login";
       }
@@ -71,28 +74,66 @@ apiClient.interceptors.response.use(
         code: error.code || "NETWORK_ERROR",
         message: userMessage,
         statusCode: 0,
+        retryable: true,        // transport blip — safe to try again
       });
     }
 
     // ---- Server responded with an error status ----
+    const status = error.response.status;
     const body = error.response?.data;
+    const bodyRec = (body as unknown as Record<string, unknown>) ?? {};
 
-    // FastAPI 422 validation envelope
-    const detail = (body as unknown as Record<string, unknown>)?.detail;
+    // ── Validation envelope (422) ─────────────────────────────────────────
+    //
+    // Two shapes ship from the backend at status 422:
+    //
+    //   (a) FastAPI's array-form  →  { detail: [{ loc, msg, type }, ...] }
+    //   (b) Our spec's string form →  { error: "validation_error", detail: "loan_request → amount: Input should be greater than 0" }
+    //
+    // Both are routed through the same VALIDATION_ERROR branch so callers
+    // get a uniform shape with `fieldError: true` and (when we can parse it)
+    // a `field` key the form can attach the error to.
+    // ─────────────────────────────────────────────────────────────────────
+    const detail = bodyRec.detail;
+
+    // Shape (a) — array form
     if (Array.isArray(detail) && detail.length > 0) {
-      const first = detail[0] as { msg?: string };
+      const first = detail[0] as { msg?: string; loc?: unknown[] };
+      const loc = Array.isArray(first.loc) ? first.loc.join(".") : undefined;
       return Promise.reject<ApiError>({
         code: "VALIDATION_ERROR",
         message: first.msg || "Validation error",
         details: { validationErrors: detail },
-        statusCode: error.response?.status || 422,
+        statusCode: status || 422,
+        fieldError: true,
+        field: loc,
       });
     }
 
-    // Business-logic error (nested or flat)
-    const nested = (body as unknown as Record<string, unknown>)?.error as
-      | Record<string, unknown>
-      | undefined;
+    // Shape (b) — string form. The spec emits messages of the form
+    // "<path> → <reason>" — split once on the arrow if it's there.
+    if (
+      typeof bodyRec.error === "string" &&
+      bodyRec.error === "validation_error" &&
+      typeof detail === "string"
+    ) {
+      const arrowIdx = detail.indexOf("→");
+      const field =
+        arrowIdx >= 0 ? detail.slice(0, arrowIdx).trim() : undefined;
+      const reason =
+        arrowIdx >= 0 ? detail.slice(arrowIdx + 1).trim() : detail;
+      return Promise.reject<ApiError>({
+        code: "VALIDATION_ERROR",
+        message: reason,
+        details: { raw: detail },
+        statusCode: status || 422,
+        fieldError: true,
+        field,
+      });
+    }
+
+    // ── Business-logic error (Shape A — nested `error.code/message`) ──────
+    const nested = bodyRec.error as Record<string, unknown> | undefined;
 
     const httpFallback: Record<number, string> = {
       400: "Invalid request. Please check your input and try again.",
@@ -110,22 +151,73 @@ apiClient.interceptors.response.use(
     let errorMessage =
       (nested?.message as string) ||
       body?.message ||
-      httpFallback[error.response?.status || 0] ||
+      httpFallback[status || 0] ||
       "An unexpected error occurred. Please try again.";
 
-    if (
-      error.response?.status === 403 &&
-      errorCode === "AUTHORIZATION_ERROR"
-    ) {
+    if (status === 403 && errorCode === "AUTHORIZATION_ERROR") {
       errorMessage =
         errorMessage || "You don't have permission to perform this action.";
     }
 
+    const details =
+      (nested?.details as Record<string, unknown>) || body?.details;
+
+    // 403 PASSWORD_CHANGE_REQUIRED — the account is still on a temporary
+    // password, so every other endpoint refuses it. Treating this as a
+    // permissions error strands the user; send them where they can fix it.
+    if (
+      status === 403 &&
+      errorCode === "PASSWORD_CHANGE_REQUIRED" &&
+      typeof window !== "undefined" &&
+      window.location.pathname !== ROUTES.AUTH.CHANGE_PASSWORD
+    ) {
+      window.location.href = ROUTES.AUTH.CHANGE_PASSWORD;
+    }
+
+    // 403 REAUTH_REQUIRED — the server wants proof of the current factor.
+    // Surface `reason` so callers branch on the code, not on message text.
+    const reauthReason =
+      status === 403 && errorCode === "REAUTH_REQUIRED"
+        ? (details?.reason as ApiError["reauthReason"])
+        : undefined;
+
+    // Status-derived UX flags so callers don't have to switch on numbers.
+    const forbidden = status === 403;
+    const notFound = status === 404;
+    // Rate limiting. `retryable` stays false on purpose: rejected attempts
+    // still count against the limit, so retrying can lock the user out.
+    const retryAfterHeader = error.response.headers?.["retry-after"];
+    const retryAfterBody = bodyRec.retry_after ?? nested?.retry_after;
+    const retryAfter =
+      status === 429
+        ? Number(retryAfterHeader ?? retryAfterBody) || undefined
+        : undefined;
+
+    if (status === 429) {
+      const wait =
+        retryAfter && retryAfter > 0
+          ? retryAfter >= 60
+            ? `${Math.ceil(retryAfter / 60)} minute${Math.ceil(retryAfter / 60) === 1 ? "" : "s"}`
+            : `${retryAfter} second${retryAfter === 1 ? "" : "s"}`
+          : null;
+      errorMessage = wait
+        ? `Too many attempts. Please try again in ${wait}.`
+        : "Too many attempts. Please wait a moment before trying again.";
+    }
+
+    // 502 SCORING_ERROR (and any plain 502/503) are retryable per spec.
+    const retryable = status === 502 || status === 503;
+
     return Promise.reject<ApiError>({
       code: errorCode,
       message: errorMessage,
-      details: (nested?.details as Record<string, unknown>) || body?.details,
-      statusCode: error.response?.status || 500,
+      details,
+      statusCode: status || 500,
+      forbidden,
+      notFound,
+      retryable,
+      retryAfter,
+      reauthReason,
     });
   },
 );

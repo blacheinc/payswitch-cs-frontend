@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { authService } from "@/lib/auth-service";
+import type { ApiError } from "@/types/models";
 import {
   twoFactorVerifySchema,
   type TwoFactorVerifyValues,
@@ -45,6 +46,7 @@ export function TwoFactorSetupDialog({
   onOpenChange,
   onEnabled,
 }: TwoFactorSetupDialogProps) {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("setup");
   const [secret, setSecret] = useState("");
   const [uri, setUri] = useState("");
@@ -79,7 +81,18 @@ export function TwoFactorSetupDialog({
       setTempToken(data?.tempToken);
       setStep("verify");
     },
-    onError: (error) => {
+    onError: (error: ApiError) => {
+      // 2FA was enabled elsewhere (another tab, another device) while this
+      // page still believed it was off. Re-read the profile so the toggle
+      // corrects itself, and point the user at the disable flow.
+      if (error?.reauthReason === "2fa_already_enabled") {
+        queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+        handleOpenChange(false);
+        toast.error(
+          "Two-factor authentication is already enabled. Disable it first to enroll a new authenticator.",
+        );
+        return;
+      }
       toast.error(error?.message || "Failed to set up 2FA");
     },
   });
@@ -95,7 +108,13 @@ export function TwoFactorSetupDialog({
         data?.message || "Two-factor authentication enabled successfully",
       );
     },
-    onError: (error) => {
+    onError: (error: ApiError) => {
+      if (error?.reauthReason === "bad_totp_code") {
+        form.setError("code", {
+          message: "That code isn't valid. Check your authenticator and retry.",
+        });
+        return;
+      }
       toast.error(
         error?.message || "Invalid verification code. Please try again.",
       );

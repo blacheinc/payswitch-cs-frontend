@@ -38,7 +38,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ROUTES } from "@/lib/constant";
-import { formatDate } from "@/lib/utils";
+import { formatDate, maskTail } from "@/lib/utils";
 import type { BatchResultItem, BatchItemStatus } from "@/lib/score-service";
 
 interface BatchItemsTableProps {
@@ -108,13 +108,17 @@ function formatErrorCode(code: string): string {
   );
 }
 
+/**
+ * Row label. Falls back to an identifier when there's no name — those are PII,
+ * so they render masked; the last four still tell rows apart.
+ */
 function getApplicantName(payload: Record<string, unknown>): string {
   const fullName = payload?.full_name || payload?.fullName;
   if (typeof fullName === "string" && fullName.trim()) return fullName;
   const id = payload?.identification;
-  if (typeof id === "string" && id) return id;
+  if (typeof id === "string" && id) return maskTail(id);
   const phone = payload?.phone_number || payload?.phoneNumber;
-  if (typeof phone === "string" && phone) return phone;
+  if (typeof phone === "string" && phone) return maskTail(phone);
   return "—";
 }
 

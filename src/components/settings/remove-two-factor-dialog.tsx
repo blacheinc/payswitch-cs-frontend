@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { authService } from "@/lib/auth-service";
+import type { ApiError } from "@/types/models";
 import {
   removeTwoFactorSchema,
   type RemoveTwoFactorValues,
@@ -66,7 +67,19 @@ export function RemoveTwoFactorDialog({
       onDisabled();
       toast.success("Two-factor authentication disabled successfully");
     },
-    onError: (error) => {
+    onError: (error: ApiError) => {
+      // Attach the failure to the field that caused it rather than a toast
+      // that makes the user guess which of the two was wrong.
+      if (error?.reauthReason === "bad_password") {
+        form.setError("password", { message: "Incorrect password." });
+        return;
+      }
+      if (error?.reauthReason === "bad_totp_code") {
+        form.setError("code", {
+          message: "That code isn't valid. Check your authenticator and retry.",
+        });
+        return;
+      }
       toast.error(
         error?.message ||
           "Failed to disable 2FA. Please verify your password and code.",

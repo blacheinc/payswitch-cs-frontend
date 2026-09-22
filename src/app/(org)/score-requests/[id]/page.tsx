@@ -364,8 +364,12 @@ export default function ScoreRequestDetailPage() {
             Refresh
           </Button>
 
-          {/* Override Decision */}
-          {canOverride && (
+          {/* Override Decision
+              Only visible when the AI decision is REFER — the BE rejects
+              override attempts on any other state with a 400 ("Can only
+              override REFER decisions"). */}
+          {canOverride &&
+            scoreRequest?.scoring_result?.decision === "REFER" && (
           <Dialog
             open={overrideDialogOpen}
             onOpenChange={(v) => {
