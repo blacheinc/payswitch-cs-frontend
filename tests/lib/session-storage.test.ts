@@ -23,9 +23,22 @@ describe("user-cache (formerly session-storage)", () => {
     clearUserCache();
   });
 
-  it("round-trips the cache payload", () => {
+  it("round-trips the cache payload minus permissions", () => {
     saveUserCache(sample);
-    expect(getUserCache()).toEqual(sample);
+
+    const { permissions, ...userWithoutPerms } = sample.user;
+    void permissions;
+    expect(getUserCache()).toEqual({ ...sample, user: userWithoutPerms });
+  });
+
+  // Permissions live in the HttpOnly cookie and reach the UI via the
+  // server-rendered layout. Caching them here would restore the exact vector
+  // VAPT §2.8 describes, in an even easier-to-edit place.
+  it("never persists permissions to localStorage", () => {
+    saveUserCache(sample);
+
+    expect(getUserCache()?.user).not.toHaveProperty("permissions");
+    expect(localStorage.getItem("user_cache")).not.toContain("permissions");
   });
 
   it("returns null when nothing is stored", () => {

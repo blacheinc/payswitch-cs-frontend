@@ -7,6 +7,19 @@
 import type { AdminUser, User } from "@/types/models";
 import type { UserProfileResponse } from "@/types/auth-type";
 
+/**
+ * Drop the permission set before sending a user to the browser.
+ *
+ * Permissions stay in the HttpOnly session cookie and reach the UI only
+ * through the server-rendered layout, so tampering with a login or /auth/me
+ * response cannot change what renders (VAPT §2.8).
+ */
+export function withoutPermissions(user: User): User {
+  const { permissions, ...rest } = user;
+  void permissions;
+  return rest as User;
+}
+
 export function mergeUserFromMeProfile(
   existing: User,
   profile: UserProfileResponse,

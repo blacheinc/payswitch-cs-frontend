@@ -15,7 +15,7 @@ import {
   updateServerSessionUser,
 } from "@/lib/server-session";
 import { BACKEND_API_URL } from "@/lib/server-config";
-import { mergeUserFromMeProfile } from "@/lib/user-merge";
+import { mergeUserFromMeProfile, withoutPermissions } from "@/lib/user-merge";
 import type { UserProfileResponse } from "@/types/auth-type";
 
 export async function GET() {
@@ -42,11 +42,17 @@ export async function GET() {
         session.userType,
       );
       await updateServerSessionUser(merged);
-      return NextResponse.json({ user: merged, userType: session.userType });
+      return NextResponse.json({
+        user: withoutPermissions(merged),
+        userType: session.userType,
+      });
     }
   } catch {
     // fall through
   }
 
-  return NextResponse.json({ user: session.user, userType: session.userType });
+  return NextResponse.json({
+    user: withoutPermissions(session.user),
+    userType: session.userType,
+  });
 }

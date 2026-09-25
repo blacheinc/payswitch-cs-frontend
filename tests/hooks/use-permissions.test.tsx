@@ -1,86 +1,60 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
 
-// Mock the auth context. Tests adjust the user/auth fields per case.
-const authState: {
-  user: { id: string; permissions?: string[] } | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-} = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: false,
-};
-
-vi.mock("@/contexts/auth-context", () => ({
-  useAuth: () => authState,
-}));
-
 import { usePermissions } from "@/hooks/use-permissions";
+import { PermissionsProvider } from "@/contexts/permissions-context";
+import { PERMISSION_CODES, type PermissionCode } from "@/lib/constant";
 
-beforeEach(() => {
-  authState.user = null;
-  authState.isAuthenticated = false;
-  authState.isLoading = false;
-});
+// The permission set is supplied by the server-rendered layout from the
+// HttpOnly session cookie — never from a login/me response or localStorage
+// (VAPT §2.8).
+function renderPermissions(permissions: string[]) {
+  return renderHook(() => usePermissions(), {
+    wrapper: ({ children }) => (
+      <PermissionsProvider permissions={permissions}>
+        {children}
+      </PermissionsProvider>
+    ),
+  });
+}
 
 describe("usePermissions", () => {
-  it("returns can=false for every code when permissions is empty", () => {
-    authState.user = { id: "u-1", permissions: [] };
-    authState.isAuthenticated = true;
-
-    const { result } = renderHook(() => usePermissions());
-    expect(result.current.can("score_requests.list")).toBe(false);
-    expect(result.current.can("admin.organizations.read")).toBe(false);
-  });
-
   it("returns can=true only for codes the user holds", () => {
-    authState.user = {
-      id: "u-1",
-      permissions: ["score_requests.list", "score_requests.read"],
-    };
-    authState.isAuthenticated = true;
+    const { result } = renderPermissions([PERMISSION_CODES.SCORE_REQUESTS.LIST]);
 
-    const { result } = renderHook(() => usePermissions());
-    expect(result.current.can("score_requests.list")).toBe(true);
-    expect(result.current.can("score_requests.read")).toBe(true);
-    expect(result.current.can("score_requests.override")).toBe(false);
+    expect(result.current.can(PERMISSION_CODES.SCORE_REQUESTS.LIST)).toBe(true);
+    expect(result.current.can(PERMISSION_CODES.USERS.LIST)).toBe(false);
   });
 
   it("treats `*` as super-admin and grants all codes", () => {
-    authState.user = { id: "u-1", permissions: ["*"] };
-    authState.isAuthenticated = true;
+    const { result } = renderPermissions(["*"]);
 
-    const { result } = renderHook(() => usePermissions());
-    expect(result.current.can("score_requests.list")).toBe(true);
-    expect(result.current.can("admin.organizations.suspend")).toBe(true);
-    expect(result.current.can("monitoring.compliance")).toBe(true);
-  });
-
-  it("isLoading=true when authenticated but permissions are still undefined", () => {
-    authState.user = { id: "u-1" };
-    authState.isAuthenticated = true;
-    authState.isLoading = false;
-
-    const { result } = renderHook(() => usePermissions());
-    expect(result.current.isLoading).toBe(true);
-  });
-
-  it("isLoading=false once permissions array is present (even empty)", () => {
-    authState.user = { id: "u-1", permissions: [] };
-    authState.isAuthenticated = true;
-
-    const { result } = renderHook(() => usePermissions());
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.can(PERMISSION_CODES.USERS.LIST)).toBe(true);
+    expect(result.current.can(PERMISSION_CODES.ROLES.READ)).toBe(true);
+    expect(result.current.can("anything.at.all" as PermissionCode)).toBe(true);
   });
 
   it("exposes the resolved permission set", () => {
-    authState.user = { id: "u-1", permissions: ["a", "b"] };
-    authState.isAuthenticated = true;
+    const { result } = renderPermissions([
+      PERMISSION_CODES.USERS.LIST,
+      PERMISSION_CODES.ROLES.READ,
+    ]);
 
-    const { result } = renderHook(() => usePermissions());
-    expect(result.current.permissions.has("a")).toBe(true);
-    expect(result.current.permissions.has("b")).toBe(true);
+    expect(result.current.permissions.has(PERMISSION_CODES.USERS.LIST)).toBe(
+      true,
+    );
     expect(result.current.permissions.size).toBe(2);
+  });
+
+  it("denies everything when no provider supplied a set", () => {
+    const { result } = renderHook(() => usePermissions());
+
+    expect(result.current.can(PERMISSION_CODES.USERS.LIST)).toBe(false);
+    expect(result.current.permissions.size).toBe(0);
+  });
+
+  it("never reports loading — the set resolves before first paint", () => {
+    const { result } = renderPermissions([]);
+    expect(result.current.isLoading).toBe(false);
   });
 });

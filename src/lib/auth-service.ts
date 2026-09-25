@@ -182,7 +182,6 @@ export const authService = {
       status: u.status as string,
       user_type: data.userType,
       organization_id: (u.organizationId as string) ?? null,
-      permissions: (u.permissions as string[]) ?? [],
       totp_enabled: (u.totp_enabled as boolean) ?? false,
       created_at: u.createdAt as string,
       last_login_at: u.lastLoginAt as string | undefined,

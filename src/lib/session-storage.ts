@@ -5,8 +5,12 @@
 // by Next Route Handlers (`src/app/api/auth/*`) and is never exposed to JS.
 //
 // What still lives client-side: a tiny non-sensitive cache of the user shape
-// (id, name, email, permissions, userType) so the UI can render immediately on
-// reload without waiting for `/api/auth/me` to round-trip.
+// (id, name, email, userType) so the UI can render immediately on reload
+// without waiting for `/api/auth/me` to round-trip.
+//
+// Permissions are deliberately NOT cached here. They live in the HttpOnly
+// session cookie and reach the UI only through the server-rendered layout, so
+// editing this cache cannot change what renders (VAPT §2.8).
 //
 // Stored in localStorage. NOT a cookie — the proxy reads `userType` from the
 // HttpOnly cookie directly. This cache is purely a render hint.
@@ -24,7 +28,12 @@ export interface UserCache {
 export function saveUserCache(data: UserCache): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    const { permissions, ...user } = data.user;
+    void permissions;
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ ...data, user }),
+    );
   } catch {
     // localStorage may be disabled (incognito, quota); UI just won't have a
     // cached render. Cookie auth still works.
