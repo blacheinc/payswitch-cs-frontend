@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "sr-1" }),
 }));
 
-import OrgLayout from "@/app/(org)/layout";
+import { OrgShell } from "@/components/layout/org-shell";
 import ScoreRequestsListPage from "@/app/(org)/score-requests/page";
 import ScoreRequestDetailPage from "@/app/(org)/score-requests/[id]/page";
 import NewScoreRequestPage from "@/app/(org)/score-requests/new/page";
@@ -47,19 +47,27 @@ beforeEach(() => {
   authState.isLoading = false;
 });
 
+let currentPerms: string[] = [];
+
 function setPerms(perms: string[]) {
-  authState.user = { id: "u-1", permissions: perms };
+  currentPerms = perms;
+  authState.user = { id: "u-1" };
   authState.isAuthenticated = true;
+}
+
+/** Renders with the permission set a server layout would have supplied. */
+function renderGated(ui: Parameters<typeof renderWithProviders>[0]) {
+  return renderWithProviders(ui, { permissions: currentPerms });
 }
 
 describe("Org sidebar nav (permission-gated)", () => {
   it("hides Teams when the user lacks users.list and roles.read", () => {
     setPerms([PERMISSION_CODES.SCORE_REQUESTS.LIST]);
 
-    renderWithProviders(
-      <OrgLayout>
+    renderGated(
+      <OrgShell>
         <div>content</div>
-      </OrgLayout>,
+      </OrgShell>,
     );
 
     expect(screen.getAllByText("Dashboard").length).toBeGreaterThan(0);
@@ -71,10 +79,10 @@ describe("Org sidebar nav (permission-gated)", () => {
   it("hides Score Requests when the user lacks both list perms", () => {
     setPerms([PERMISSION_CODES.USERS.LIST]);
 
-    renderWithProviders(
-      <OrgLayout>
+    renderGated(
+      <OrgShell>
         <div>content</div>
-      </OrgLayout>,
+      </OrgShell>,
     );
 
     expect(screen.queryByText("Score Requests")).toBeNull();
@@ -84,10 +92,10 @@ describe("Org sidebar nav (permission-gated)", () => {
   it("shows everything for `*` super-admin equivalents", () => {
     setPerms(["*"]);
 
-    renderWithProviders(
-      <OrgLayout>
+    renderGated(
+      <OrgShell>
         <div>content</div>
-      </OrgLayout>,
+      </OrgShell>,
     );
 
     ["Dashboard", "Score Requests", "Teams", "Settings"].forEach((label) => {
@@ -99,7 +107,7 @@ describe("Org sidebar nav (permission-gated)", () => {
 describe("Score Requests list page guard", () => {
   it("renders NoPermission without score_requests.list", () => {
     setPerms([]);
-    renderWithProviders(<ScoreRequestsListPage />);
+    renderGated(<ScoreRequestsListPage />);
     expect(
       screen.getByText("You don't have permission to view this."),
     ).toBeTruthy();
@@ -107,13 +115,13 @@ describe("Score Requests list page guard", () => {
 
   it("hides Bulk Request button without batch_scoring.list", () => {
     setPerms([PERMISSION_CODES.SCORE_REQUESTS.LIST]);
-    renderWithProviders(<ScoreRequestsListPage />);
+    renderGated(<ScoreRequestsListPage />);
     expect(screen.queryByText("Bulk Request")).toBeNull();
   });
 
   it("hides New Request button without score_requests.create", () => {
     setPerms([PERMISSION_CODES.SCORE_REQUESTS.LIST]);
-    renderWithProviders(<ScoreRequestsListPage />);
+    renderGated(<ScoreRequestsListPage />);
     expect(screen.queryByText("New Request")).toBeNull();
   });
 
@@ -122,7 +130,7 @@ describe("Score Requests list page guard", () => {
       PERMISSION_CODES.SCORE_REQUESTS.LIST,
       PERMISSION_CODES.SCORE_REQUESTS.CREATE,
     ]);
-    renderWithProviders(<ScoreRequestsListPage />);
+    renderGated(<ScoreRequestsListPage />);
     expect(screen.getByText("New Request")).toBeTruthy();
   });
 });
@@ -130,7 +138,7 @@ describe("Score Requests list page guard", () => {
 describe("Score Request detail page guard", () => {
   it("renders NoPermission without score_requests.read", () => {
     setPerms([]);
-    renderWithProviders(<ScoreRequestDetailPage />);
+    renderGated(<ScoreRequestDetailPage />);
     expect(
       screen.getByText("You don't have permission to view this."),
     ).toBeTruthy();
@@ -140,7 +148,7 @@ describe("Score Request detail page guard", () => {
 describe("New Score Request page guard", () => {
   it("blocks the flow when score_requests.create is missing", () => {
     setPerms([PERMISSION_CODES.BUREAU.LOOKUP]);
-    renderWithProviders(<NewScoreRequestPage />);
+    renderGated(<NewScoreRequestPage />);
     expect(
       screen.getByText(/score_requests\.create/),
     ).toBeTruthy();
@@ -148,7 +156,7 @@ describe("New Score Request page guard", () => {
 
   it("blocks the flow when bureau.lookup is missing", () => {
     setPerms([PERMISSION_CODES.SCORE_REQUESTS.CREATE]);
-    renderWithProviders(<NewScoreRequestPage />);
+    renderGated(<NewScoreRequestPage />);
     expect(screen.getByText(/bureau\.lookup/)).toBeTruthy();
   });
 
@@ -157,7 +165,7 @@ describe("New Score Request page guard", () => {
       PERMISSION_CODES.SCORE_REQUESTS.CREATE,
       PERMISSION_CODES.BUREAU.LOOKUP,
     ]);
-    renderWithProviders(<NewScoreRequestPage />);
+    renderGated(<NewScoreRequestPage />);
     // Step header is unique to the actual flow.
     expect(screen.getByText(/Step 1 of/)).toBeTruthy();
   });
@@ -166,7 +174,7 @@ describe("New Score Request page guard", () => {
 describe("Org profile tab gating", () => {
   it("renders NoPermission inline when org.read is missing", () => {
     setPerms([]);
-    renderWithProviders(<OrgProfileTab />);
+    renderGated(<OrgProfileTab />);
     expect(
       screen.getByText("You don't have permission to view this."),
     ).toBeTruthy();
@@ -174,7 +182,7 @@ describe("Org profile tab gating", () => {
 
   it("hides Save Changes button when org.update is missing but org.read is granted", () => {
     setPerms([PERMISSION_CODES.ORG.READ]);
-    renderWithProviders(<OrgProfileTab />);
+    renderGated(<OrgProfileTab />);
     expect(screen.queryByText("Save Changes")).toBeNull();
   });
 
@@ -183,7 +191,7 @@ describe("Org profile tab gating", () => {
     // tab sits on the loader rather than rendering the read-denied placeholder.
     // That's enough to prove the perm check let the user through.
     setPerms([PERMISSION_CODES.ORG.READ, PERMISSION_CODES.ORG.UPDATE]);
-    renderWithProviders(<OrgProfileTab />);
+    renderGated(<OrgProfileTab />);
     expect(
       screen.queryByText("You don't have permission to view this."),
     ).toBeNull();

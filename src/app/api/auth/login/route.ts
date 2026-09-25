@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { setServerSession } from "@/lib/server-session";
+import { withoutPermissions } from "@/lib/user-merge";
 import { BACKEND_API_URL } from "@/lib/server-config";
 import type { AdminUser, User } from "@/types/models";
 
@@ -204,6 +205,6 @@ export async function POST(request: Request) {
     expiresAt,
   });
 
-  // Return only the user-facing portion. No tokens.
-  return NextResponse.json({ user, userType });
+  // Return only the user-facing portion. No tokens, no permissions.
+  return NextResponse.json({ user: withoutPermissions(user), userType });
 }

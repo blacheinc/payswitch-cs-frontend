@@ -3,6 +3,8 @@ import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 
+import { PermissionsProvider } from "@/contexts/permissions-context";
+
 /**
  * Build a QueryClient configured for tests: no retries, no stale time, so
  * mocked responses are deterministic.
@@ -19,11 +21,23 @@ export function createTestQueryClient(): QueryClient {
 interface ProvidersProps {
   children: ReactNode;
   queryClient?: QueryClient;
+  /** Seeds the permission set the server layout would supply in production. */
+  permissions?: string[];
 }
 
-export function TestProviders({ children, queryClient }: ProvidersProps) {
+export function TestProviders({
+  children,
+  queryClient,
+  permissions = [],
+}: ProvidersProps) {
   const client = queryClient ?? createTestQueryClient();
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <PermissionsProvider permissions={permissions}>
+        {children}
+      </PermissionsProvider>
+    </QueryClientProvider>
+  );
 }
 
 /**
@@ -32,12 +46,17 @@ export function TestProviders({ children, queryClient }: ProvidersProps) {
  */
 export function renderWithProviders(
   ui: ReactNode,
-  options?: Omit<RenderOptions, "wrapper"> & { queryClient?: QueryClient },
+  options?: Omit<RenderOptions, "wrapper"> & {
+    queryClient?: QueryClient;
+    permissions?: string[];
+  },
 ) {
-  const { queryClient, ...rest } = options ?? {};
+  const { queryClient, permissions, ...rest } = options ?? {};
   const utils = render(ui, {
     wrapper: ({ children }) => (
-      <TestProviders queryClient={queryClient}>{children}</TestProviders>
+      <TestProviders queryClient={queryClient} permissions={permissions}>
+        {children}
+      </TestProviders>
     ),
     ...rest,
   });

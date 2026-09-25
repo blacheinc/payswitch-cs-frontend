@@ -26,7 +26,7 @@ import { INACTIVITY_TIMEOUT_MS, ROUTES } from "@/lib/constant";
 // (`src/app/api/auth/*`). This context never sees, stores, or transmits them.
 //
 // What lives here:
-//   - the user object (id, name, permissions, etc.) for rendering
+//   - the user object (id, name, etc.) for rendering
 //   - the userType ("admin" | "org") for sidebar / route gating decisions
 //   - a tiny localStorage cache of the above so the UI hydrates immediately on
 //     reload (the source of truth is /api/auth/me)
@@ -116,7 +116,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
             status: profile.status as User["status"],
             createdAt: profile.created_at || new Date().toISOString(),
             organizationId: profile.organization_id ?? undefined,
-            permissions: profile.permissions ?? [],
             ...(profile.user_type === "admin"
               ? { isAdmin: true, adminRole: "super_admin" }
               : {}),
@@ -175,11 +174,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Drop the localStorage cache so a stale tab can't rehydrate after this,
     // but DO NOT clear the React `user` yet — between this setState and the
-    // browser navigation below, every gated page would otherwise re-render
-    // once with empty permissions and flash the NoPermission placeholder.
-    // Flipping `isLoading: true` lets auth-dependent UI know a transition is
-    // in flight; the full reset happens when the new page mounts after
-    // `window.location.href` lands.
+    // browser navigation below, header and sidebar would otherwise re-render
+    // against a null user. Flipping `isLoading: true` signals the transition;
+    // the full reset happens when the new page mounts.
     clearUserCache();
     setState((prev) => ({ ...prev, isLoading: true }));
 

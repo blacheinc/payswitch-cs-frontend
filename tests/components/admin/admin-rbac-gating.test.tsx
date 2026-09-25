@@ -39,7 +39,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({}),
 }));
 
-import AdminLayout from "@/app/(admin)/layout";
+import { AdminShell } from "@/components/layout/admin-shell";
 import OrganizationsPage from "@/app/(admin)/organizations/page";
 import TrainingPage from "@/app/(admin)/training/page";
 import ScoreRequestsPage from "@/app/(admin)/admin-score-requests/page";
@@ -52,9 +52,17 @@ beforeEach(() => {
   authState.isLoading = false;
 });
 
+let currentPerms: string[] = [];
+
 function setPerms(perms: string[]) {
-  authState.user = { id: "u-1", permissions: perms };
+  currentPerms = perms;
+  authState.user = { id: "u-1" };
   authState.isAuthenticated = true;
+}
+
+/** Renders with the permission set a server layout would have supplied. */
+function renderGated(ui: Parameters<typeof renderWithProviders>[0]) {
+  return renderWithProviders(ui, { permissions: currentPerms });
 }
 
 describe("Admin sidebar nav (permission-gated)", () => {
@@ -69,10 +77,10 @@ describe("Admin sidebar nav (permission-gated)", () => {
       PERMISSION_CODES.ADMIN.ORGS_READ,
     ]);
 
-    renderWithProviders(
-      <AdminLayout>
+    renderGated(
+      <AdminShell>
         <div>content</div>
-      </AdminLayout>,
+      </AdminShell>,
     );
 
     // Visible — has read perms or matches an any-of bucket
@@ -91,10 +99,10 @@ describe("Admin sidebar nav (permission-gated)", () => {
   it("shows every nav item for super admins (`*`)", () => {
     setPerms(["*"]);
 
-    renderWithProviders(
-      <AdminLayout>
+    renderGated(
+      <AdminShell>
         <div>content</div>
-      </AdminLayout>,
+      </AdminShell>,
     );
 
     [
@@ -116,7 +124,7 @@ describe("Organizations page guard", () => {
   it("renders the NoPermission placeholder when admin.organizations.read is missing", () => {
     setPerms([]);
 
-    renderWithProviders(<OrganizationsPage />);
+    renderGated(<OrganizationsPage />);
 
     expect(
       screen.getByText("You don't have permission to view this."),
@@ -127,7 +135,7 @@ describe("Organizations page guard", () => {
   it("hides the Add Organization button without admin.organizations.create", () => {
     setPerms([PERMISSION_CODES.ADMIN.ORGS_READ]);
 
-    renderWithProviders(<OrganizationsPage />);
+    renderGated(<OrganizationsPage />);
 
     expect(screen.getByText("All Organizations")).toBeTruthy();
     expect(screen.queryByText("Add Organization")).toBeNull();
@@ -139,7 +147,7 @@ describe("Organizations page guard", () => {
       PERMISSION_CODES.ADMIN.ORGS_CREATE,
     ]);
 
-    renderWithProviders(<OrganizationsPage />);
+    renderGated(<OrganizationsPage />);
 
     expect(screen.getByText("Add Organization")).toBeTruthy();
   });
@@ -149,7 +157,7 @@ describe("Training page guard", () => {
   it("renders NoPermission when neither training_data.read nor sources.read is granted", () => {
     setPerms([]);
 
-    renderWithProviders(<TrainingPage />);
+    renderGated(<TrainingPage />);
 
     expect(
       screen.getByText("You don't have permission to view this."),
@@ -159,7 +167,7 @@ describe("Training page guard", () => {
   it("hides Upload button without training_data.upload", () => {
     setPerms([PERMISSION_CODES.ADMIN.TRAINING_READ]);
 
-    renderWithProviders(<TrainingPage />);
+    renderGated(<TrainingPage />);
 
     expect(screen.queryByText("Upload Dataset")).toBeNull();
   });
@@ -170,7 +178,7 @@ describe("Training page guard", () => {
       PERMISSION_CODES.ADMIN.TRAINING_UPLOAD,
     ]);
 
-    renderWithProviders(<TrainingPage />);
+    renderGated(<TrainingPage />);
 
     expect(screen.getByText("Upload Dataset")).toBeTruthy();
   });
@@ -179,7 +187,7 @@ describe("Training page guard", () => {
 describe("Score Requests page guard", () => {
   it("renders NoPermission without admin.score_requests.read", () => {
     setPerms([]);
-    renderWithProviders(<ScoreRequestsPage />);
+    renderGated(<ScoreRequestsPage />);
     expect(
       screen.getByText("You don't have permission to view this."),
     ).toBeTruthy();
@@ -187,7 +195,7 @@ describe("Score Requests page guard", () => {
 
   it("renders the page when admin.score_requests.read is granted", () => {
     setPerms([PERMISSION_CODES.ADMIN.SCORE_REQUESTS_READ]);
-    renderWithProviders(<ScoreRequestsPage />);
+    renderGated(<ScoreRequestsPage />);
     // Two `Score Requests` strings render — we just need the page header.
     expect(
       screen.getAllByText("Score Requests").length,
@@ -198,7 +206,7 @@ describe("Score Requests page guard", () => {
 describe("Scoring Engine page guard", () => {
   it("renders NoPermission when neither models.read nor rules.evaluate is granted", () => {
     setPerms([]);
-    renderWithProviders(<ScoringEnginePage />);
+    renderGated(<ScoringEnginePage />);
     expect(
       screen.getByText("You don't have permission to view this."),
     ).toBeTruthy();
@@ -207,7 +215,7 @@ describe("Scoring Engine page guard", () => {
   it("hides the Models tab without models.read but shows Rules Sandbox with rules.evaluate", () => {
     setPerms([PERMISSION_CODES.RULES.EVALUATE]);
 
-    renderWithProviders(<ScoringEnginePage />);
+    renderGated(<ScoringEnginePage />);
 
     expect(screen.queryByText("Models")).toBeNull();
     expect(screen.getByText("Rules Sandbox")).toBeTruthy();

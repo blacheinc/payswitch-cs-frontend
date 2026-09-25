@@ -225,4 +225,45 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(502);
     expect(cookiesMock.set).not.toHaveBeenCalled();
   });
+
+  // VAPT §2.8: the tester's PoC edits `permissions` in this response body.
+  // It is no longer there — the UI reads the set from the HttpOnly cookie via
+  // the server-rendered layout, so tampering here changes nothing.
+  it("omits permissions from the response while keeping them in the session", async () => {
+    server.use(
+      http.post("http://backend.test/auth/login", () =>
+        HttpResponse.json({
+          access_token: "a",
+          refresh_token: "r",
+          user_type: "org",
+        }),
+      ),
+      http.get("http://backend.test/auth/me", () =>
+        HttpResponse.json({
+          id: "u-1",
+          email: "u@example.com",
+          name: "U",
+          role: "analyst",
+          status: "active",
+          permissions: ["api_logs.read"],
+        }),
+      ),
+    );
+
+    const { POST } = await import("@/app/api/auth/login/route");
+    const res = await POST(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: "u@example.com", password: "p" }),
+      }),
+    );
+
+    const body = await res.json();
+    expect(body.user).not.toHaveProperty("permissions");
+    expect(JSON.stringify(body)).not.toContain("api_logs.read");
+
+    // Still authoritative server-side.
+    const session = JSON.parse(cookieJar.get("__Host-session")!.value);
+    expect(session.user.permissions).toEqual(["api_logs.read"]);
+  });
 });
